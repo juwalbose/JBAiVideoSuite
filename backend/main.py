@@ -145,16 +145,28 @@ async def check_lmstudio_health():
             details=f"Unexpected error: {str(e)}"
         )
 
+@app.get("/projects/", response_model=list)
+async def list_projects():
+    print(f'DEBUG: Fetching all projects')
+    projects = await db.project.find_many()
+    # Convert Prisma objects to dictionaries for the JSON response
+    return [p.dict() for p in projects]
+
 @app.post("/projects/", response_model=dict)
 async def create_project(input_data: ProjectCreate):
     print(f'DEBUG: Creating project named "{input_data.name}"')
     project = await db.project.create(
         data={
             "name": input_data.name,
-            "description": input_data.description
+            "description": input_data.description if input_data.description else ""
         }
     )
-    return project.dict()
+    # Ensure we return a clean dictionary with the expected keys
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description
+    }
 
 @app.post("/projects/{project_id}/generate-story", response_model=StoryOutput)
 async def generate_story(project_id: str, input_data: StoryInput):

@@ -34,22 +34,46 @@ export interface Project {
 }
 
 interface ProjectState {
+  projects: Project[];
   currentProject: Project | null;
   isLoading: boolean;
   error: string | null;
-  setProject: (project: Project) => void;
+  setProjects: (newProject: Project) => void;
+  addProject: (newProject: Project) => void;
+  setCurrentProject: (project: Project) => void;
+  fetchProjects: () => Promise<void>;
   updateStory: (narrativeArc: string, rawInput?: string) => void;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
 }
 
-export const useProjectStore = create<ProjectState>((set) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
+  projects: [],
   currentProject: null,
   isLoading: false,
   error: null,
 
-  setProject: (project) => set({ currentProject: project }),
+  setProjects: (newProject) => set((state) => ({ 
+    projects: state.projects.length === 0 ? [newProject] : [...state.projects, newProject] 
+  })),
+  addProject: (newProject) => set((state) => ({ 
+    projects: [...state.projects, newProject] 
+  })),
+  setCurrentProject: (project) => set({ currentProject: project }),
   
+  fetchProjects: async () => {
+    set({ isLoading: true });
+    try {
+      const response = await fetch('http://127.0.0.1:8000/projects/');
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const data = await response.json();
+      set({ projects: data, isLoading: false });
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      set({ error: error.message, isLoading: false });
+    }
+  },
+
   updateStory: (narrativeArc, rawInput) => 
     set((state) => ({
       currentProject: state.currentProject ? {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import StoryStage from '../components/studio/StoryStage';
+import ProjectLibrary from '../components/studio/ProjectLibrary';
 
 const Studio = () => {
   const { currentProject, setProject } = useProjectStore();
@@ -68,15 +69,7 @@ const Studio = () => {
               <StoryStage />
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <p className="mb-6 text-lg">Create a project to begin the journey.</p>
-              <button 
-                onClick={handleCreateProject}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-              >
-                + New Project
-              </button>
-            </div>
+            <ProjectLibrary />
           )}
         </main>
 
