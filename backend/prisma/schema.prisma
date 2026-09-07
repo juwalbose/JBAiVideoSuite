@@ -1,0 +1,71 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./database.db"
+}
+
+generator client {
+  provider = "prisma-client-py"
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  story       Story?
+  beats       Beat[]
+  assets      Asset[]
+  finalVideo  FinalVideo?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Story {
+  id           String   @id @default(cuid())
+  projectId    String   @unique 
+  project      Project  @relation(fields: [projectId], references: [id])
+  narrativeArc String
+  rawInput     String?
+}
+
+model Beat {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  storyId     String?
+  order       Int
+  content     String
+  shots       Shot[]
+  assets      Asset[]
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  beatId      String?
+  beat        Beat?    @relation(fields: [beatId], references: [id])
+  type        String   // Changed from Enum to String (e.g., "CHARACTER", "ENVIRONMENT", "PROP")
+  name        String
+  imagePath   String?
+  prompt      String?
+}
+
+model Shot {
+  id             String   @id @default(cuid())
+  beatId         String
+  beat           Beat     @relation(fields: [beatId], references: [id])
+  order          Int
+  prompt         String
+  cameraMovement String?
+  duration       Float?
+  videoPath      String?
+}
+
+model FinalVideo {
+  id           String   @id @default(cuid())
+  projectId    String   @unique 
+  project      Project  @relation(fields: [projectId], references: [id])
+  totalDuration Float?
+  exportPath   String?
+  thumbnailUrl String?
+}
