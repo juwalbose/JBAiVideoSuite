@@ -152,6 +152,17 @@ async def list_projects():
     # Convert Prisma objects to dictionaries for the JSON response
     return [p.dict() for p in projects]
 
+@app.delete("/projects/delete-all")
+async def delete_all_projects():
+    print(f'DEBUG: Deleting all projects')
+    await db.shot.delete_many()
+    await db.asset.delete_many()
+    await db.beat.delete_many()
+    await db.story.delete_many()
+    await db.finalvideo.delete_many()
+    await db.project.delete_many()
+    return {"message": "All projects deleted successfully"}
+
 @app.post("/projects/", response_model=dict)
 async def create_project(input_data: ProjectCreate):
     print(f'DEBUG: Creating project named "{input_data.name}"')

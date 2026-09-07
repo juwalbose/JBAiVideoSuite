@@ -42,6 +42,7 @@ interface ProjectState {
   addProject: (newProject: Project) => void;
   setCurrentProject: (project: Project) => void;
   fetchProjects: () => Promise<void>;
+  deleteAllProjects: () => Promise<void>;
   updateStory: (narrativeArc: string, rawInput?: string) => void;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
@@ -71,6 +72,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     } catch (error) {
       console.error("Error fetching projects:", error);
       set({ error: error.message, isLoading: false });
+    }
+  },
+
+  deleteAllProjects: async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/projects/delete-all', {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete all projects');
+      set({ projects: [] });
+    } catch (error) {
+      console.error("Error deleting all projects:", error);
+      set({ error: error.message });
     }
   },
 

@@ -5,7 +5,7 @@ import NewProjectModal from './NewProjectModal';
 
 const ProjectLibrary = () => {
   const [modalOpen, setModalOpen] = useState(false);
-  const { projects, currentProject, setCurrentProject, fetchProjects } = useProjectStore();
+  const { projects, currentProject, setCurrentProject, fetchProjects, deleteAllProjects } = useProjectStore();
 
   useEffect(() => {
     fetchProjects();
@@ -13,9 +13,23 @@ const ProjectLibrary = () => {
 
   return (
     <div className="p-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Your Projects</h1>
-        <p className="text-gray-600">Select a project to start your production journey.</p>
+      <header className="mb-8 flex justify-between items-end">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Your Projects</h1>
+          <p className="text-gray-600">Select a project to start your production journey.</p>
+        </div>
+        {projects.length > 0 && (
+          <button 
+            onClick={() => {
+              if (window.confirm("Do you want to remove all projects?")) {
+                deleteAllProjects();
+              }
+            }}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors shadow"
+          >
+            Delete All
+          </button>
+        )}
       </header>
 
       {projects.length === 0 ? (
