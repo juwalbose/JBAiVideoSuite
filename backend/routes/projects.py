@@ -97,13 +97,13 @@ async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get
         result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
         
         # 3. Update the story in the database
-        await db.story.update({
-            'where': {'projectId': id},
-            'data': {
+        await db.story.update(
+            data={
                 'rawInput': story_input.rawInput,
                 'narrativeArc': result
-            }
-        })
+            },
+            where={'projectId': id}
+        )
 
         return {"status": "success", "narrative_arc": result}
     except Exception as e:

@@ -124,7 +124,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           ...state.currentProject,
           story: {
             ...state.currentProject.story,
-            narrativeArc: data.narrative_arc || data.narrativeArc,
+            narrativeArc: data.data?.narrativeArc || data.narrative_arc || data.narrativeArc,
             rawInput: rawInput !== undefined ? rawInput : state.currentProject.story.rawInput
           }
         }

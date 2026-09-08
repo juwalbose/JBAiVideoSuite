@@ -6,7 +6,7 @@ import Settings from './Settings';
 import { useSettingsStore } from '../store/settingsStore';
 
 const Studio = () => {
-  const { currentProject, setProject, fetchProjects } = useProjectStore();
+  const { currentProject, setCurrentProject, fetchProjects } = useProjectStore();
   const [status, setStatus] = useState('Connecting...');
   const [activeTab, setActiveTab] = useState('app'); // 'app', 'playground', 'settings'
 
@@ -48,7 +48,7 @@ const Studio = () => {
 
       if (!response.ok) throw new Error('Failed to create project');
       const data = await response.json();
-      setProject({
+      setCurrentProject({
         id: data.id,
         name: data.name,
         description: data.description,
@@ -122,11 +122,19 @@ const Studio = () => {
                 {/* Main Content Area */}
                 <main className="flex-1 p-8 overflow-y-auto">
                   <div className="max-w-4xl mx-auto">
-                    <h1 className="text-3xl font-bold mb-2">{currentProject.name}</h1>
-                    {currentProject.description && <p className="mb-8 text-gray-600">{currentProject.description}</p>}
+                    {currentProject && (
+                      <button 
+                        onClick={() => setCurrentProject(null)}
+                        className="mb-4 text-blue-600 hover:underline flex items-center gap-2 transition-colors"
+                      >
+                        ← Back to Library
+                      </button>
+                    )}
+                    <h1 className="text-3xl font-bold mb-2">{currentProject?.name}</h1>
+                    {currentProject?.description && <p className="mb-8 text-gray-600">{currentProject.description}</p>}
                     
                     <div className="mt-12">
-                      {currentProject.story ? (
+                      {currentProject?.story ? (
                         <StoryStage story={currentProject.story} />
                       ) : (
                         <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
