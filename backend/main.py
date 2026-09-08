@@ -24,7 +24,8 @@ app.add_middleware(
 # --- Models ---
 
 class StoryInput(BaseModel):
-    raw_text: str
+    original_idea: str
+    narrative_arc: Optional[str] = None
 
 class StoryOutput(BaseModel):
     id: str
@@ -148,8 +149,8 @@ async def check_lmstudio_health():
 @app.get("/projects/", response_model=list)
 async def list_projects():
     print(f'DEBUG: Fetching all projects')
-    projects = await db.project.find_many()
-    # Convert Prisma objects to dictionaries for the JSON response
+    # Use include to ensure story is fetched with the project
+    projects = await db.project.find_many(include={"story": True})
     return [p.dict() for p in projects]
 
 @app.delete("/projects/delete-all")
@@ -159,7 +160,7 @@ async def delete_all_projects():
     await db.asset.delete_many()
     await db.beat.delete_many()
     await db.story.delete_many()
-    await db.finalvideo.delete_many()
+    await db.finalVideo.delete_many()
     await db.project.delete_many()
     return {"message": "All projects deleted successfully"}
 
@@ -172,12 +173,59 @@ async def create_project(input_data: ProjectCreate):
             "description": input_data.description if input_data.description else ""
         }
     )
-    # Ensure we return a clean dictionary with the expected keys
+    # Fetch the project with its story included to return a complete object
+    full_project = await db.project.find_unique(where={"id": project.id}, include={"story": True})
     return {
-        "id": project.id,
-        "name": project.name,
-        "description": project.description
+        "id": full_project.id,
+        "name": full_project.name,
+        "description": full_project.description,
+        "story": full_project.story.dict() if full_project.story else None
     }
+
+@app.patch("/projects/{project_id}", response_model=dict)
+async def update_project(project_id: str, input_data: ProjectCreate):
+    print(f'DEBUG: Updating project {project_id}')
+    project = await db.project.find_unique(where={"id": project_id})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    updated_project = await db.project.update(
+        where={"id": project_id},
+        data={
+            "name": input_data.name,
+            "description": input_data.description if input_data.description else ""
+        }
+    )
+    return {
+        "id": updated_project.id,
+        "name": updated_project.name,
+        "description": updated_project.description
+    }
+
+@app.patch("/projects/{project_id}/story", response_model=dict)
+async def update_story(project_id: str, input_data: StoryInput):
+    print(f'DEBUG: Updating story for project {project_id}')
+    story = await db.story.find_unique(where={"projectId": project_id})
+    if not story:
+        # If no story exists yet, create one
+        new_story = await db.story.create(
+            data={
+                "projectId": project_id,
+                "narrativeArc": input_data.narrative_arc or input_data.original_idea,
+                "rawInput": input_data.original_idea
+            }
+        )
+        return {"id": new_story.id, "narrative_arc": new_story.narrativeArc, "raw_input": new_story.rawInput}
+    else:
+        # Update existing story
+        updated_story = await db.story.update(
+            where={"projectId": project_id},
+            data={
+                "narrativeArc": input_data.narrative_arc or input_data.original_idea,
+                "rawInput": input_data.original_idea
+            }
+        )
+        return {"id": updated_story.id, "narrative_arc": updated_story.narrativeArc, "raw_input": updated_story.rawInput}
 
 @app.post("/projects/{project_id}/generate-story", response_model=StoryOutput)
 async def generate_story(project_id: str, input_data: StoryInput):
@@ -187,12 +235,12 @@ async def generate_story(project_id: str, input_data: StoryInput):
         print(f'DEBUG: Error - Project {project_id} not found in DB')
         raise HTTPException(status_code=404, detail="Project not found")
 
-    print(f'DEBUG: Raw Input received: "{input_data.raw_text}"')
+    print(f'DEBUG: Raw Input received: "{input_data.original_idea}"')
     prompt = f"""
     Expand the following raw story idea into a detailed Narrative Arc. 
     Focus on setting the scene, establishing the mood, and describing the main conflict.
     
-    Raw Idea: {input_data.raw_text}
+    Raw Idea: {input_data.original_idea}
     
     Narrative Arc:
     """
@@ -201,19 +249,39 @@ async def generate_story(project_id: str, input_data: StoryInput):
     narrative_arc = call_llm(prompt)
     print(f'DEBUG: Narrative Arc received from LLM.')
     
-    story = await db.story.create(
-        data={
-            "projectId": project_id,
-            "narrativeArc": narrative_arc,
-            "rawInput": input_data.raw_text
-        }
-    )
-    print(f'DEBUG: Story saved to the database with ID: {story.id}')
-    return StoryOutput(
-        id=story.id, 
-        narrative_arc=story.narrativeArc, 
-        raw_input=story.rawInput
-    )
+    # Check if a story already exists for this project
+    existing_story = await db.story.find_unique(where={"projectId": project_id})
+    
+    if existing_story:
+        # Update the existing story instead of creating a new one to avoid UniqueViolationError
+        updated_story = await db.story.update(
+            where={"projectId": project_id},
+            data={
+                "narrativeArc": narrative_arc,
+                "rawInput": input_data.original_idea
+            }
+        )
+        print(f'DEBUG: Story updated in the database with ID: {updated_story.id}')
+        return StoryOutput(
+            id=updated_story.id, 
+            narrative_arc=updated_story.narrativeArc, 
+            raw_input=updated_story.rawInput
+        )
+    else:
+        # Create a new story if none exists
+        new_story = await db.story.create(
+            data={
+                "projectId": project_id,
+                "narrativeArc": narrative_arc,
+                "rawInput": input_data.original_idea
+            }
+        )
+        print(f'DEBUG: New story saved to the database with ID: {new_story.id}')
+        return StoryOutput(
+            id=new_story.id, 
+            narrative_arc=new_story.narrativeArc, 
+            raw_input=new_story.rawInput
+        )
 
 @app.post("/projects/{project_id}/generate-script", response_model=dict)
 async def generate_script(project_id: str):
