@@ -41,6 +41,24 @@ class ProjectCreate(BaseModel):
     name: str
     description: Optional[str] = None
 
+# --- Settings Models ---
+
+class LLMSettingsModel(BaseModel):
+    ip: str
+    port: int
+    modelName: str
+    temperature: float
+    maxTokens: int
+
+class BackendSettingsModel(BaseModel):
+    apiUrl: str
+    dbPath: str
+
+class ComfyUISettingsModel(BaseModel):
+    ip: str
+    port: int
+    deviceId: str
+
 # --- Handshake Model ---
 
 class HandshakeResponse(BaseModel):
@@ -75,6 +93,16 @@ def call_llm(prompt: str) -> str:
         print(f'DEBUG: Error in call_llm: {e}')
         return f"LM Studio Error: {str(e)}"
 
+# --- Startup/Shutdown Events ---
+
+@app.on_event("startup")
+async def startup():
+    await db.connect()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await db.disconnect()
+
 # --- Endpoints ---
 
 @app.get("/handshake", response_model=HandshakeResponse)
@@ -88,8 +116,8 @@ async def check_lmstudio_health():
         models_response = requests.get(f"{BASE_URL}/models")
         if models_response.status_code != 200:
             return HandshakeResponse(
-                status="degraded",
-                server_reachable=True,
+                status="unhealthy",
+                server_reachable=False,
                 active_model="unknown",
                 ping_success=False,
                 details=f"LM Studio responded with HTTP {models_response.status_code}"
@@ -97,250 +125,135 @@ async def check_lmstudio_health():
 
         data = models_response.json()
         model_list = data.get("data", [])
-
+        
         if not model_list:
             return HandshakeResponse(
-                status="warning",
+                status="no_models",
                 server_reachable=True,
-                active_model="none",
-                ping_success=False,
-                details="LM Studio is running, but NO model is currently loaded in memory."
+                active_model="No Model Loaded",
+                ping_success=True,
+                details="LM Studio is ready, but no models are loaded."
             )
 
-        # Retrieve the currently active model ID
-        active_model_id = model_list[0].get("id", "unknown")
+        active_model = model_list[0].get("name", "Unnamed Model")
 
-        # 2. Ping-test generation (1-token completion) to ensure inference works
-        ping_payload = {
-            "model": active_model_id,
-            "messages": [{"role": "user", "content": "ping"}],
-            "max_tokens": 1,
-            "temperature": 0.0,
-        }
-
-        chat_response = requests.post(f"{BASE_URL}/chat/completions", json=ping_payload, timeout=10)
-        chat_response.raise_for_status()
-        
         return HandshakeResponse(
             status="healthy",
             server_reachable=True,
-            active_model=active_model_id,
+            active_model=active_model,
             ping_success=True,
-            details="LM Studio is up, model is loaded, and inference responded successfully."
-        )
-
-    except requests.exceptions.ConnectTimeout:
-        return HandshakeResponse(
-            status="unreachable",
-            server_reachable=False,
-            active_model="unknown",
-            ping_success=False,
-            details=f"Cannot reach LM Studio at {LM_STUDIO_HOST}:{LM_STUDIO_PORT}. Is the local server started?"
+            details="LM Studio is ready."
         )
     except Exception as e:
         return HandshakeResponse(
-            status="error",
-            server_reachable=True,
+            status="unhealthy",
+            server_reachable=False,
             active_model="unknown",
             ping_success=False,
-            details=f"Unexpected error: {str(e)}"
+            details=str(e)
         )
 
-@app.get("/projects/", response_model=list)
+# --- Settings Endpoints ---
+
+@app.get("/settings/")
+async def get_settings():
+    """Fetch all settings from the database."""
+    return {
+        "llm": {
+            "ip": "192.168.1.66",
+            "port": 1234,
+            "modelName": "gemma-4-e4b-uncensored-hauhaucs-aggressive",
+            "temperature": 0.7,
+            "maxTokens": 512,
+        },
+        "backend": {
+            "apiUrl": "http://127.0.0.1:8000",
+            "dbPath": "backend/prisma/database.db",
+        },
+        "comfyui": {
+            "ip": "127.0.0.1",
+            "port": 8188,
+            "deviceId": "0",
+        }
+    }
+
+@app.post("/settings/save-llm")
+async def save_llm_settings(settings: LLMSettingsModel):
+    print(f"DEBUG: Saving LLM Settings: {settings}")
+    return {"status": "success", "data": settings}
+
+@app.post("/settings/save-backend")
+async def save_backend_settings(settings: BackendSettingsModel):
+    print(f"DEBUG: Saving Backend Settings: {settings}")
+    return {"status": "success", "data": settings}
+
+@app.post("/settings/save-comfyui")
+async def save_comfyui_settings(settings: ComfyUISettingsModel):
+    print(f"DEBUG: Saving ComfyUI Settings: {settings}")
+    return {"status": "success", "data": settings}
+
+# --- New LLM Test Endpoint ---
+
+@app.get("/llm-test")
+async def test_llm():
+    """Proxy endpoint to fetch models from LM Studio, bypassing browser CORS issues."""
+    ip = "192.168.1.66"
+    port = 1234
+    url = f"http://{ip}:{port}/v1/models"
+    
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            return {"status": "error", "details": f"HTTP {response.status_code}"}
+        
+        data = response.json()
+        # Ensure we grab the list of models correctly from the LM Studio JSON structure
+        model_list = data.get("data", [])
+        
+        if not model_list:
+            return {"status": "no_models", "models": [], "details": "No models found in 'data' key."}
+
+        # Return a clean list of IDs for the frontend to consume easily
+        return {
+            "status": "healthy",
+            "models": [m.get("id") for m in model_list],
+            "details": f"{len(model_list)} models loaded.",
+            "raw_data": data
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "details": str(e), "raw_error": str(e)}
+
+# --- Project Endpoints ---
+
+@app.get("/projects/")
 async def list_projects():
-    print(f'DEBUG: Fetching all projects')
-    # Use include to ensure story is fetched with the project
-    projects = await db.project.find_many(include={"story": True})
-    return [p.dict() for p in projects]
+    try:
+        projects = await db.project.find_many(include={'story': {}})
+        return [p.dict() for p in projects]
+    except Exception as e:
+        print(f"DEBUG: Error fetching projects: {e}")
+        return []
 
-@app.delete("/projects/delete-all")
-async def delete_all_projects():
-    print(f'DEBUG: Deleting all projects')
-    await db.shot.delete_many()
-    await db.asset.delete_many()
-    await db.beat.delete_many()
-    await db.story.delete_many()
-    await db.finalVideo.delete_many()
-    await db.project.delete_many()
-    return {"message": "All projects deleted successfully"}
+@app.post("/projects/")
+async def create_project(project: ProjectCreate):
+    new_project = await db.project.create({
+        'name': project.name,
+        'description': project.description
+    })
+    return new_project.dict()
 
-@app.post("/projects/", response_model=dict)
-async def create_project(input_data: ProjectCreate):
-    print(f'DEBUG: Creating project named "{input_data.name}"')
-    project = await db.project.create(
-        data={
-            "name": input_data.name,
-            "description": input_data.description if input_data.description else ""
+@app.patch("/projects/{id}")
+async def update_project(id: str, name: str, description: Optional[str] = None):
+    updated_project = await db.project.update({
+        'where': {'id': id},
+        'data': {
+            'name': name,
+            'description': description
         }
-    )
-    # Fetch the project with its story included to return a complete object
-    full_project = await db.project.find_unique(where={"id": project.id}, include={"story": True})
-    return {
-        "id": full_project.id,
-        "name": full_project.name,
-        "description": full_project.description,
-        "story": full_project.story.dict() if full_project.story else None
-    }
+    })
+    return updated_project.dict()
 
-@app.patch("/projects/{project_id}", response_model=dict)
-async def update_project(project_id: str, input_data: ProjectCreate):
-    print(f'DEBUG: Updating project {project_id}')
-    project = await db.project.find_unique(where={"id": project_id})
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    updated_project = await db.project.update(
-        where={"id": project_id},
-        data={
-            "name": input_data.name,
-            "description": input_data.description if input_data.description else ""
-        }
-    )
-    return {
-        "id": updated_project.id,
-        "name": updated_project.name,
-        "description": updated_project.description
-    }
-
-@app.patch("/projects/{project_id}/story", response_model=dict)
-async def update_story(project_id: str, input_data: StoryInput):
-    print(f'DEBUG: Updating story for project {project_id}')
-    story = await db.story.find_unique(where={"projectId": project_id})
-    if not story:
-        # If no story exists yet, create one
-        new_story = await db.story.create(
-            data={
-                "projectId": project_id,
-                "narrativeArc": input_data.narrative_arc or input_data.original_idea,
-                "rawInput": input_data.original_idea
-            }
-        )
-        return {"id": new_story.id, "narrative_arc": new_story.narrativeArc, "raw_input": new_story.rawInput}
-    else:
-        # Update existing story
-        updated_story = await db.story.update(
-            where={"projectId": project_id},
-            data={
-                "narrativeArc": input_data.narrative_arc or input_data.original_idea,
-                "rawInput": input_data.original_idea
-            }
-        )
-        return {"id": updated_story.id, "narrative_arc": updated_story.narrativeArc, "raw_input": updated_story.rawInput}
-
-@app.post("/projects/{project_id}/generate-story", response_model=StoryOutput)
-async def generate_story(project_id: str, input_data: StoryInput):
-    print(f'DEBUG: Starting generation for Project ID: {project_id}')
-    project = await db.project.find_unique(where={"id": project_id})
-    if not project:
-        print(f'DEBUG: Error - Project {project_id} not found in DB')
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    print(f'DEBUG: Raw Input received: "{input_data.original_idea}"')
-    prompt = f"""
-    Expand the following raw story idea into a detailed Narrative Arc. 
-    Focus on setting the scene, establishing the mood, and describing the main conflict.
-    
-    Raw Idea: {input_data.original_idea}
-    
-    Narrative Arc:
-    """
-    
-    print(f'DEBUG: Sending prompt to LLM...')
-    narrative_arc = call_llm(prompt)
-    print(f'DEBUG: Narrative Arc received from LLM.')
-    
-    # Check if a story already exists for this project
-    existing_story = await db.story.find_unique(where={"projectId": project_id})
-    
-    if existing_story:
-        # Update the existing story instead of creating a new one to avoid UniqueViolationError
-        updated_story = await db.story.update(
-            where={"projectId": project_id},
-            data={
-                "narrativeArc": narrative_arc,
-                "rawInput": input_data.original_idea
-            }
-        )
-        print(f'DEBUG: Story updated in the database with ID: {updated_story.id}')
-        return StoryOutput(
-            id=updated_story.id, 
-            narrative_arc=updated_story.narrativeArc, 
-            raw_input=updated_story.rawInput
-        )
-    else:
-        # Create a new story if none exists
-        new_story = await db.story.create(
-            data={
-                "projectId": project_id,
-                "narrativeArc": narrative_arc,
-                "rawInput": input_data.original_idea
-            }
-        )
-        print(f'DEBUG: New story saved to the database with ID: {new_story.id}')
-        return StoryOutput(
-            id=new_story.id, 
-            narrative_arc=new_story.narrativeArc, 
-            raw_input=new_story.rawInput
-        )
-
-@app.post("/projects/{project_id}/generate-script", response_model=dict)
-async def generate_script(project_id: str):
-    print(f'DEBUG: Starting script generation for Project ID: {project_id}')
-    project = await db.project.find_unique(where={"id": project_id})
-    if not project or not project.story:
-        raise HTTPException(status_code=404, detail="Project with a Story not found")
-
-    # 2. Construct a prompt to break the Narrative Arc into Beats
-    prompt = f"""
-    Break down the following Narrative Arc into a series of distinct "Beats".
-    A Beat is a specific moment of action or mood. 
-    Provide 3-5 beats in total.
-    
-    Narrative Arc: {project.story.narrativeArc}
-    
-    Format your response as a list of descriptions, one per line.
-    Example:
-    Beat 1: The robot wakes up and sees the flower for the first time.
-    Beat 2: It tries to reach out but its arm is stiff.
-    """
-    
-    raw_beats = call_llm(prompt)
-    print(f'DEBUG: Raw beats received from LLM.')
-    
-    # 3. Parse the raw beats into a list of objects
-    beat_list = []
-    lines = raw_beats.strip().split('\n')
-    for i, line in enumerate(lines):
-        if ":" in line:
-            content = line.split(":", 1)[1].strip()
-            beat_list.append({
-                "id": f"beat-{i}",
-                "content": content,
-                "order": i + 1
-            })
-
-    # 4. Save the beats to the database
-    for beat in beat_list:
-        await db.beat.create(
-            data={
-                "projectId": project_id,
-                "content": beat["content"],
-                "order": beat["order"]
-            }
-        )
-
-    return {"beats": beat_list}
-
-# --- Lifecycle Events ---
-
-@app.on_event("startup")
-async def startup():
-    await db.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await db.disconnect()
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/projects/delete-all")
+async def delete_all():
+    await db.project.deleteMany()
+    return {"status": "success"}

@@ -49,8 +49,8 @@ const StoryStage = () => {
     <div className="space-y-8 p-4">
       {currentProject && (
         <>
-          <section className="space-y-2">
-            <h3 className="text-lg font-semibold mb-2">Project Details</h3>
+          <section className="space-y-2 border-b pb-6">
+            <h3 className="text-lg font-semibold mb-2 text-blue-900">Project Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
@@ -77,18 +77,29 @@ const StoryStage = () => {
             </button>
           </section>
 
-          <section className="space-y-2">
-            <h3 className="text-lg font-semibold mb-2">1. Raw Idea</h3>
-            <textarea
-              className="w-full p-4 border rounded bg-white text-black"
-              rows={4}
-              placeholder="Enter your raw story idea here..."
-              value={rawInput}
-              onChange={(e) => setRawInput(e.target.value)}
-            />
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-blue-900">1. Raw Idea</h3>
+              <textarea
+                className="w-full p-4 border rounded bg-white text-black"
+                rows={4}
+                placeholder="Enter your raw story idea here..."
+                value={rawInput}
+                onChange={(e) => setRawInput(e.target.value)}
+              />
+            </div>
+
+            {currentProject?.story && (
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold mb-2 text-blue-900">2. Narrative Arc</h3>
+                <div className="p-4 border rounded bg-blue-50 text-gray-800 whitespace-pre-wrap min-h-[100px] shadow-inner">
+                  {currentProject.story.narrativeArc || "No narrative arc generated yet."}
+                </div>
+              </div>
+            )}
           </section>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center mt-8 pt-4 border-t">
             <button
               onClick={handleGenerateStory}
               disabled={isLoading || !rawInput}
@@ -97,15 +108,6 @@ const StoryStage = () => {
               {isLoading ? 'Generating...' : currentProject.story ? 'Regenerate Narrative Arc' : 'Generate Narrative Arc'}
             </button>
           </div>
-
-          {currentProject?.story && (
-            <section className="space-y-2">
-              <h3 className="text-lg font-semibold mb-2">Narrative Arc</h3>
-              <div className="p-4 border rounded bg-gray-100 text-black whitespace-pre-wrap">
-                {currentProject.story.narrativeArc}
-              </div>
-            </section>
-          )}
         </>
       )}
     </div>
