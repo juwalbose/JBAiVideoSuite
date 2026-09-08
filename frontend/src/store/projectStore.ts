@@ -117,6 +117,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         body: JSON.stringify({ narrativeArc, rawInput })
       });
       if (!response.ok) throw new Error('Failed to update story');
+      const data = await response.json();
+
+      set((state) => ({
+        currentProject: {
+          ...state.currentProject,
+          story: {
+            ...state.currentProject.story,
+            narrativeArc: data.narrative_arc || data.narrativeArc,
+            rawInput: rawInput !== undefined ? rawInput : state.currentProject.story.rawInput
+          }
+        }
+      }));
     } catch (error) {
       console.error("Error updating story:", error);
     }

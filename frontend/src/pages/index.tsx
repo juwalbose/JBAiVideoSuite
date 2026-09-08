@@ -52,8 +52,9 @@ const Studio = () => {
         id: data.id,
         name: data.name,
         description: data.description,
-        beats: [],
-        assets: []
+        beats: data.beats || [],
+        assets: data.assets || [],
+        story: data.story
       });
     } catch (error) {
       console.error("Error creating project:", error);

@@ -25,7 +25,7 @@ const Settings = () => {
         setAvailableModels([]);
       } else {
         setAvailableModels(modelList);
-        setTestStatus(`🟢 Healthy: ${modelList[0]} (and ${modelList.length - 1} more)`);
+        setTestStatus('🟢 Healthy');
       }
     } catch (error) {
       console.error("LLM Test Error:", error);
@@ -132,8 +132,12 @@ const Settings = () => {
               <div>
                 <h3 className="text-sm font-bold mb-2">Available Models:</h3>
                 <ul className="list-disc ml-5 text-sm">
-                  {availableModels.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
+  {availableModels.map((m, i) => (
+    <li key={i}>
+      {typeof m === 'object' ? (m.id || m.name || m.object?.name || JSON.stringify(m)) : m}
+    </li>
+  ))}
+</ul>
               </div>
             )}
             <div className="mt-8 pt-4 border-t">

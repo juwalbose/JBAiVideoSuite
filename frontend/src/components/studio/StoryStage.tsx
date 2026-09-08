@@ -14,7 +14,8 @@ const StoryStage = () => {
         name: 'My New Story',
         description: '',
         beats: [],
-        assets: []
+        assets: [],
+        story: { narrativeArc: '', rawInput: '' }
       });
     }
   }, [currentProject, setProject]);
@@ -32,12 +33,13 @@ const StoryStage = () => {
       const response = await fetch(`http://127.0.0.1:8000/projects/${currentProject.id}/generate-story`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ original_idea: rawInput }),
+        body: JSON.stringify({ rawInput }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
-      updateStory(data.narrative_arc, rawInput);
+      console.log("LLM Response received:", data);
+      await updateStory(data.narrative_arc, rawInput);
     } catch (error) {
       console.error("Error generating story:", error);
     } finally {
@@ -90,10 +92,10 @@ const StoryStage = () => {
             </div>
 
             {currentProject?.story && (
-              <div className="space-y-2">
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <h3 className="text-lg font-semibold mb-2 text-blue-900">2. Narrative Arc</h3>
                 <div className="p-4 border rounded bg-blue-50 text-gray-800 whitespace-pre-wrap min-h-[100px] shadow-inner">
-                  {currentProject.story.narrativeArc || "No narrative arc generated yet."}
+                  {currentProject.story.narrativeArc || 'Narrative arc will appear here...'}
                 </div>
               </div>
             )}
@@ -105,7 +107,7 @@ const StoryStage = () => {
               disabled={isLoading || !rawInput}
               className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {isLoading ? 'Generating...' : currentProject.story ? 'Regenerate Narrative Arc' : 'Generate Narrative Arc'}
+              {isLoading ? 'Generating...' : currentProject.story?.narrativeArc ? 'Regenerate Narrative Arc' : 'Generate Narrative Arc'}
             </button>
           </div>
         </>
