@@ -37,6 +37,7 @@ export interface SettingsState {
   setBackend: (settings: Partial<BackendSettings>) => void;
   setComfyUI: (settings: Partial<ComfyUISettings>) => void;
   addWorkflow: (workflow: Workflow) => void;
+  setWorkflows: (workflows: Workflow[]) => void;
   setAvailableModels: (models: string[]) => void;
 
   saveLLM: () => Promise<void>;
@@ -71,6 +72,7 @@ export const useSettingsStore = create<SettingsState>()(
       setBackend: (settings) => set((state) => ({ backend: { ...state.backend, ...settings } })),
       setComfyUI: (settings) => set((state) => ({ comfyui: { ...state.comfyui, ...settings } })),
       addWorkflow: (workflow) => set((state) => ({ workflows: [...state.workflows, workflow] })),
+      setWorkflows: (workflows) => set({ workflows }),
       setAvailableModels: (models) => set({ availableModels: models }),
 
       testComfyuiConnection: async () => {

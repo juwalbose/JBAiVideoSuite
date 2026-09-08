@@ -1,0 +1,229 @@
+{
+  "51": {
+    "inputs": {
+      "text": [
+        "135",
+        0
+      ],
+      "clip": [
+        "75",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "52": {
+    "inputs": {
+      "width": [
+        "136",
+        0
+      ],
+      "height": [
+        "137",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "53": {
+    "inputs": {
+      "seed": [
+        "138",
+        0
+      ],
+      "steps": 9,
+      "cfg": 1,
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "89",
+        0
+      ],
+      "positive": [
+        "129",
+        0
+      ],
+      "negative": [
+        "58",
+        0
+      ],
+      "latent_image": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "54": {
+    "inputs": {
+      "samples": [
+        "53",
+        0
+      ],
+      "vae": [
+        "57",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "57": {
+    "inputs": {
+      "vae_name": "Wan2_1_VAE_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "58": {
+    "inputs": {
+      "conditioning": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "71": {
+    "inputs": {
+      "images": [
+        "54",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "(output:image) Image Output"
+    }
+  },
+  "75": {
+    "inputs": {
+      "clip_name": "Huihui-Qwen3-VL-4B-Instruct-abliterated-fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "89": {
+    "inputs": {
+      "enabled": true,
+      "strength": 1,
+      "debug": false,
+      "model": [
+        "130",
+        0
+      ]
+    },
+    "class_type": "ComfyUI-Krea2T-Enhancer",
+    "_meta": {
+      "title": "ComfyUI-Krea2T-Enhancer"
+    }
+  },
+  "128": {
+    "inputs": {
+      "model_name": "krea2_turbo_int8_convrot.safetensors",
+      "weight_dtype": "default",
+      "compute_dtype": "default",
+      "patch_cublaslinear": false,
+      "sage_attention": "disabled",
+      "enable_fp16_accumulation": true
+    },
+    "class_type": "DiffusionModelLoaderKJ",
+    "_meta": {
+      "title": "Diffusion Model Loader KJ"
+    }
+  },
+  "129": {
+    "inputs": {
+      "randomize_percent": 50,
+      "auto_strength_factor": 1,
+      "strength": 20,
+      "noise_insert": "noise on beginning steps",
+      "steps_switchover_percent": 25,
+      "seed": 450444501170150,
+      "mask_starts_at": "beginning",
+      "mask_percent": 0,
+      "log_to_console": false,
+      "noise_distribution": "uniform",
+      "granularity": "values",
+      "conditioning": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "KreaSeedVarianceEnhancer",
+    "_meta": {
+      "title": "Seed Variance Enhancer - Krea 2 Turbo"
+    }
+  },
+  "130": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "128",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
+    }
+  },
+  "135": {
+    "inputs": {
+      "value": "A high-resolution, neutral front-view bust-up portrait of an imposing, dark-skinned Indian man with subtle ancient royal features, designed as a character baseline. Symmetrical composition looking directly at the camera with an intense, calm, and majestic expression. He possesses a strong square jawline, high chiseled cheekbones, a pronounced brow ridge, and a sharp aquiline nose bridge. Deep-set, striking eyes with subtle amber-hazel irises framed by thick, sharply arched dark eyebrows. His dark black, shoulder-length hair is neatly combed straight backwards. A prominent, well-groomed, long curvy dark mustache is styled neatly, contrasting with his completely clean-shaven chin and cheeks (zero beard). No jewelry or marks. Wearing a simple dark emerald-green Khadi cotton shirt. Soft, even, studio lighting, neutral grey background, sharp focus, 8k resolution, ultra-detailed photorealistic render."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "(Input:prompt) Prompt"
+    }
+  },
+  "136": {
+    "inputs": {
+      "value": 1920
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:width) Width"
+    }
+  },
+  "137": {
+    "inputs": {
+      "value": 1088
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:height) Height"
+    }
+  },
+  "138": {
+    "inputs": {
+      "value": 0
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:seed) Seed"
+    }
+  }
+}

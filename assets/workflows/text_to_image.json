@@ -1,0 +1,15 @@
+{
+  "name": "Simple Text to Image",
+  "json": {
+    "inputs": {
+      "prompt": "A serene mountain lake at sunrise, cinematic lighting, 8k resolution",
+      "seed": 42,
+      "steps": 20,
+      "cfg": 7.5,
+      "sampler_name": "euler"
+    },
+    "outputs": {
+      "image": "Image Output"
+    }
+  }
+}

@@ -13,20 +13,8 @@ from models import (
     HandshakeResponse
 )
 
-# Import Models
-from models import (
-    StoryInput, 
-    StoryOutput, 
-    Beat, 
-    ProjectCreate, 
-    LLMSettingsModel, 
-    BackendSettingsModel, 
-    ComfyUISettingsModel, 
-    HandshakeResponse
-)
-
 # Import Routers
-from routes import settings, projects, handshake, comfyui
+from routes import settings, projects, handshake, comfyui, workflows
 
 from database import db, get_db
 
@@ -85,6 +73,7 @@ async def shutdown():
 app.include_router(settings.router)
 app.include_router(projects.router)
 app.include_router(handshake.router)
+app.include_router(workflows.router)
 app.include_router(comfyui.router)
 
 # --- Root Endpoint (Optional) ---
