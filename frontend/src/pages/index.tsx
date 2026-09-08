@@ -3,6 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import StoryStage from '../components/studio/StoryStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
+import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
 import { useSettingsStore } from '../store/settingsStore';
 
 const Studio = () => {
@@ -151,7 +152,7 @@ const Studio = () => {
 
         {activeTab === 'playground' && (
           <div className="flex flex-1 items-center justify-center p-8">
-             <p className="text-gray-500">Playground coming soon...</p>
+            <ComfyUIPlayground />
           </div>
         )}
 

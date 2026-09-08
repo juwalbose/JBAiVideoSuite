@@ -5,9 +5,9 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('llm');
   const [testStatus, setTestStatus] = useState('');
   const [isTesting, setIsTesting] = useState(false);
-  const { llm, backend, comfyui, workflows, setLLM, setBackend, setComfyUI, addWorkflow, availableModels, setAvailableModels, saveLLM, saveBackend, saveComfyUI, loadSettings } = useSettingsStore();
+  const { llm, backend, comfyui, workflows, setLLM, setBackend, setComfyUI, addWorkflow, availableModels, setAvailableModels, saveLLM, saveBackend, saveComfyUI, loadSettings, testComfyuiConnection } = useSettingsStore();
 
-  const testLLMConnection = async () => {
+  const runLLMTest = async () => {
     setIsTesting(true);
     setTestStatus('Testing...');
     try {
@@ -118,7 +118,7 @@ const Settings = () => {
             </div>
             <div className="mb-6">
               <button 
-                onClick={testLLMConnection}
+                onClick={runLLMTest}
                 disabled={isTesting}
                 className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
               >
@@ -132,12 +132,12 @@ const Settings = () => {
               <div>
                 <h3 className="text-sm font-bold mb-2">Available Models:</h3>
                 <ul className="list-disc ml-5 text-sm">
-  {availableModels.map((m, i) => (
-    <li key={i}>
-      {typeof m === 'object' ? (m.id || m.name || m.object?.name || JSON.stringify(m)) : m}
-    </li>
-  ))}
-</ul>
+                  {availableModels.map((m, i) => (
+                    <li key={i}>
+                      {typeof m === 'object' ? (m.id || m.name || m.object?.name || JSON.stringify(m)) : m}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
             <div className="mt-8 pt-4 border-t">
@@ -215,6 +215,25 @@ const Settings = () => {
                   value={comfyui.deviceId} 
                   onChange={(e) => setComfyUI({ deviceId: e.target.value })}
                 />
+              </div>
+            </div>
+            <div className="mb-6">
+              <button 
+                onClick={async () => {
+                  setIsTesting(true);
+                  const status = await testComfyuiConnection();
+                  setTestStatus(status);
+                  setIsTesting(false);
+                }}
+                className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+              >
+                {isTesting ? 'Testing...' : 'Test Connection & Status'}
+              </button>
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 mb-1">Calling: <span className="font-mono">{comfyui.ip}:{comfyui.port}</span></p>
+                {testStatus && (
+                  <p className="font-mono text-sm">{testStatus}</p>
+                )}
               </div>
             </div>
             <div className="mt-8 pt-4 border-t">

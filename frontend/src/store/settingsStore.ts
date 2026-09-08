@@ -73,6 +73,21 @@ export const useSettingsStore = create<SettingsState>()(
       addWorkflow: (workflow) => set((state) => ({ workflows: [...state.workflows, workflow] })),
       setAvailableModels: (models) => set({ availableModels: models }),
 
+      testComfyuiConnection: async () => {
+        const state = useSettingsStore.getState();
+        try {
+          // Call the new /check route using the dynamic IP and Port from settings as query parameters
+          const response = await fetch(`${state.backend.apiUrl}/comfyui/check?host=${state.comfyui.ip}&port=${state.comfyui.port}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.details;
+        } catch (error) {
+          return `🔴 Unreachable (${error.message})`;
+        }
+      },
+
       saveLLM: async () => {
         const state = useSettingsStore.getState();
         await fetch('http://127.0.0.1:8000/settings/save-llm', {
