@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useSettingsStore } from './settingsStore';
 
 export type AssetType = 'CHARACTER' | 'ENVIRONMENT' | 'PROP';
 
@@ -55,9 +56,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  setProjects: (newProject) => set((state) => ({ 
-    projects: state.projects.length === 0 ? [newProject] : [...state.projects, newProject] 
-  })),
+  setProjects: (newProject) => set((state) => { 
+    return { projects: state.projects.length === 0 ? [newProject] : [...state.projects, newProject] };
+  }),
   addProject: (newProject) => set((state) => ({ 
     projects: [...state.projects, newProject] 
   })),
@@ -66,7 +67,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjects: async () => {
     set({ isLoading: true });
     try {
-      const response = await fetch('http://127.0.0.1:8000/projects/');
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/`);
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       set({ projects: data, isLoading: false });
@@ -78,7 +80,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   deleteAllProjects: async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/projects/delete-all', {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/delete-all`, {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete all projects');
@@ -92,56 +95,53 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   updateProject: async (name: string, description?: string) => {
     if (!get().currentProject) return;
     try {
-      const response = await fetch(`http://127.0.0.1:8000/projects/${get().currentProject.id}`, {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/${get().currentProject.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description: description || "" })
       });
       if (!response.ok) throw new Error('Failed to update project');
-      const data = await response.json();
-      set((state) => ({
-        currentProject: { ...state.currentProject, name: data.name, description: data.description }
-      }));
     } catch (error) {
       console.error("Error updating project:", error);
     }
   },
 
   updateStory: async (narrativeArc: string, rawInput?: string) => {
-    if (!get().currentProject) return;
+    if (!get().currentProject || !get().currentProject.story) return;
     try {
-      const response = await fetch(`http://127.0.0.1:8000/projects/${get().currentProject.id}/story`, {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/${get().currentProject.id}/story`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          narrative_arc: narrativeArc, 
-          original_idea: rawInput 
-        })
+        body: JSON.stringify({ narrativeArc, rawInput })
       });
       if (!response.ok) throw new Error('Failed to update story');
-      const data = await response.json();
-      set((state) => ({
-        currentProject: state.currentProject ? {
-          ...state.currentProject,
-          story: { id: data.id, narrativeArc: data.narrative_arc, rawInput: data.raw_input }
-        } : null
-      }));
     } catch (error) {
       console.error("Error updating story:", error);
     }
   },
 
-  addBeat: (content) => set((state) => ({
-    currentProject: state.currentProject ? {
-      ...state.currentProject,
-      beats: [...state.currentProject.beats, { id: 'temp-id', content, shots: [] }]
-    } : null
-  })),
+  addBeat: (content: string) => {
+    const project = get().currentProject;
+    if (!project) return;
+    const newBeat = {
+      id: Math.random().toString(36).substring(2, 9),
+      content,
+      order: project.beats.length,
+      shots: []
+    };
+    set({ currentProject: { ...project, beats: [...project.beats, newBeat] } });
+  },
 
-  removeBeat: (beatId) => set((state) => ({
-    currentProject: state.currentProject ? {
-      ...state.currentProject,
-      beats: state.currentProject.beats.filter(b => b.id !== beatId)
-    } : null
-  })),
+  removeBeat: (beatId: string) => {
+    const project = get().currentProject;
+    if (!project) return;
+    set({ 
+      currentProject: { 
+        ...project, 
+        beats: project.beats.filter(b => b.id !== beatId) 
+      } 
+    });
+  },
 }));

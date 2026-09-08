@@ -70,16 +70,23 @@ class HandshakeResponse(BaseModel):
 
 # --- Helper Functions ---
 
-def call_llm(prompt: str) -> str:
+async def call_llm(prompt: str) -> str:
     """Helper to call LM Studio's local LLM using the OpenAI SDK."""
-    url = "http://192.168.1.66:1234/v1/chat/completions"
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        # Fallback defaults if no settings exist in DB yet
+        ip, port, modelName, temperature = "192.168.1.66", 1234, "gemma-4-e4b-uncensored-hauhaucs-aggressive", 0.7
+    else:
+        ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
+
+    url = f"http://{ip}:{port}/v1/chat/completions"
     payload = {
-        "model": "gemma-4-e4b-uncensored-hauhaucs-aggressive", 
+        "model": modelName, 
         "messages": [
             {"role": "system", "content": "You are a creative video production assistant."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.7,
+        "temperature": temperature,
     }
     try:
         response = requests.post(url, json=payload)
@@ -98,6 +105,34 @@ def call_llm(prompt: str) -> str:
 @app.on_event("startup")
 async def startup():
     await db.connect()
+    await initialize_settings()
+
+async def initialize_settings():
+    """Initialize default settings in the database if they don't exist."""
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        await db.llmsettings.create({
+            "ip": "192.168.1.66",
+            "port": 1234,
+            "modelName": "gemma-4-e4b-uncensored-hauhaucs-aggressive",
+            "temperature": 0.7,
+            "maxTokens": 512,
+        })
+    
+    backend = await db.backendsettings.find_first()
+    if not backend:
+        await db.backendsettings.create({
+            "apiUrl": "http://127.0.0.1:8000",
+            "dbPath": "backend/prisma/database.db",
+        })
+
+    comfyui = await db.comfyuisettings.find_first()
+    if not comfyui:
+        await db.comfyuisettings.create({
+            "ip": "127.0.0.1",
+            "port": 8188,
+            "deviceId": "0",
+        })
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -107,9 +142,13 @@ async def shutdown():
 
 @app.get("/handshake", response_model=HandshakeResponse)
 async def check_lmstudio_health():
-    LM_STUDIO_HOST = "192.168.1.66"
-    LM_STUDIO_PORT = 1234
-    BASE_URL = f"http://{LM_STUDIO_HOST}:{LM_STUDIO_PORT}/v1"
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        ip, port = "192.168.1.66", 1234
+    else:
+        ip, port = llm.ip, llm.port
+
+    BASE_URL = f"http://{ip}:{port}/v1"
 
     try:
         # 1. Check reachability and fetch loaded models
@@ -158,19 +197,23 @@ async def check_lmstudio_health():
 @app.get("/settings/")
 async def get_settings():
     """Fetch all settings from the database."""
+    llm = await db.llmsettings.find_first()
+    backend = await db.backendsettings.find_first()
+    comfyui = await db.comfyuisettings.find_first()
+
     return {
-        "llm": {
+        "llm": llm if llm else {
             "ip": "192.168.1.66",
             "port": 1234,
             "modelName": "gemma-4-e4b-uncensored-hauhaucs-aggressive",
             "temperature": 0.7,
             "maxTokens": 512,
         },
-        "backend": {
+        "backend": backend if backend else {
             "apiUrl": "http://127.0.0.1:8000",
             "dbPath": "backend/prisma/database.db",
         },
-        "comfyui": {
+        "comfyui": comfyui if comfyui else {
             "ip": "127.0.0.1",
             "port": 8188,
             "deviceId": "0",
@@ -179,17 +222,42 @@ async def get_settings():
 
 @app.post("/settings/save-llm")
 async def save_llm_settings(settings: LLMSettingsModel):
-    print(f"DEBUG: Saving LLM Settings: {settings}")
+    llm = await db.llmsettings.find_first()
+    if llm:
+        await db.llmsettings.update({
+            "ip": settings.ip,
+            "port": settings.port,
+            "modelName": settings.modelName,
+            "temperature": settings.temperature,
+            "maxTokens": settings.maxTokens
+        }, where={"id": llm.id})
+    else:
+        await db.llmsettings.create(**settings.dict())
     return {"status": "success", "data": settings}
 
 @app.post("/settings/save-backend")
 async def save_backend_settings(settings: BackendSettingsModel):
-    print(f"DEBUG: Saving Backend Settings: {settings}")
+    backend = await db.backendsettings.find_first()
+    if backend:
+        await db.backendsettings.update({
+            "apiUrl": settings.apiUrl,
+            "dbPath": settings.dbPath
+        }, where={"id": backend.id})
+    else:
+        await db.backendsettings.create(**settings.dict())
     return {"status": "success", "data": settings}
 
 @app.post("/settings/save-comfyui")
 async def save_comfyui_settings(settings: ComfyUISettingsModel):
-    print(f"DEBUG: Saving ComfyUI Settings: {settings}")
+    comfy = await db.comfyuisettings.find_first()
+    if comfy:
+        await db.comfyuisettings.update({
+            "ip": settings.ip,
+            "port": settings.port,
+            "deviceId": settings.deviceId
+        }, where={"id": comfy.id})
+    else:
+        await db.comfyuisettings.create(**settings.dict())
     return {"status": "success", "data": settings}
 
 # --- New LLM Test Endpoint ---
@@ -197,8 +265,12 @@ async def save_comfyui_settings(settings: ComfyUISettingsModel):
 @app.get("/llm-test")
 async def test_llm():
     """Proxy endpoint to fetch models from LM Studio, bypassing browser CORS issues."""
-    ip = "192.168.1.66"
-    port = 1234
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        ip, port = "192.168.1.66", 1234
+    else:
+        ip, port = llm.ip, llm.port
+
     url = f"http://{ip}:{port}/v1/models"
     
     try:
