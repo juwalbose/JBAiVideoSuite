@@ -2,6 +2,11 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 import httpx
 
+import os
+from pathlib import Path
+from database import db
+from models import ComfyUISettingsModel
+
 router = APIRouter(prefix="/comfyui", tags=["ComfyUI"])
 
 class ComfyUIStatus(BaseModel):
@@ -58,3 +63,42 @@ async def check_comfyui(host: str = Query("127.0.0.1"), port: int = Query(8188))
                 url=target_url,
                 details=f"Error checking ComfyUI: {str(e)}"
             )
+
+@router.post("/upload/image")
+async def upload_image(filename: str = Query(...)):
+    # Fetch ComfyUI settings from DB
+    comfy_settings = await db.comfyuisettings.find_first()
+    if not comfy_settings:
+        return {"error": "ComfyUI settings not found in database."}
+
+    target_url = f"http://{comfy_settings.ip}:{comfy_settings.port}/upload/image"
+    
+    # Use a more robust pathing system relative to the project root
+    base_path = Path(__file__).resolve().parent.parent
+    image_path = base_path / "assets" / "generated" / filename
+
+    if not image_path.exists():
+        return {"error": f"File not found at {image_path}"}
+
+    try:
+        with open(image_path, "rb") as f:
+            file_bytes = f.read()
+
+        # ComfyUI strictly expects multipart form key named "image"
+        files = {
+            "image": (filename, file_bytes, "image/png"),
+        }
+        data = {"overwrite": "true"}
+
+        upload_res = await httpx.AsyncClient().post(
+            target_url, 
+            files=files, 
+            data=data
+        )
+
+        if upload_res.status_code == 200:
+            return upload_res.json()
+        else:
+            return {"error": f"ComfyUI returned {upload_res.status_code}: {upload_res.text}"}
+    except Exception as e:
+        return {"error": str(e)}

@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 
 # Import Models
@@ -24,10 +26,17 @@ app = FastAPI(title="BionicProducer API")
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount the assets directory to serve static files (images, workflows, etc.)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+assets_dir = os.path.abspath(os.path.join(base_dir, "..", "assets"))
+print(f"DEBUG: Assets directory mounted at: {assets_dir}")
+app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 # --- Startup/Shutdown Events ---
 

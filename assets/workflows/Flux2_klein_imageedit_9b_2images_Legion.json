@@ -1,0 +1,384 @@
+{
+  "76": {
+    "inputs": {
+      "image": "Mahabali_LegendaryFront.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(Input:image) Image1"
+    }
+  },
+  "155": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "156": {
+    "inputs": {
+      "noise": [
+        "158",
+        0
+      ],
+      "guider": [
+        "162",
+        0
+      ],
+      "sampler": [
+        "155",
+        0
+      ],
+      "sigmas": [
+        "169",
+        0
+      ],
+      "latent_image": [
+        "161",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "157": {
+    "inputs": {
+      "samples": [
+        "156",
+        0
+      ],
+      "vae": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "158": {
+    "inputs": {
+      "noise_seed": [
+        "172",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "159": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "161": {
+    "inputs": {
+      "width": [
+        "181",
+        0
+      ],
+      "height": [
+        "182",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "162": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "174",
+        0
+      ],
+      "positive": [
+        "178",
+        0
+      ],
+      "negative": [
+        "175",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Guider"
+    }
+  },
+  "163": {
+    "inputs": {
+      "conditioning": [
+        "167",
+        0
+      ],
+      "latent": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "164": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "165": {
+    "inputs": {
+      "conditioning": [
+        "166",
+        0
+      ],
+      "latent": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "166": {
+    "inputs": {
+      "text": [
+        "173",
+        0
+      ],
+      "clip": [
+        "183",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "167": {
+    "inputs": {
+      "conditioning": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "168": {
+    "inputs": {
+      "pixels": [
+        "179",
+        0
+      ],
+      "vae": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "169": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "181",
+        0
+      ],
+      "height": [
+        "182",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "171": {
+    "inputs": {
+      "images": [
+        "157",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "(output:image) Image Output"
+    }
+  },
+  "172": {
+    "inputs": {
+      "value": 0
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:seed) Seed"
+    }
+  },
+  "173": {
+    "inputs": {
+      "value": "both characters standing facing each other"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "(Input:prompt) Prompt"
+    }
+  },
+  "174": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "159",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
+    }
+  },
+  "175": {
+    "inputs": {
+      "conditioning": [
+        "163",
+        0
+      ],
+      "latent": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "176": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "180",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "177": {
+    "inputs": {
+      "pixels": [
+        "176",
+        0
+      ],
+      "vae": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "178": {
+    "inputs": {
+      "conditioning": [
+        "165",
+        0
+      ],
+      "latent": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "179": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "76",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "180": {
+    "inputs": {
+      "image": "Indra_NormalFront.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(Input:image) Image2"
+    }
+  },
+  "181": {
+    "inputs": {
+      "value": 1920
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:width) Width"
+    }
+  },
+  "182": {
+    "inputs": {
+      "value": 1088
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:height) Height"
+    }
+  },
+  "183": {
+    "inputs": {
+      "clip_name": "Qwen3-8B-Q4_K_M.gguf",
+      "type": "stable_diffusion"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "CLIPLoader (GGUF)"
+    }
+  }
+}
