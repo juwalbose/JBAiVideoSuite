@@ -22,7 +22,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
               <textarea 
                 className="p-2 border rounded bg-white"
                 rows={3}
-                value={values[role]}
+                value={values[role] ?? ""}
                 onChange={(e) => onChange(role, e.target.value)}
               />
             </div>
@@ -51,8 +51,8 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
               <input 
                 type="number" 
                 className="p-2 border rounded bg-white"
-                value={values[role]}
-                onChange={(e) => onChange(role, parseInt(e.target.value))}
+                value={values[role] ?? ""}
+                onChange={(e) => onChange(role, e.target.value === "" ? 0 : parseInt(e.target.value))}
               />
             </div>
           );
