@@ -42,21 +42,64 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
 
-    // Check if it's an image input workflow
+    // Identify image roles
     const imageRoles = Object.entries(activeWorkflowData.inputs).filter(([_, field]) => field.type === 'image');
     
+    // Basic check: If it's an image workflow, ensure all images are selected
     if (imageRoles.length > 0) {
-      const filenames = imageRoles.map(([role, _]) => `[${role}]: ${inputValues[role] || "No file picked"}`).join(', ');
-      alert(`Image Input Workflow detected!\nFiles: ${filenames}`);
+      for (const [role, _] of imageRoles) {
+        if (!inputValues[role]) {
+          alert(`Please select an image for the "${role}" input.`);
+          return; // Exit early if any image is missing
+        }
+      }
+
+      const filenames = imageRoles.map(([role, _]) => `[${role}]: ${inputValues[role] instanceof File ? inputValues[role].name : inputValues[role]}`).join(', ');
+      console.log(`Image Input Workflow detected!\nFiles: ${filenames}`);
     }
 
     setIsGenerating(true);
     
     const finalInputs: Record<string, any> = {};
-    Object.keys(activeWorkflowData.inputs).forEach(key => {
+    for (const key of Object.keys(activeWorkflowData.inputs)) {
       const field = activeWorkflowData.inputs[key];
-      finalInputs[key] = inputValues[key] ?? field.value;
-    });
+      if (field.type === 'image') {
+        // If it's an image role and we have a File object, upload it first
+        if (inputValues[key] instanceof File) {
+          console.log(`Starting upload for ${key}...`);
+          try {
+            const formData = new FormData();
+            formData.append('file', inputValues[key]);
+
+            const res = await fetch(`${baseUrl}/comfyui/upload`, {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!res.ok) throw new Error(`Upload failed for ${key}`);
+            
+            const data = await res.json();
+            console.log(`Upload response for ${key}:`, data);
+            // Update the value in our local state to the name returned by ComfyUI
+            setInputValues(prev => ({ ...prev, [key]: data.name }));
+            // Also update finalInputs with the new name
+            finalInputs[key] = data.name;
+          } catch (err) {
+            console.error(`Error uploading image for ${key}:`, err);
+            // If it failed to upload, use the filename of the File object as a fallback
+            finalInputs[key] = inputValues[key] instanceof File ? inputValues[key].name : inputValues[key];
+          }
+        } else {
+          // Ensure we are passing a string (either the picked name or the default value)
+          const val = inputValues[key] ?? field.value;
+          finalInputs[key] = typeof val === 'object' ? (val as any).name : val;
+        }
+      } else {
+        // For non-image types, ensure we pass a string or number
+        const val = inputValues[key] ?? field.value;
+        finalInputs[key] = typeof val === 'object' ? (val as any).name : val;
+      }
+    }
 
     try {
       const response = await fetch(`${baseUrl}/playground/generate`, {

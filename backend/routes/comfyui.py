@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, File, HTTPException, UploadFile
 from pydantic import BaseModel
 import httpx
+from database import db
 
 router = APIRouter(prefix="/comfyui", tags=["ComfyUI"])
 
@@ -58,3 +59,49 @@ async def check_comfyui(host: str = Query("127.0.0.1"), port: int = Query(8188))
                 url=target_url,
                 details=f"Error checking ComfyUI: {str(e)}"
             )
+
+@router.post("/upload")
+async def upload_to_comfy(file: UploadFile = File(...)):
+    print(f"Backend received upload request for file: {file.filename}")
+    # Fetch comfyui settings from DB
+    comfyui = await db.comfyuisettings.find_first()
+    if not comfyui:
+        raise HTTPException(status_code=500, detail="ComfyUI settings not found in database.")
+
+    # Accessing fields using dot notation for Prisma Model objects
+    host = comfyui.ip
+    port = comfyui.port
+    target_url = f"http://{host}:{port}"
+
+    # Read binary bytes sent from React
+    file_bytes = await file.read()
+
+    # ComfyUI strictly expects multipart form key named "image"
+    files = {
+        "image": (
+            file.filename,
+            file_bytes,
+            file.content_type or "image/png",
+        )
+    }
+    data = {"overwrite": "true"}
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            res = await client.post(
+                f"{target_url}/upload/image", files=files, data=data
+            )
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail="ComfyUI is unreachable. Check if it is running.",
+            )
+
+        if res.status_code != 200:
+            raise HTTPException(
+                status_code=res.status_code,
+                detail=f"ComfyUI rejected upload: {res.text}",
+            )
+
+        # Returns: {"name": "my_image.png", "subfolder": "", "type": "input"}
+        return res.json()

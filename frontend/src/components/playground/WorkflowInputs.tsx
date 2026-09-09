@@ -39,7 +39,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
                   const file = e.target.files?.[0];
                   if (file) {
                     console.log(`Picked file for ${role}: ${file.name}`);
-                    onChange(role, file.name);
+                    onChange(role, file);
                   }
                 }}
               />
