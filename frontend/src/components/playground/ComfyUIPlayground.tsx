@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
+import WorkflowInputs from './WorkflowInputs';
+import GenerationResult from './GenerationResult';
 
 interface InputField {
   type: 'string' | 'int' | 'image';
@@ -149,7 +151,7 @@ const ComfyUIPlayground = () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-4">
+    <div className="flex flex-col gap-8 p-4 h-[calc(100vh-2rem)] overflow-y-auto">
       <section>
         <h3 className="text-lg font-bold mb-4">Workflow Selection</h3>
         <div className="flex flex-wrap gap-2">
@@ -165,7 +167,7 @@ const ComfyUIPlayground = () => {
         </div>
       </section>
 
-      <section className="border p-6 rounded-xl bg-gray-50">
+      <div className="w-full border p-6 rounded-xl bg-gray-50 shadow-sm">
         <h3 className="text-lg font-bold mb-4">Preview</h3>
         {isLoadingParse ? (
           <p className="text-gray-500 italic">Parsing workflow...</p>
@@ -182,75 +184,23 @@ const ComfyUIPlayground = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-4 mb-6">
-              {Object.entries(activeWorkflowData.inputs).map(([role, field]) => {
-                if (field.type === 'string') {
-                  return (
-                    <div key={role} className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold uppercase text-gray-500">{role}</label>
-                      <textarea 
-                        className="p-2 border rounded bg-white"
-                        rows={3}
-                        value={inputValues[role]}
-                        onChange={(e) => setInputValues(prev => ({ ...prev, [role]: e.target.value }))}
-                      />
-                    </div>
-                  );
-                } else if (field.type === 'image') {
-                  return (
-                    <div key={role} className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold uppercase text-gray-500">{role}</label>
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        className="p-2 border rounded bg-white"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setImagePaths(prev => ({ ...prev, [role]: file.name }));
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div key={role} className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold uppercase text-gray-500">{role}</label>
-                      <input 
-                        type="number" 
-                        className="p-2 border rounded bg-white"
-                        value={inputValues[role]}
-                        onChange={(e) => setInputValues(prev => ({ ...prev, [role]: parseInt(e.target.value) }))}
-                      />
-                    </div>
-                  );
-                }
-              })}
-            </div>
+            <WorkflowInputs 
+              inputs={activeWorkflowData.inputs}
+              values={inputValues}
+              onChange={(role, value) => setInputValues(prev => ({ ...prev, [role]: value }))}
+            />
 
-            <button 
-              onClick={handleGenerate}
-              disabled={isGenerating || !activeWorkflowData.is_valid}
-              className={`px-8 py-3 rounded-full font-bold text-white transition-all ${isGenerating ? 'bg-gray-400' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
-            >
-              {isGenerating ? 'Generating...' : 'Generate'}
-            </button>
-
-            <div className="mt-8 flex justify-center">
-              {resultImage ? (
-                <img src={resultImage} alt="Generated result" className="max-w-full h-auto rounded shadow-md border" />
-              ) : (
-                <div className="w-64 h-64 bg-gray-200 flex items-center justify-center rounded text-gray-400 italic">
-                  Result will appear here
-                </div>
-              )}
-            </div>
+            <GenerationResult 
+              isGenerating={isGenerating}
+              resultImage={resultImage}
+              onGenerate={handleGenerate}
+              isValid={activeWorkflowData?.is_valid ?? false}
+            />
           </>
         ) : (
           !isLoadingParse && <p className="text-gray-500">Select a workflow to begin.</p>
         )}
-      </section>
+      </div>
     </div>
   );
 };
