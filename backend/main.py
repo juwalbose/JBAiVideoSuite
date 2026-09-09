@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from typing import Optional
+from fastapi.staticfiles import StaticFiles
 
 # Import Models
 from models import (
@@ -14,11 +15,16 @@ from models import (
 )
 
 # Import Routers
-from routes import settings, projects, handshake, comfyui, workflows, playground
+from routes import settings, projects, handshake, comfyui, workflows, playground, gallery
 
 from database import db, get_db
 
 app = FastAPI(title="BionicProducer API")
+
+# --- Static Files Mounting ---
+# This allows the browser to access files in the assets folder via /assets/ path.
+# Since main.py is inside the backend folder, we go up one level (..) to find assets.
+app.mount("/assets", StaticFiles(directory="../assets"), name="assets")
 
 # Middleware for CORS
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,6 +82,7 @@ app.include_router(handshake.router)
 app.include_router(workflows.router)
 app.include_router(comfyui.router)
 app.include_router(playground.router)
+app.include_router(gallery.router)
 
 # --- Root Endpoint (Optional) ---
 @app.get("/")
