@@ -78,7 +78,9 @@ async def generate(request: GenerateRequest, db: Any = Depends(get_db)):
                     if role == "prompt":
                         inputs_dict[role] = value if isinstance(value, (int, float)) else value
                     else:
-                        inputs_dict[role] = value if isinstance(value, (int, float)) else [value]
+                        # If it's a string and not prompt, use the string directly. 
+                        # Otherwise, wrap in a list for multi-value inputs or keep as is for numbers.
+                        inputs_dict[role] = value if isinstance(value, (int, float)) or isinstance(value, str) else [value]
 
     # Log the modified JSON to terminal for debugging
     print(f"\n--- Modified Workflow JSON ({workflow_id}) ---")
