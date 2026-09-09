@@ -41,16 +41,21 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
 
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
+
+    // Check if it's an image input workflow
+    const imageRoles = Object.entries(activeWorkflowData.inputs).filter(([_, field]) => field.type === 'image');
+    
+    if (imageRoles.length > 0) {
+      const filenames = imageRoles.map(([role, _]) => `[${role}]: ${inputValues[role] || "No file picked"}`).join(', ');
+      alert(`Image Input Workflow detected!\nFiles: ${filenames}`);
+    }
+
     setIsGenerating(true);
     
     const finalInputs: Record<string, any> = {};
     Object.keys(activeWorkflowData.inputs).forEach(key => {
       const field = activeWorkflowData.inputs[key];
-      if (field.type === 'image') {
-        finalInputs[key] = imagePaths[key] || field.value;
-      } else {
-        finalInputs[key] = inputValues[key] ?? field.value;
-      }
+      finalInputs[key] = inputValues[key] ?? field.value;
     });
 
     try {

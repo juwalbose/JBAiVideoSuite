@@ -9,7 +9,8 @@ class PlaygroundParser:
             "prompt": "string",
             "width": "int",
             "height": "int",
-            "seed": "int"
+            "seed": "int",
+            "image": "image"
         }
 
     def parse(self, workflow_path):
