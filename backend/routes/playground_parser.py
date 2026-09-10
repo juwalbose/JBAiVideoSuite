@@ -35,9 +35,10 @@ class PlaygroundParser:
         playground_obj = {
             "workflow_name": full_path.split('/')[-1].replace('.json', '').replace('_', ' '),
             "inputs": {},
-            "nodes": data, # <--- Added this line to ensure nodesCount > 0 in the UI
+            "nodes": data,
             "output_type": None,
-            "is_valid": False
+            "is_valid": False,
+            "image_node_map": {}
         }
 
         image_nodes = []
@@ -87,6 +88,8 @@ class PlaygroundParser:
                 "type": "image",
                 "value": node["value"]
             }
+            # Store the mapping of role name to actual Node ID
+            playground_obj["image_node_map"][role] = node["id"]
 
         # A workflow is valid only if it has exactly one output node
         output_nodes = playground_obj.get("output_nodes", [])

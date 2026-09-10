@@ -14,7 +14,7 @@ interface PlaygroundObject {
   output_type: string;
   is_valid: boolean;
   invalid_reason?: string;
-  id: string; 
+  image_node_map: Record<string, string>;
 }
 
 interface WorkflowInputManagerProps {
@@ -29,55 +29,15 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
-  // Initialize input values when activeWorkflowData changes
   React.useEffect(() => {
     if (activeWorkflowData && activeWorkflowData.nodes) {
       const newInputs: Record<string, any> = {};
-      
-      // 1. Identify all nodes that have an image role from the nodes object directly
-      const imageNodeIds = Object.keys(activeWorkflowData.inputs).filter(id => 
-        activeWorkflowData.inputs[id]?.type === 'image'
-      );
-
-      if (imageNodeIds.length === 1) {
-        // Single Image Workflow: Use the standard "image" key
-        const id = imageNodeIds[0];
-        const field = activeWorkflowData.inputs[id];
-        newInputs["image"] = {
-          type: 'image',
-          value: field?.value ?? ""
+      Object.entries(activeWorkflowData.inputs).forEach(([id, field]) => {
+        newInputs[id] = {
+          type: field.type,
+          value: field.value ?? ""
         };
-      } else if (imageNodeIds.length > 1) {
-        // Multi-Image Workflow: Use the actual Node ID as the key for a 1:1 relation
-        const sortedIds = [...imageNodeIds].sort((a, b) => {
-          const nodeA = activeWorkflowData.nodes[a];
-          const nodeB = activeWorkflowData.nodes[b];
-          const titleA = nodeA?._meta?.title || "";
-          const titleB = nodeB?._meta?.title || "";
-          const numA = parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0;
-          const numB = parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0;
-          return numA - numB;
-        });
-
-        sortedIds.forEach((id) => {
-          const field = activeWorkflowData.inputs[id];
-          newInputs[id] = { // Changed from `image${index + 1}` to `id`
-            type: 'image',
-            value: field?.value ?? ""
-          };
-        });
-      }
-
-      // 2. Process all other inputs (strings, ints) using their original roles/IDs
-      Object.entries(activeWorkflowData.inputs).forEach(([role, field]) => {
-        if (field.type !== 'image') {
-          newInputs[role] = {
-            type: field.type,
-            value: field.value
-          };
-        }
       });
-
       setInputValues(newInputs);
     }
   }, [activeWorkflowData]);
@@ -87,24 +47,16 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
 
     console.log("[Gen] Starting generation process...");
 
-    // Identify image roles (using the keys we established in useEffect)
     const imageRoles = Object.entries(inputValues).filter(([_, value]) => 
       value?.type === 'image'
     );
     
-    console.log(`[Gen] Image roles identified: ${JSON.stringify(imageRoles)}`);
-
-    let sortedImageRoles = [...imageRoles];
-
-    if (imageRoles.length > 1) {
-      sortedImageRoles = imageRoles.sort((a, b) => {
-        const titleA = activeWorkflowData.nodes[a[0]]?._meta?.title || "";
-        const titleB = activeWorkflowData.nodes[b[0]]?._meta?.title || "";
-        const numA = parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0;
-        const numB = parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0;
-        return numA - numB;
-      });
-    }
+    const sortedImageRoles = [...imageRoles].sort((a, b) => {
+      const titleA = activeWorkflowData.nodes[a[0]]?._meta?.title || "";
+      const titleB = activeWorkflowData.nodes[b[0]]?._meta?.title || "";
+      return (parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0) - 
+             (parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0);
+    });
 
     if (imageRoles.length > 0) {
       for (const [role, _] of sortedImageRoles) {
@@ -117,16 +69,17 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
     }
 
     setIsGenerating(true);
-    
     const finalInputs: Record<string, any> = {};
     
     console.log("[Gen] Processing inputs and uploading images...");
 
     for (const [role, data] of Object.entries(inputValues)) {
       if (data?.type === 'image') {
+        const nodeId = activeWorkflowData.image_node_map[role] || role;
+
         if (data.value instanceof File) {
           try {
-            console.log(`[Gen] Uploading file for role "${role}":`, data.value.name);
+            console.log(`[Gen] Uploading file for Node ${nodeId}:`, data.value.name);
             const formData = new FormData();
             formData.append('file', data.value);
 
@@ -135,39 +88,39 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
               body: formData,
             });
 
-            if (!res.ok) throw new Error(`Upload failed for ${role}`);
+            if (!res.ok) throw new Error(`Upload failed for Node ${nodeId}`);
             
             const resultData = await res.json();
-            console.log(`[Gen] Upload success for "${role}". Received name from ComfyUI:`, resultData.name);
+            console.log(`[Gen] Upload success for Node ${nodeId}. Received name from ComfyUI:`, resultData.name);
             setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
 
-            finalInputs[role] = resultData.name; 
+            finalInputs[role] = [nodeId, resultData.name]; 
           } catch (err) {
-            console.error(`[Gen] Error uploading image for "${role}":`, err);
+            console.error(`[Gen] Error uploading image for Node ${nodeId}:`, err);
             const fallbackValue = data.value instanceof File ? data.value.name : data.value;
-            finalInputs[role] = fallbackValue;
+            finalInputs[role] = [nodeId, fallbackValue];
           }
         } else {
-          // If it's an image but not a File (already uploaded or default), use the value
-          finalInputs[role] = data.value;
+          finalInputs[role] = [nodeId, data.value];
         }
       } else {
-        // For non-image types, just take the value
         finalInputs[role] = data.value;
       }
     }
 
-    console.log("[Gen] Final inputs payload constructed:", finalInputs);
+    const payload = {
+      workflow_id: workflowId,
+      inputs: finalInputs
+    };
+
+    console.log("[Gen] Final JSON payload:", JSON.stringify(payload, null, 2));
 
     try {
       console.log("[Gen] Sending generation request to server...");
       const response = await fetch(`${baseUrl}/playground/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          workflow_id: workflowId,
-          inputs: finalInputs 
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -208,7 +161,8 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
         inputs={inputValues}
         values={inputValues}
         nodes={activeWorkflowData.nodes}
-        onChange={(role, value) => setInputValues(prev => ({ ...prev, [role]: { type: prev[role]?.type ?? 'string', value } }))}
+        baseUrl={baseUrl}
+        onChange={(nodeId, value) => setInputValues(prev => ({ ...prev, [nodeId]: { type: prev[nodeId]?.type ?? 'string', value } }))}
       />
 
       <GenerationResult 
