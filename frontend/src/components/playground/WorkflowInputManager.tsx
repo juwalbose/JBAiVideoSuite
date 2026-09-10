@@ -48,7 +48,7 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
           value: field?.value ?? ""
         };
       } else if (imageNodeIds.length > 1) {
-        // Multi-Image Workflow: Sort by title sequence and assign unique keys
+        // Multi-Image Workflow: Use the actual Node ID as the key for a 1:1 relation
         const sortedIds = [...imageNodeIds].sort((a, b) => {
           const nodeA = activeWorkflowData.nodes[a];
           const nodeB = activeWorkflowData.nodes[b];
@@ -59,9 +59,9 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
           return numA - numB;
         });
 
-        sortedIds.forEach((id, index) => {
+        sortedIds.forEach((id) => {
           const field = activeWorkflowData.inputs[id];
-          newInputs[`image${index + 1}`] = {
+          newInputs[id] = { // Changed from `image${index + 1}` to `id`
             type: 'image',
             value: field?.value ?? ""
           };
@@ -85,11 +85,15 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
 
+    console.log("[Gen] Starting generation process...");
+
     // Identify image roles (using the keys we established in useEffect)
     const imageRoles = Object.entries(inputValues).filter(([_, value]) => 
       value?.type === 'image'
     );
     
+    console.log(`[Gen] Image roles identified: ${JSON.stringify(imageRoles)}`);
+
     let sortedImageRoles = [...imageRoles];
 
     if (imageRoles.length > 1) {
@@ -105,6 +109,7 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
     if (imageRoles.length > 0) {
       for (const [role, _] of sortedImageRoles) {
         if (!inputValues[role]) {
+          console.warn(`[Gen] Validation: Missing value for role "${role}"`);
           alert(`Please select an image for the "${role}" input.`);
           return;
         }
@@ -115,16 +120,13 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
     
     const finalInputs: Record<string, any> = {};
     
-    // Determine if we have a single image node or multiple
-    const allImageNodeIds = Object.keys(activeWorkflowData.inputs).filter(id => 
-      activeWorkflowData.inputs[id]?.type === 'image'
-    );
+    console.log("[Gen] Processing inputs and uploading images...");
 
     for (const [role, data] of Object.entries(inputValues)) {
       if (data?.type === 'image') {
         if (data.value instanceof File) {
           try {
-            console.log(`[Log 1] Sending file for ${role}:`, data.value);
+            console.log(`[Gen] Uploading file for role "${role}":`, data.value.name);
             const formData = new FormData();
             formData.append('file', data.value);
 
@@ -136,32 +138,18 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
             if (!res.ok) throw new Error(`Upload failed for ${role}`);
             
             const resultData = await res.json();
-            console.log(`[Log 2] Received name from ComfyUI for ${role}:`, resultData.name);
+            console.log(`[Gen] Upload success for "${role}". Received name from ComfyUI:`, resultData.name);
             setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
 
-            // SURGICAL FIX: If only one image node exists, use the role "image" as the key in finalInputs
-            if (allImageNodeIds.length === 1) {
-              finalInputs["image"] = resultData.name;
-            } else {
-              finalInputs[role] = resultData.name;
-            }
-            console.log(`[Log 3] Final input for ${role} set to:`, finalInputs);
+            finalInputs[role] = resultData.name; 
           } catch (err) {
-            console.error(`Error uploading image for ${role}:`, err);
+            console.error(`[Gen] Error uploading image for "${role}":`, err);
             const fallbackValue = data.value instanceof File ? data.value.name : data.value;
-            if (allImageNodeIds.length === 1) {
-              finalInputs["image"] = fallbackValue;
-            } else {
-              finalInputs[role] = fallbackValue;
-            }
+            finalInputs[role] = fallbackValue;
           }
         } else {
           // If it's an image but not a File (already uploaded or default), use the value
-          if (allImageNodeIds.length === 1) {
-            finalInputs["image"] = data.value;
-          } else {
-            finalInputs[role] = data.value;
-          }
+          finalInputs[role] = data.value;
         }
       } else {
         // For non-image types, just take the value
@@ -169,7 +157,10 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
       }
     }
 
+    console.log("[Gen] Final inputs payload constructed:", finalInputs);
+
     try {
+      console.log("[Gen] Sending generation request to server...");
       const response = await fetch(`${baseUrl}/playground/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,16 +171,19 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
       });
 
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}: ${await response.text()}`);
+        const errorText = await response.text();
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
+      console.log("[Gen] Generation request successful.");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setResultImage(url);
     } catch (error) {
-      console.error("Generation failed:", error);
+      console.error("[Gen] Final generation failed:", error);
     } finally {
       setIsGenerating(false);
+      console.log("[Gen] Generation process complete.");
     }
   };
 
