@@ -10,10 +10,11 @@ interface InputField {
 interface PlaygroundObject {
   workflow_name: string;
   inputs: Record<string, InputField>;
+  nodes: Record<string, any>;
   output_type: string;
   is_valid: boolean;
   invalid_reason?: string;
-  id: string; // Added id to the object for easier access in handleGenerate
+  id: string; 
 }
 
 interface WorkflowInputManagerProps {
@@ -30,74 +31,141 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
 
   // Initialize input values when activeWorkflowData changes
   React.useEffect(() => {
-    if (activeWorkflowData) {
-      const initialInputs: Record<string, any> = {};
+    if (activeWorkflowData && activeWorkflowData.nodes) {
+      const newInputs: Record<string, any> = {};
+      
+      // 1. Identify all nodes that have an image role from the nodes object directly
+      const imageNodeIds = Object.keys(activeWorkflowData.inputs).filter(id => 
+        activeWorkflowData.inputs[id]?.type === 'image'
+      );
+
+      if (imageNodeIds.length === 1) {
+        // Single Image Workflow: Use the standard "image" key
+        const id = imageNodeIds[0];
+        const field = activeWorkflowData.inputs[id];
+        newInputs["image"] = {
+          type: 'image',
+          value: field?.value ?? ""
+        };
+      } else if (imageNodeIds.length > 1) {
+        // Multi-Image Workflow: Sort by title sequence and assign unique keys
+        const sortedIds = [...imageNodeIds].sort((a, b) => {
+          const nodeA = activeWorkflowData.nodes[a];
+          const nodeB = activeWorkflowData.nodes[b];
+          const titleA = nodeA?._meta?.title || "";
+          const titleB = nodeB?._meta?.title || "";
+          const numA = parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0;
+          const numB = parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0;
+          return numA - numB;
+        });
+
+        sortedIds.forEach((id, index) => {
+          const field = activeWorkflowData.inputs[id];
+          newInputs[`image${index + 1}`] = {
+            type: 'image',
+            value: field?.value ?? ""
+          };
+        });
+      }
+
+      // 2. Process all other inputs (strings, ints) using their original roles/IDs
       Object.entries(activeWorkflowData.inputs).forEach(([role, field]) => {
-        initialInputs[role] = field.value;
+        if (field.type !== 'image') {
+          newInputs[role] = {
+            type: field.type,
+            value: field.value
+          };
+        }
       });
-      setInputValues(initialInputs);
+
+      setInputValues(newInputs);
     }
   }, [activeWorkflowData]);
 
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
 
-    // Identify image roles
-    const imageRoles = Object.entries(activeWorkflowData.inputs).filter(([_, field]) => field.type === 'image');
+    // Identify image roles (using the keys we established in useEffect)
+    const imageRoles = Object.entries(inputValues).filter(([_, value]) => 
+      value?.type === 'image'
+    );
     
-    // Basic check: If it's an image workflow, ensure all images are selected
+    let sortedImageRoles = [...imageRoles];
+
+    if (imageRoles.length > 1) {
+      sortedImageRoles = imageRoles.sort((a, b) => {
+        const titleA = activeWorkflowData.nodes[a[0]]?._meta?.title || "";
+        const titleB = activeWorkflowData.nodes[b[0]]?._meta?.title || "";
+        const numA = parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0;
+        const numB = parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0;
+        return numA - numB;
+      });
+    }
+
     if (imageRoles.length > 0) {
-      for (const [role, _] of imageRoles) {
+      for (const [role, _] of sortedImageRoles) {
         if (!inputValues[role]) {
           alert(`Please select an image for the "${role}" input.`);
-          return; // Exit early if any image is missing
+          return;
         }
       }
-
-      const filenames = imageRoles.map(([role, _]) => `[${role}]: ${inputValues[role] instanceof File ? inputValues[role].name : inputValues[role]}`).join(', ');
-      console.log(`Image Input Workflow detected!\nFiles: ${filenames}`);
     }
 
     setIsGenerating(true);
     
     const finalInputs: Record<string, any> = {};
-    for (const key of Object.keys(activeWorkflowData.inputs)) {
-      const field = activeWorkflowData.inputs[key];
-      if (field.type === 'image') {
-        // If it's an image role and we have a File object, upload it first
-        if (inputValues[key] instanceof File) {
-          console.log(`Starting upload for ${key}...`);
+    
+    // Determine if we have a single image node or multiple
+    const allImageNodeIds = Object.keys(activeWorkflowData.inputs).filter(id => 
+      activeWorkflowData.inputs[id]?.type === 'image'
+    );
+
+    for (const [role, data] of Object.entries(inputValues)) {
+      if (data?.type === 'image') {
+        if (data.value instanceof File) {
           try {
+            console.log(`[Log 1] Sending file for ${role}:`, data.value);
             const formData = new FormData();
-            formData.append('file', inputValues[key]);
+            formData.append('file', data.value);
 
             const res = await fetch(`${baseUrl}/comfyui/upload`, {
               method: 'POST',
               body: formData,
             });
 
-            if (!res.ok) throw new Error(`Upload failed for ${key}`);
+            if (!res.ok) throw new Error(`Upload failed for ${role}`);
             
-            const data = await res.json();
-            console.log(`Upload response for ${key}:`, data);
-            // Update the value in our local state to the name returned by ComfyUI
-            setInputValues(prev => ({ ...prev, [key]: data.name }));
-            // Also update finalInputs with the new name
-            finalInputs[key] = data.name;
+            const resultData = await res.json();
+            console.log(`[Log 2] Received name from ComfyUI for ${role}:`, resultData.name);
+            setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
+
+            // SURGICAL FIX: If only one image node exists, use the role "image" as the key in finalInputs
+            if (allImageNodeIds.length === 1) {
+              finalInputs["image"] = resultData.name;
+            } else {
+              finalInputs[role] = resultData.name;
+            }
+            console.log(`[Log 3] Final input for ${role} set to:`, finalInputs);
           } catch (err) {
-            console.error(`Error uploading image for ${key}:`, err);
-            // If it failed to upload, use the filename of the File object as a fallback
-            finalInputs[key] = inputValues[key] instanceof File ? inputValues[key].name : inputValues[key];
+            console.error(`Error uploading image for ${role}:`, err);
+            const fallbackValue = data.value instanceof File ? data.value.name : data.value;
+            if (allImageNodeIds.length === 1) {
+              finalInputs["image"] = fallbackValue;
+            } else {
+              finalInputs[role] = fallbackValue;
+            }
           }
         } else {
-          // Ensure we are passing a string (either the picked name or the default value)
-          const val = inputValues[key] ?? field.value;
-          finalInputs[key] = typeof val === 'object' ? (val as any).name : val;
+          // If it's an image but not a File (already uploaded or default), use the value
+          if (allImageNodeIds.length === 1) {
+            finalInputs["image"] = data.value;
+          } else {
+            finalInputs[role] = data.value;
+          }
         }
       } else {
-        // For non-image types, ensure we pass a string or number
-        const val = inputValues[key] ?? field.value;
-        finalInputs[key] = typeof val === 'object' ? (val as any).name : val;
+        // For non-image types, just take the value
+        finalInputs[role] = data.value;
       }
     }
 
@@ -143,9 +211,10 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
       </div>
 
       <WorkflowInputs 
-        inputs={activeWorkflowData.inputs}
+        inputs={inputValues}
         values={inputValues}
-        onChange={(role, value) => setInputValues(prev => ({ ...prev, [role]: value }))}
+        nodes={activeWorkflowData.nodes}
+        onChange={(role, value) => setInputValues(prev => ({ ...prev, [role]: { type: prev[role]?.type ?? 'string', value } }))}
       />
 
       <GenerationResult 

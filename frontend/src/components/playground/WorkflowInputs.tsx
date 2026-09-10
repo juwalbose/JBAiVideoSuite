@@ -15,6 +15,9 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
   return (
     <div className="flex flex-col gap-4 mb-6">
       {Object.entries(inputs).map(([role, field]) => {
+        // Access the .value property from our new object structure
+        const currentVal = values[role]?.value ?? "";
+
         if (field.type === 'string') {
           return (
             <div key={role} className="flex flex-col gap-1">
@@ -22,7 +25,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
               <textarea 
                 className="p-2 border rounded bg-white"
                 rows={3}
-                value={values[role] ?? ""}
+                value={currentVal}
                 onChange={(e) => onChange(role, e.target.value)}
               />
             </div>
@@ -52,7 +55,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, onChang
               <input 
                 type="number" 
                 className="p-2 border rounded bg-white"
-                value={values[role] ?? ""}
+                value={currentVal}
                 onChange={(e) => onChange(role, e.target.value === "" ? 0 : parseInt(e.target.value))}
               />
             </div>

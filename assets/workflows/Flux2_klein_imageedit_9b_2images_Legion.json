@@ -86,12 +86,12 @@
   "161": {
     "inputs": {
       "width": [
-        "176",
+        "181",
         0
       ],
       "height": [
-        "176",
-        1
+        "182",
+        0
       ],
       "batch_size": 1
     },
@@ -108,11 +108,11 @@
         0
       ],
       "positive": [
-        "165",
+        "178",
         0
       ],
       "negative": [
-        "163",
+        "175",
         0
       ]
     },
@@ -169,7 +169,7 @@
         0
       ],
       "clip": [
-        "177",
+        "183",
         0
       ]
     },
@@ -193,7 +193,7 @@
   "168": {
     "inputs": {
       "pixels": [
-        "76",
+        "179",
         0
       ],
       "vae": [
@@ -210,12 +210,12 @@
     "inputs": {
       "steps": 4,
       "width": [
-        "176",
+        "181",
         0
       ],
       "height": [
-        "176",
-        1
+        "182",
+        0
       ]
     },
     "class_type": "Flux2Scheduler",
@@ -237,7 +237,7 @@
   },
   "172": {
     "inputs": {
-      "value": 42
+      "value": 0
     },
     "class_type": "PrimitiveInt",
     "_meta": {
@@ -246,7 +246,7 @@
   },
   "173": {
     "inputs": {
-      "value": "character doing a dance move"
+      "value": "both characters standing facing each other"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -266,22 +266,115 @@
       "title": "ModelAttentionBackend"
     }
   },
+  "175": {
+    "inputs": {
+      "conditioning": [
+        "163",
+        0
+      ],
+      "latent": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
   "176": {
     "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "180",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "177": {
+    "inputs": {
+      "pixels": [
+        "176",
+        0
+      ],
+      "vae": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "178": {
+    "inputs": {
+      "conditioning": [
+        "165",
+        0
+      ],
+      "latent": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "179": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
       "image": [
         "76",
         0
       ]
     },
-    "class_type": "GetImageSize",
+    "class_type": "ImageScaleToTotalPixels",
     "_meta": {
-      "title": "Get Image Size"
+      "title": "Scale Image to Total Pixels"
     }
   },
-  "177": {
+  "180": {
+    "inputs": {
+      "image": "Indra_NormalFront.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(Input:image) Image2"
+    }
+  },
+  "181": {
+    "inputs": {
+      "value": 1088
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:width) Width"
+    }
+  },
+  "182": {
+    "inputs": {
+      "value": 1920
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:height) Height"
+    }
+  },
+  "183": {
     "inputs": {
       "clip_name": "Qwen3-8B-Q4_K_M.gguf",
-      "type": "flux2"
+      "type": "stable_diffusion"
     },
     "class_type": "CLIPLoaderGGUF",
     "_meta": {
