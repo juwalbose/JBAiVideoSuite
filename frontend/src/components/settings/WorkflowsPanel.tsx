@@ -5,18 +5,19 @@ const WorkflowsPanel: React.FC = () => {
   const { workflows, setWorkflows, backend } = useSettingsStore();
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchWorkflows = async () => {
-      try {
-        const response = await fetch(`${backend.apiUrl}/workflows/`);
-        if (response.ok) {
-          const data = await response.json();
-          setWorkflows(data);
-        }
-      } catch (error) {
-        console.error('Error fetching workflows:', error);
+  const fetchWorkflows = async () => {
+    try {
+      const response = await fetch(`${backend.apiUrl}/workflows/`);
+      if (response.ok) {
+        const data = await response.json();
+        setWorkflows(data);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchWorkflows();
   }, [setWorkflows, backend.apiUrl]);
 
@@ -30,16 +31,22 @@ const WorkflowsPanel: React.FC = () => {
       const url = `${baseUrl}/workflows/add?name=${file.name.replace('.json', '')}&json_content=${encodeURIComponent(content)}`;
       console.log('Fetching workflow from:', url);
       await fetch(url, { method: 'POST' });
-      const response = await fetch(`${backend.apiUrl}/workflows/`);
-      const data = await response.json();
-      setWorkflows(data);
+      await fetchWorkflows();
     };
     reader.readAsText(file);
   };
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">ComfyUI Workflows</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">ComfyUI Workflows</h2>
+        <button
+          onClick={fetchWorkflows}
+          className="px-3 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
       <div className="mb-4">
         <label className="block text-sm font-medium">Add New Workflow JSON:</label>
         <input

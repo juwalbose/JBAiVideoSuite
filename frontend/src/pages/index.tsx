@@ -4,22 +4,20 @@ import StoryStage from '../components/studio/StoryStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
+import ChatPanel from '../components/ChatPanel';
 import { useSettingsStore } from '../store/settingsStore';
 
 const Studio = () => {
   const { currentProject, setCurrentProject, fetchProjects } = useProjectStore();
   const [status, setStatus] = useState('Connecting...');
-  const [activeTab, setActiveTab] = useState('app'); // 'app', 'playground', 'settings'
+  const [activeTab, setActiveTab] = useState('app');
+  const [chatOpen, setChatOpen] = useState(true);
 
   const { loadSettings } = useSettingsStore();
 
   useEffect(() => {
-    // 1. Load settings from DB first
     loadSettings().then(() => {
-      // 2. Start fetching projects immediately (non-blocking)
       fetchProjects();
-
-      // 3. Perform handshake in the background to update status
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
       fetch(`${baseUrl}/handshake`)
         .then(res => res.json())
@@ -37,6 +35,12 @@ const Studio = () => {
         });
     });
   }, [loadSettings]);
+
+  useEffect(() => {
+    const handler = () => setChatOpen(true);
+    window.addEventListener('open-chat', handler);
+    return () => window.removeEventListener('open-chat', handler);
+  }, []);
 
   const handleCreateProject = async () => {
     try {
@@ -92,75 +96,79 @@ const Studio = () => {
         </nav>
       </header>
 
-      {/* Main Workspace */}
-      <div className="flex flex-1 overflow-hidden">
-        {activeTab === 'app' && (
-          <>
-            {!currentProject ? (
-              <div className="flex flex-col items-center justify-center h-full w-full p-8 gap-8">
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold text-gray-500 mb-4">No Project Selected</h2>
-                  <p className="text-gray-400 max-w-md mx-auto">Choose a project from your library or create a new one to begin.</p>
-                </div>
-                <div className="w-full max-w-2xl">
-                  <ProjectLibrary />
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Left Sidebar (The Flow) - Only visible when inside a project */}
-                <aside className="w-64 border-r bg-white p-4 flex flex-col gap-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">The Flow</h3>
-                  <nav className="flex flex-col gap-2">
-                    <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">1. Story</button>
-                    <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">2. Script</button>
-                    <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">3. Assets</button>
-                    <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">4. Shot List</button>
-                    <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">5. Final Video</button>
-                  </nav>
-                </aside>
-
-                {/* Main Content Area */}
-                <main className="flex-1 p-8 overflow-y-auto">
-                  <div className="max-w-4xl mx-auto">
-                    {currentProject && (
-                      <button 
-                        onClick={() => setCurrentProject(null)}
-                        className="mb-4 text-blue-600 hover:underline flex items-center gap-2 transition-colors"
-                      >
-                        ← Back to Library
-                      </button>
-                    )}
-                    <h1 className="text-3xl font-bold mb-2">{currentProject?.name}</h1>
-                    {currentProject?.description && <p className="mb-8 text-gray-600">{currentProject.description}</p>}
-                    
-                    <div className="mt-12">
-                      {currentProject?.story ? (
-                        <StoryStage story={currentProject.story} />
-                      ) : (
-                        <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                          <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
-                        </div>
-                      )}
-                    </div>
+      {/* Main Workspace + Chat Panel */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Main content area (shrinks when chat is open) */}
+        <div className={`flex flex-1 overflow-hidden transition-all duration-300 ${chatOpen ? 'w-3/4' : 'w-full'}`}>
+          {activeTab === 'app' && (
+            <>
+              {!currentProject ? (
+                <div className="flex flex-col items-center justify-center h-full w-full p-8 gap-8">
+                  <div className="text-center">
+                    <h2 className="text-3xl font-bold text-gray-500 mb-4">No Project Selected</h2>
+                    <p className="text-gray-400 max-w-md mx-auto">Choose a project from your library or create a new one to begin.</p>
                   </div>
-                </main>
-              </>
-            )}
-          </>
-        )}
+                  <div className="w-full max-w-2xl">
+                    <ProjectLibrary />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <aside className="w-64 border-r bg-white p-4 flex flex-col gap-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">The Flow</h3>
+                    <nav className="flex flex-col gap-2">
+                      <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">1. Story</button>
+                      <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">2. Script</button>
+                      <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">3. Assets</button>
+                      <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">4. Shot List</button>
+                      <button className="p-2 rounded hover:bg-blue-100 transition-colors border border-transparent hover:border-blue-300">5. Final Video</button>
+                    </nav>
+                  </aside>
 
-        {activeTab === 'playground' && (
-          <div className="flex flex-1 items-center justify-center p-8">
-            <ComfyUIPlayground />
-          </div>
-        )}
+                  <main className="flex-1 p-8 overflow-y-auto">
+                    <div className="max-w-4xl mx-auto">
+                      {currentProject && (
+                        <button 
+                          onClick={() => setCurrentProject(null)}
+                          className="mb-4 text-blue-600 hover:underline flex items-center gap-2 transition-colors"
+                        >
+                          ← Back to Library
+                        </button>
+                      )}
+                      <h1 className="text-3xl font-bold mb-2">{currentProject?.name}</h1>
+                      {currentProject?.description && <p className="mb-8 text-gray-600">{currentProject.description}</p>}
+                      
+                      <div className="mt-12">
+                        {currentProject?.story ? (
+                          <StoryStage story={currentProject.story} />
+                        ) : (
+                          <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
+                            <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </main>
+                </>
+              )}
+            </>
+          )}
 
-        {activeTab === 'settings' && (
-          <div className="flex flex-1 items-center justify-center p-8">
-            <Settings />
-          </div>
-        )}
+          {activeTab === 'playground' && (
+            <div className="flex flex-1 items-center justify-center p-8">
+              <ComfyUIPlayground />
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="flex flex-1 items-center justify-center p-8">
+              <Settings />
+            </div>
+          )}
+        </div>
+
+        {/* Chat Panel (right side) */}
+        <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       </div>
     </div>
   );

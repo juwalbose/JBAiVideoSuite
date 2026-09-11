@@ -44,7 +44,15 @@ const SystemPromptsPanel: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">System Prompts</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">System Prompts</h2>
+        <button
+          onClick={fetchPrompts}
+          className="px-3 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
       <div className="mb-4">
         <label className="block text-sm font-medium">Add New System Prompt (.txt):</label>
         <input
