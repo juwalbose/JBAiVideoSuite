@@ -2,12 +2,13 @@ import React from 'react';
 
 interface GenerationResultProps {
   isGenerating: boolean;
+  queueCount: number;
   resultImage: string | null;
   onGenerate: () => void;
   isValid: boolean;
 }
 
-const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resultImage, onGenerate, isValid }) => {
+const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, queueCount, resultImage, onGenerate, isValid }) => {
   return (
     <>
       <div className="flex justify-center">
@@ -21,12 +22,12 @@ const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resul
       </div>
 
       <div className="mt-6 flex justify-center">
-        <button 
+        <button
           onClick={onGenerate}
-          disabled={isGenerating || !isValid}
-          className={`px-8 py-3 rounded-full font-bold text-white transition-all ${isGenerating ? 'bg-gray-400' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
+          disabled={!isValid}
+          className={`px-8 py-3 rounded-full font-bold text-white transition-all ${isGenerating ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
         >
-          {isGenerating ? 'Generating...' : 'Generate'}
+          {isGenerating ? 'Queue Another' : 'Generate'}
         </button>
       </div>
     </>

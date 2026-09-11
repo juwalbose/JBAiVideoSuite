@@ -36,6 +36,7 @@ class ComfyUISettingsModel(BaseModel):
     ip: str
     port: int
     deviceId: str
+    pollInterval: int = 4000
 
 # --- Handshake Model ---
 

@@ -27,6 +27,7 @@ model ComfyUISettings {
   ip          String
   port        Int
   deviceId    String
+  pollInterval Int     @default(4000)
 }
 
 model Project {

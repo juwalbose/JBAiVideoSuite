@@ -29,6 +29,10 @@ const ComfyUIPlayground = () => {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingParse, setIsLoadingParse] = useState(false);
 
+  // Persisted across workflow switches
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
+
   // Effect 1: Fetch all workflows from the folder on mount
   useEffect(() => {
     const fetchWorkflows = async () => {
@@ -103,7 +107,8 @@ const ComfyUIPlayground = () => {
           <WorkflowSelector 
             workflows={workflows} 
             selectedId={selectedWorkflowId} 
-            onSelect={setSelectedWorkflowId} 
+            onSelect={setSelectedWorkflowId}
+            queueCount={queueCount}
           />
 
           <section>
@@ -115,6 +120,10 @@ const ComfyUIPlayground = () => {
                 activeWorkflowData={activeWorkflowData} 
                 baseUrl={baseUrl}
                 workflowId={selectedWorkflowId}
+                resultImage={resultImage}
+                queueCount={queueCount}
+                onResultImage={setResultImage}
+                onQueueChange={setQueueCount}
               />
             ) : (
               !isLoadingParse && <p className="text-gray-500">Select a workflow to begin.</p>

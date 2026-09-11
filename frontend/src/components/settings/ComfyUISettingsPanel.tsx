@@ -26,7 +26,7 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">ComfyUI Settings</h2>
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-8">
         <div>
           <label className="block text-sm font-medium">IP Address</label>
           <input
@@ -52,6 +52,15 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
             className="border p-2 rounded w-full"
             value={comfyui.deviceId}
             onChange={(e) => setComfyUI({ deviceId: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Poll Interval (ms)</label>
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
+            value={comfyui.pollInterval}
+            onChange={(e) => setComfyUI({ pollInterval: parseInt(e.target.value) || 4000 })}
           />
         </div>
       </div>

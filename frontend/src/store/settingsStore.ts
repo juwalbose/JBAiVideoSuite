@@ -18,6 +18,7 @@ export interface ComfyUISettings {
   ip: string;
   port: number;
   deviceId: string;
+  pollInterval: number;
 }
 
 export interface Workflow {
@@ -64,6 +65,7 @@ export const useSettingsStore = create<SettingsState>()(
         ip: '127.0.0.1',
         port: 8188,
         deviceId: '0',
+        pollInterval: 4000,
       },
       workflows: [],
       availableModels: [],

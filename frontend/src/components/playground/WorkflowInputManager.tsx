@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import WorkflowInputs from './WorkflowInputs';
 import GenerationResult from './GenerationResult';
+import { useSettingsStore } from '../../store/settingsStore';
 
 interface InputField {
   type: 'string' | 'int' | 'image';
@@ -21,13 +22,35 @@ interface WorkflowInputManagerProps {
   activeWorkflowData: PlaygroundObject | null;
   baseUrl: string;
   workflowId: string | null;
+  resultImage: string | null;
+  queueCount: number;
+  onResultImage: (url: string) => void;
+  onQueueChange: (count: number) => void;
 }
 
-const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: WorkflowInputManagerProps) => {
-  const [imagePaths, setImagePaths] = useState<Record<string, string>>({});
+const WorkflowInputManager = ({
+  activeWorkflowData,
+  baseUrl,
+  workflowId,
+  resultImage,
+  queueCount,
+  onResultImage,
+  onQueueChange,
+}: WorkflowInputManagerProps) => {
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [resultImage, setResultImage] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPollingRef = useRef(false);
+  const { comfyui } = useSettingsStore();
+  const pollInterval = comfyui.pollInterval || 4000;
+
+  const baseUrlRef = useRef(baseUrl);
+  const pollIntervalRef = useRef(pollInterval);
+  const onResultImageRef = useRef(onResultImage);
+  const onQueueChangeRef = useRef(onQueueChange);
+  baseUrlRef.current = baseUrl;
+  pollIntervalRef.current = pollInterval;
+  onResultImageRef.current = onResultImage;
+  onQueueChangeRef.current = onQueueChange;
 
   React.useEffect(() => {
     if (activeWorkflowData && activeWorkflowData.nodes) {
@@ -42,36 +65,89 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
     }
   }, [activeWorkflowData]);
 
+  const runPollCycle = async () => {
+    if (isPollingRef.current) return;
+    isPollingRef.current = true;
+
+    try {
+      const activeRes = await fetch(`${baseUrlRef.current}/playground/active`);
+      if (!activeRes.ok) {
+        isPollingRef.current = false;
+        return;
+      }
+      const activeData = await activeRes.json();
+      const tasks: string[] = activeData.tasks || [];
+      onQueueChangeRef.current(tasks.length);
+
+      if (tasks.length === 0) {
+        isPollingRef.current = false;
+        return;
+      }
+
+      for (const taskId of tasks) {
+        try {
+          const res = await fetch(`${baseUrlRef.current}/playground/status/${taskId}`);
+          if (res.status === 404) continue;
+
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.startsWith('image/')) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            onResultImageRef.current(url);
+            fetch(`${baseUrlRef.current}/playground/status/${taskId}`, { method: 'DELETE' }).catch(() => {});
+          }
+        } catch (err) {
+          console.error(`[Gen] Poll error for task ${taskId}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('[Gen] Poll cycle error:', err);
+    }
+
+    isPollingRef.current = false;
+    pollTimerRef.current = setTimeout(runPollCycle, pollIntervalRef.current);
+  };
+
+  const startPolling = () => {
+    if (pollTimerRef.current === null) {
+      pollTimerRef.current = setTimeout(runPollCycle, pollIntervalRef.current);
+    }
+  };
+
+  useEffect(() => {
+    startPolling();
+    return () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
 
-    console.log("[Gen] Starting generation process...");
-
-    const imageRoles = Object.entries(inputValues).filter(([_, value]) => 
+    const imageRoles = Object.entries(inputValues).filter(([_, value]) =>
       value?.type === 'image'
     );
-    
+
     const sortedImageRoles = [...imageRoles].sort((a, b) => {
       const titleA = activeWorkflowData.nodes[a[0]]?._meta?.title || "";
       const titleB = activeWorkflowData.nodes[b[0]]?._meta?.title || "";
-      return (parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0) - 
+      return (parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0) -
              (parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0);
     });
 
     if (imageRoles.length > 0) {
       for (const [role, _] of sortedImageRoles) {
         if (!inputValues[role]) {
-          console.warn(`[Gen] Validation: Missing value for role "${role}"`);
           alert(`Please select an image for the "${role}" input.`);
           return;
         }
       }
     }
 
-    setIsGenerating(true);
     const finalInputs: Record<string, any> = {};
-    
-    console.log("[Gen] Processing inputs and uploading images...");
 
     for (const [role, data] of Object.entries(inputValues)) {
       if (data?.type === 'image') {
@@ -79,7 +155,6 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
 
         if (data.value instanceof File) {
           try {
-            console.log(`[Gen] Uploading file for Node ${nodeId}:`, data.value.name);
             const formData = new FormData();
             formData.append('file', data.value);
 
@@ -89,14 +164,11 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
             });
 
             if (!res.ok) throw new Error(`Upload failed for Node ${nodeId}`);
-            
-            const resultData = await res.json();
-            console.log(`[Gen] Upload success for Node ${nodeId}. Received name from ComfyUI:`, resultData.name);
-            setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
 
-            finalInputs[role] = [nodeId, resultData.name]; 
+            const resultData = await res.json();
+            setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
+            finalInputs[role] = [nodeId, resultData.name];
           } catch (err) {
-            console.error(`[Gen] Error uploading image for Node ${nodeId}:`, err);
             const fallbackValue = data.value instanceof File ? data.value.name : data.value;
             finalInputs[role] = [nodeId, fallbackValue];
           }
@@ -113,10 +185,7 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
       inputs: finalInputs
     };
 
-    console.log("[Gen] Final JSON payload:", JSON.stringify(payload, null, 2));
-
     try {
-      console.log("[Gen] Sending generation request to server...");
       const response = await fetch(`${baseUrl}/playground/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,15 +197,11 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
         throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
-      console.log("[Gen] Generation request successful.");
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setResultImage(url);
+      const data = await response.json();
+      console.log(`[Gen] Queued: task_id=${data.task_id}`);
+      onQueueChangeRef.current(queueCount + 1);
     } catch (error) {
-      console.error("[Gen] Final generation failed:", error);
-    } finally {
-      setIsGenerating(false);
-      console.log("[Gen] Generation process complete.");
+      console.error("[Gen] Failed to queue generation:", error);
     }
   };
 
@@ -157,16 +222,15 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
         </p>
       </div>
 
-      {/* Preview moved up, just under Workflow Selection */}
-      <GenerationResult 
-        isGenerating={isGenerating}
+      <GenerationResult
+        isGenerating={queueCount > 0}
+        queueCount={queueCount}
         resultImage={resultImage}
         onGenerate={handleGenerate}
         isValid={activeWorkflowData.is_valid}
       />
 
-      {/* Input elements now at the bottom */}
-      <WorkflowInputs 
+      <WorkflowInputs
         inputs={inputValues}
         values={inputValues}
         nodes={activeWorkflowData.nodes}
