@@ -14,6 +14,14 @@ async def list_prompts():
     files = [f for f in os.listdir(PROMPTS_DIR) if f.endswith('.txt')]
     return [{"id": f, "name": f.replace('.txt', '')} for f in files]
 
+@router.get("/{filename}")
+async def get_prompt(filename: str):
+    filepath = os.path.join(PROMPTS_DIR, filename)
+    if not os.path.exists(filepath):
+        return {"status": "error", "details": "Prompt not found"}
+    with open(filepath, 'r', encoding='utf-8') as f:
+        return {"content": f.read()}
+
 @router.post("/add")
 async def add_prompt(name: str, content: str):
     filename = f"{name}.txt"

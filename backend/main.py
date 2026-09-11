@@ -15,7 +15,7 @@ from models import (
 )
 
 # Import Routers
-from routes import settings, projects, handshake, comfyui, workflows, playground, gallery, systemprompts
+from routes import settings, projects, handshake, comfyui, workflows, playground, gallery, systemprompts, chat
 
 from database import db, get_db
 
@@ -88,6 +88,7 @@ app.include_router(comfyui.router)
 app.include_router(playground.router)
 app.include_router(gallery.router)
 app.include_router(systemprompts.router)
+app.include_router(chat.router)
 
 # --- Root Endpoint (Optional) ---
 @app.get("/")
