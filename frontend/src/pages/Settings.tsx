@@ -3,12 +3,14 @@ import LLMSettingsPanel from '../components/settings/LLMSettingsPanel';
 import BackendSettingsPanel from '../components/settings/BackendSettingsPanel';
 import ComfyUISettingsPanel from '../components/settings/ComfyUISettingsPanel';
 import WorkflowsPanel from '../components/settings/WorkflowsPanel';
+import SystemPromptsPanel from '../components/settings/SystemPromptsPanel';
 
 const TABS = [
   { id: 'llm', label: 'LLM Settings' },
   { id: 'backend', label: 'Backend Settings' },
   { id: 'comfyui', label: 'ComfyUI Settings' },
   { id: 'workflows', label: 'ComfyUI Workflows' },
+  { id: 'systemprompts', label: 'System Prompts' },
 ] as const;
 
 const Settings = () => {
@@ -40,6 +42,8 @@ const Settings = () => {
         );
       case 'workflows':
         return <WorkflowsPanel />;
+      case 'systemprompts':
+        return <SystemPromptsPanel />;
       default:
         return null;
     }
