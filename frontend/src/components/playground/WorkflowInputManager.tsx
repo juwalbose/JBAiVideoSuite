@@ -157,19 +157,21 @@ const WorkflowInputManager = ({ activeWorkflowData, baseUrl, workflowId }: Workf
         </p>
       </div>
 
+      {/* Preview moved up, just under Workflow Selection */}
+      <GenerationResult 
+        isGenerating={isGenerating}
+        resultImage={resultImage}
+        onGenerate={handleGenerate}
+        isValid={activeWorkflowData.is_valid}
+      />
+
+      {/* Input elements now at the bottom */}
       <WorkflowInputs 
         inputs={inputValues}
         values={inputValues}
         nodes={activeWorkflowData.nodes}
         baseUrl={baseUrl}
         onChange={(nodeId, value) => setInputValues(prev => ({ ...prev, [nodeId]: { type: prev[nodeId]?.type ?? 'string', value } }))}
-      />
-
-      <GenerationResult 
-        isGenerating={isGenerating}
-        resultImage={resultImage}
-        onGenerate={handleGenerate}
-        isValid={activeWorkflowData.is_valid}
       />
     </div>
   );

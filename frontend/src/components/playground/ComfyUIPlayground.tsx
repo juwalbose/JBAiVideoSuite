@@ -91,15 +91,15 @@ const ComfyUIPlayground = () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-4 h-[calc(100vh-2rem)] overflow-y-auto">
-      <div className="flex flex-row gap-8 w-full">
-        {/* Left Column: Gallery */}
+    <div className="flex flex-col gap-8 p-4 h-[calc(100vh-2rem)]">
+      <div className="flex flex-row gap-8 w-full h-full">
+        {/* Left Column: Gallery - Removed overflow-y-auto to let Gallery handle its own scroll */}
         <div className="w-1/3">
           <Gallery />
         </div>
 
         {/* Right Column: Workflow Selection + Preview */}
-        <div className="w-2/3 border p-6 rounded-xl bg-gray-50 shadow-sm flex flex-col gap-8">
+        <div className="w-2/3 border p-6 rounded-xl bg-gray-50 shadow-sm flex flex-col gap-8 overflow-y-auto">
           <WorkflowSelector 
             workflows={workflows} 
             selectedId={selectedWorkflowId} 

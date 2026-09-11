@@ -37,7 +37,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   }, [baseUrl]); // Re-run if baseUrl changes
 
   return (
-    <div className={`flex flex-col h-full w-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
+    <div className={`flex flex-col w-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
       <div className="flex justify-between items-center mb-6 border-b pb-2">
         <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Gallery</h2>
         <button 
@@ -48,7 +48,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         </button>
       </div>
       
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex flex-col">
         {loading ? (
           <div className="flex items-center justify-center h-full text-slate-400 italic animate-pulse">
             Loading assets...
@@ -58,13 +58,13 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
             {error}
           </div>
         ) : images.length > 0 ? (
-          <div className="grid grid-cols-3 gap-3 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-3 gap-6 overflow-y-auto pr-2 custom-scrollbar max-h-[60vh] items-start">
             {images.map((img, index) => (
-              <div key={index} className="relative group rounded-lg overflow-hidden border bg-slate-50 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div key={index} className="relative group rounded-lg overflow-hidden border bg-slate-50 shadow-sm hover:shadow-md transition-shadow duration-200 w-full">
                 <img 
                   src={`${baseUrl}${img}`} 
                   alt={`${img}`}
-                  className="w-full h-32 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-64 object-cover transform group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[9px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   {img}
