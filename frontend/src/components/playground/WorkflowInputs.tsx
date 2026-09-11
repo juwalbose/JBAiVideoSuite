@@ -28,16 +28,18 @@ const RESOLUTIONS = [
   { name: 'Portrait (1080x1920)', w: 1080, h: 1920 },
   { name: 'Portrait (1440x2560)', w: 1440, h: 2560 },
   { name: 'Portrait (2160x3840)', w: 2160, h: 3840 },
-  { name: 'Custom', w: 0, h: 0 },
 ];
 
 const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, baseUrl, onChange }) => {
   const [selectedRes, setSelectedRes] = useState(RESOLUTIONS[5]);
 
+  const hasWidth = 'width' in inputs;
+  const hasHeight = 'height' in inputs;
+
   const handleResolutionChange = (index: number) => {
     setSelectedRes(RESOLUTIONS[index]);
-    onChange('width', RESOLUTIONS[index].w);
-    onChange('height', RESOLUTIONS[index].h);
+    if (hasWidth) onChange('width', RESOLUTIONS[index].w);
+    if (hasHeight) onChange('height', RESOLUTIONS[index].h);
   };
 
   const getVal = (role: string) => values[role]?.value ?? '';
@@ -85,43 +87,47 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
       </div>
 
       {/* 3. Resolution & Dimensions */}
-      <div className="flex flex-col gap-2 p-4 border rounded bg-gray-50">
-        <label className="text-xs font-bold uppercase text-gray-600 mb-1">Resolution</label>
-        <div className="flex items-center gap-4">
-          <select 
-            className="p-2 border rounded bg-white text-sm"
-            value={selectedRes.name}
-            onChange={(e) => handleResolutionChange(RESOLUTIONS.findIndex(r => r.name === e.target.value))}
-          >
-            {RESOLUTIONS.map((res, i) => (
-              <option key={i} value={res.name}>{res.name}</option>
-            ))}
-          </select>
+      {(hasWidth || hasHeight) && (
+        <div className="flex flex-col gap-2 p-4 border rounded bg-gray-50">
+          <label className="text-xs font-bold uppercase text-gray-600 mb-1">Resolution</label>
+          <div className="flex items-center gap-4">
+            <select 
+              className="p-2 border rounded bg-white text-sm"
+              value={selectedRes.name}
+              onChange={(e) => handleResolutionChange(RESOLUTIONS.findIndex(r => r.name === e.target.value))}
+            >
+              {RESOLUTIONS.map((res, i) => (
+                <option key={i} value={res.name}>{res.name}</option>
+              ))}
+            </select>
 
-          {selectedRes.name !== 'Custom' && (
             <div className="flex flex-1 items-center gap-4">
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Width</label>
-                <input 
-                  type="number" 
-                  className="p-2 border rounded bg-white w-full"
-                  value={getVal('width')}
-                  onChange={(e) => onChange('width', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                />
-              </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Height</label>
-                <input 
-                  type="number" 
-                  className="p-2 border rounded bg-white w-full"
-                  value={getVal('height')}
-                  onChange={(e) => onChange('height', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                />
-              </div>
+              {hasWidth && (
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Width</label>
+                  <input 
+                    type="number" 
+                    className="p-2 border rounded bg-white w-full"
+                    value={getVal('width')}
+                    onChange={(e) => onChange('width', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                  />
+                </div>
+              )}
+              {hasHeight && (
+                <div className="flex flex-col gap-1 flex-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Height</label>
+                  <input 
+                    type="number" 
+                    className="p-2 border rounded bg-white w-full"
+                    value={getVal('height')}
+                    onChange={(e) => onChange('height', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                  />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 4. Image Roles */}
       <div className="flex flex-col gap-2">

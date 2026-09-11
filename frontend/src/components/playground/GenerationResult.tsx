@@ -10,15 +10,7 @@ interface GenerationResultProps {
 const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resultImage, onGenerate, isValid }) => {
   return (
     <>
-      <button 
-        onClick={onGenerate}
-        disabled={isGenerating || !isValid}
-        className={`px-8 py-3 rounded-full font-bold text-white transition-all ${isGenerating ? 'bg-gray-400' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
-      >
-        {isGenerating ? 'Generating...' : 'Generate'}
-      </button>
-
-      <div className="mt-8 flex justify-center">
+      <div className="flex justify-center">
         {resultImage ? (
           <img src={resultImage} alt="Generated result" className="max-w-full h-auto rounded shadow-md border" />
         ) : (
@@ -26,6 +18,16 @@ const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resul
             Result will appear here
           </div>
         )}
+      </div>
+
+      <div className="mt-6 flex justify-center">
+        <button 
+          onClick={onGenerate}
+          disabled={isGenerating || !isValid}
+          className={`px-8 py-3 rounded-full font-bold text-white transition-all ${isGenerating ? 'bg-gray-400' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
+        >
+          {isGenerating ? 'Generating...' : 'Generate'}
+        </button>
       </div>
     </>
   );
