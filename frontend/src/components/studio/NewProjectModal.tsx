@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { X } from 'lucide-react';
 
 const NewProjectModal = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [type, setType] = useState<'single' | 'episodic'>('single');
   const [isCreating, setIsCreating] = useState(false);
   const { projects, addProject } = useProjectStore();
 
@@ -12,12 +13,13 @@ const NewProjectModal = ({ isOpen, onClose }) => {
 
   const handleCreate = async () => {
     setIsCreating(true);
-    console.log("DEBUG: Creating Project with Name:", name, "and Description:", description);
+    console.log("DEBUG: Creating Project with Name:", name, "and Type:", type);
     try {
-      const response = await fetch('http://127.0.0.1:8000/projects/', {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, type }),
       });
 
       if (!response.ok) throw new Error('Failed to create project');
@@ -61,14 +63,31 @@ const NewProjectModal = ({ isOpen, onClose }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea 
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Briefly describe the story..."
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Video Type</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="projectType"
+                  value="single"
+                  checked={type === 'single'}
+                  onChange={() => setType('single')}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm">Single Video</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="projectType"
+                  value="episodic"
+                  checked={type === 'episodic'}
+                  onChange={() => setType('episodic')}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm">Episodic</span>
+              </label>
+            </div>
           </div>
         </div>
 

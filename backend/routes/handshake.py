@@ -39,7 +39,7 @@ async def check_lmstudio_health(db = Depends(get_db)):
                 details="LM Studio is ready, but no models are loaded."
             )
 
-        active_model = model_list[0].get("name", "Unnamed Model")
+        active_model = model_list[0].get("id", model_list[0].get("name", "Unnamed Model"))
 
         return HandshakeResponse(
             status="healthy",

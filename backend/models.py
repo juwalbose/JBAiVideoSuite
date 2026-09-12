@@ -17,7 +17,7 @@ class Beat(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    type: str = "single"
 
 # --- Settings Models ---
 

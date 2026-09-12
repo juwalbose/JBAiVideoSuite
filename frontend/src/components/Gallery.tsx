@@ -6,14 +6,12 @@ interface GalleryProps {
 }
 
 const Gallery: React.FC<GalleryProps> = ({ className }) => {
-  const { backendSettings } = useSettingsStore();
+  const { backend } = useSettingsStore();
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the apiUrl from settings (e.g., "http://127.0.0.1:8000")
-  // We'll fallback to localhost:8000 if it's not loaded yet
-  const baseUrl = backendSettings?.apiUrl || 'http://localhost:8000';
+  const baseUrl = backend?.apiUrl || 'http://127.0.0.1:8000';
 
   const fetchImages = async () => {
     setLoading(true);
@@ -37,8 +35,8 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   }, [baseUrl]); // Re-run if baseUrl changes
 
   return (
-    <div className={`flex flex-col w-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
-      <div className="flex justify-between items-center mb-6 border-b pb-2">
+    <div className={`flex flex-col w-full h-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
+      <div className="flex justify-between items-center mb-4 border-b pb-2">
         <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Gallery</h2>
         <button 
           onClick={fetchImages}
@@ -48,7 +46,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         </button>
       </div>
       
-      <div className="flex flex-col">
+      <div className="flex flex-col flex-1 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-full text-slate-400 italic animate-pulse">
             Loading assets...
@@ -58,13 +56,13 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
             {error}
           </div>
         ) : images.length > 0 ? (
-          <div className="grid grid-cols-3 gap-6 overflow-y-auto pr-2 custom-scrollbar max-h-[60vh] items-start">
+          <div className="grid grid-cols-3 gap-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 items-start">
             {images.map((img, index) => (
-              <div key={index} className="relative group rounded-lg overflow-hidden border bg-slate-50 shadow-sm hover:shadow-md transition-shadow duration-200 w-full">
+              <div key={index} className="relative group overflow-hidden bg-slate-50 w-full aspect-square">
                 <img 
                   src={`${baseUrl}${img}`} 
                   alt={`${img}`}
-                  className="w-full h-64 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[9px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   {img}
@@ -79,7 +77,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         )}
 
         {/* Debug Info - This will help us see exactly what's happening */}
-        <div className="mt-4 pt-2 border-t text-[10px] text-slate-400 flex justify-between">
+        <div className="mt-2 pt-2 border-t text-[10px] text-slate-400 flex justify-between">
           <span>Base URL: {baseUrl}</span>
           <span>Images Found: {images.length}</span>
         </div>

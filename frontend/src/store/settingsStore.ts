@@ -94,7 +94,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       saveLLM: async () => {
         const state = useSettingsStore.getState();
-        await fetch('http://127.0.0.1:8000/settings/save-llm', {
+        await fetch(`${state.backend.apiUrl}/settings/save-llm`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.llm),
@@ -102,7 +102,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveBackend: async () => {
         const state = useSettingsStore.getState();
-        await fetch('http://127.0.0.1:8000/settings/save-backend', {
+        await fetch(`${state.backend.apiUrl}/settings/save-backend`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.backend),
@@ -110,7 +110,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveComfyUI: async () => {
         const state = useSettingsStore.getState();
-        await fetch('http://127.0.0.1:8000/settings/save-comfyui', {
+        await fetch(`${state.backend.apiUrl}/settings/save-comfyui`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.comfyui),
@@ -119,7 +119,8 @@ export const useSettingsStore = create<SettingsState>()(
 
       loadSettings: async () => {
         try {
-          const response = await fetch('http://127.0.0.1:8000/settings/');
+          const state = useSettingsStore.getState();
+          const response = await fetch(`${state.backend.apiUrl}/settings/`);
           if (response.ok) {
             const data = await response.json();
             set({

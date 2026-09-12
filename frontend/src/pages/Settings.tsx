@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AppSettingsPanel from '../components/settings/AppSettingsPanel';
 import LLMSettingsPanel from '../components/settings/LLMSettingsPanel';
 import BackendSettingsPanel from '../components/settings/BackendSettingsPanel';
 import ComfyUISettingsPanel from '../components/settings/ComfyUISettingsPanel';
@@ -6,6 +7,7 @@ import WorkflowsPanel from '../components/settings/WorkflowsPanel';
 import SystemPromptsPanel from '../components/settings/SystemPromptsPanel';
 
 const TABS = [
+  { id: 'appsettings', label: 'App Settings' },
   { id: 'llm', label: 'LLM Settings' },
   { id: 'backend', label: 'Backend Settings' },
   { id: 'comfyui', label: 'ComfyUI Settings' },
@@ -14,12 +16,14 @@ const TABS = [
 ] as const;
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState<string>('llm');
+  const [activeTab, setActiveTab] = useState<string>('appsettings');
   const [testStatus, setTestStatus] = useState('');
   const [isTesting, setIsTesting] = useState(false);
 
   const renderPanel = () => {
     switch (activeTab) {
+      case 'appsettings':
+        return <AppSettingsPanel />;
       case 'llm':
         return (
           <LLMSettingsPanel

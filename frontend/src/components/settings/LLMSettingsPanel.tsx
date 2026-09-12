@@ -14,13 +14,13 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
   isTesting,
   setIsTesting,
 }) => {
-  const { llm, setLLM, saveLLM, availableModels, setAvailableModels } = useSettingsStore();
+  const { llm, setLLM, saveLLM, availableModels, setAvailableModels, backend } = useSettingsStore();
 
   const runLLMTest = async () => {
     setIsTesting(true);
     setTestStatus('Testing...');
     try {
-      const response = await fetch('http://127.0.0.1:8000/llm-test');
+      const response = await fetch(`${backend.apiUrl}/llm-test`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

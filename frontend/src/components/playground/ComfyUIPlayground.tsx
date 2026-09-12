@@ -19,10 +19,10 @@ interface WorkflowItem {
 }
 
 const ComfyUIPlayground = () => {
-  const { backendSettings } = useSettingsStore();
+  const { backend } = useSettingsStore();
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
   
-  const baseUrl = backendSettings?.apiUrl || 'http://localhost:8000';
+  const baseUrl = backend?.apiUrl || 'http://127.0.0.1:8000';
 
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [activeWorkflowData, setActiveWorkflowData] = useState<PlaygroundObject | null>(null);

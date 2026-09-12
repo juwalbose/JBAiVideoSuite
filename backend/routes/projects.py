@@ -3,8 +3,22 @@ from typing import Optional, Any
 from database import get_db
 from models import ProjectCreate, StoryInput
 import requests
+import os
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+PROMPTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "systemprompts"))
+
+def get_system_prompt(db, action: str) -> Optional[str]:
+    """Fetch the mapped system prompt file content for an action, or None."""
+    mapping = db.appactionmapping.find_first(where={'action': action})
+    if not mapping or not mapping.promptFile:
+        return None
+    filepath = os.path.join(PROMPTS_DIR, mapping.promptFile)
+    if not os.path.exists(filepath):
+        return None
+    with open(filepath, 'r', encoding='utf-8') as f:
+        return f.read()
 
 @router.get("/")
 async def list_projects(db: Any = Depends(get_db)):
@@ -45,7 +59,7 @@ async def create_project(project: ProjectCreate, db: Any = Depends(get_db)):
     # Create the project first
     new_project = await db.project.create({
         'name': project.name,
-        'description': project.description
+        'type': project.type
     })
     
     # Automatically create an initial story for this project
@@ -59,14 +73,36 @@ async def create_project(project: ProjectCreate, db: Any = Depends(get_db)):
     updated_project = await db.project.find_first(where={'id': new_project.id}, include={'story': {}})
     return updated_project.dict()
 
+@router.delete("/{id}")
+async def delete_project(id: str, db: Any = Depends(get_db)):
+    # Delete child records in order to satisfy foreign key constraints
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+
+    # Find and delete shots, assets, beats, story, finalvideo for this project
+    beats = await db.beat.find_many(where={'projectId': id})
+    beat_ids = [b.id for b in beats]
+    if beat_ids:
+        await db.shot.delete_many(where={'beatId': {'in': beat_ids}})
+    await db.asset.delete_many(where={'projectId': id})
+    await db.beat.delete_many(where={'projectId': id})
+    await db.story.delete_many(where={'projectId': id})
+    await db.finalvideo.delete_many(where={'projectId': id})
+    await db.project.delete(where={'id': id})
+
+    return {"status": "success"}
+
 @router.patch("/{id}")
-async def update_project(id: str, name: str, db: Any = Depends(get_db), description: Optional[str] = None):
+async def update_project(id: str, name: str, duration: Optional[int] = None, episodeCount: Optional[int] = None, db: Any = Depends(get_db)):
+    data: dict = {'name': name}
+    if duration is not None:
+        data['duration'] = duration
+    if episodeCount is not None:
+        data['episodeCount'] = episodeCount
     updated_project = await db.project.update({
         'where': {'id': id},
-        'data': {
-            'name': name,
-            'description': description
-        }
+        'data': data
     })
     return updated_project.dict()
 
@@ -77,16 +113,21 @@ async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get
     if not project or not project.story:
         return {"status": "error", "details": "Project or Story not found"}
 
-    # 2. Call the LLM using our dynamic settings
+    # 2. Check for mapped system prompt
+    system_prompt = await get_system_prompt(db, "Develop Raw Story")
+    if not system_prompt:
+        return {"status": "error", "details": "No system prompt mapped for 'Develop Raw Story'. Go to Settings > App Settings and map a prompt first."}
+
+    # 3. Call the LLM using our dynamic settings
     llm = await db.llmsettings.find_first()
     ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
-    
+
     url = f"http://{ip}:{port}/v1/chat/completions"
     payload = {
-        "model": modelName, 
+        "model": modelName,
         "messages": [
-            {"role": "system", "content": "You are a creative video production assistant. Your task is to turn a raw story idea into a structured Narrative Arc."},
-            {"role": "user", "content": f"Turn this raw idea into a narrative arc: {story_input.rawInput}"}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this raw idea into a narrative arc: {story_input.rawInput}"}
         ],
         "temperature": temperature,
     }
@@ -95,8 +136,8 @@ async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get
         response = requests.post(url, json=payload)
         response.raise_for_status()
         result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        
-        # 3. Update the story in the database
+
+        # 4. Update the story in the database
         await db.story.update(
             data={
                 'rawInput': story_input.rawInput,

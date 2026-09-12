@@ -28,7 +28,9 @@ export interface Story {
 export interface Project {
   id: string;
   name: string;
-  description?: string;
+  type: 'single' | 'episodic';
+  duration: number;
+  episodeCount: number;
   story?: Story;
   beats: Beat[];
   assets: any[];
@@ -44,7 +46,8 @@ interface ProjectState {
   setCurrentProject: (project: Project) => void;
   fetchProjects: () => Promise<void>;
   deleteAllProjects: () => Promise<void>;
-  updateProject: (name: string, description?: string) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  updateProject: (name: string, duration?: number, episodeCount?: number) => Promise<void>;
   updateStory: (narrativeArc: string, rawInput?: string) => Promise<void>;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
@@ -92,14 +95,34 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  updateProject: async (name: string, description?: string) => {
+  deleteProject: async (id: string) => {
+    try {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete project');
+      set((state) => ({
+        projects: state.projects.filter(p => p.id !== id),
+        currentProject: state.currentProject?.id === id ? null : state.currentProject
+      }));
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      set({ error: error.message });
+    }
+  },
+
+  updateProject: async (name: string, duration?: number, episodeCount?: number) => {
     if (!get().currentProject) return;
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const body: Record<string, any> = { name };
+      if (duration !== undefined) body.duration = duration;
+      if (episodeCount !== undefined) body.episodeCount = episodeCount;
       const response = await fetch(`${baseUrl}/projects/${get().currentProject.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description: description || "" })
+        body: JSON.stringify(body)
       });
       if (!response.ok) throw new Error('Failed to update project');
     } catch (error) {
