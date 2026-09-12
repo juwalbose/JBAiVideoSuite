@@ -25,6 +25,11 @@ export interface Story {
   rawInput?: string;
 }
 
+export interface Script {
+  id: string;
+  content: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -32,6 +37,7 @@ export interface Project {
   duration: number;
   episodeCount: number;
   story?: Story;
+  script?: Script;
   beats: Beat[];
   assets: any[];
 }

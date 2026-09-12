@@ -9,9 +9,9 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 
 PROMPTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "systemprompts"))
 
-def get_system_prompt(db, action: str) -> Optional[str]:
+async def get_system_prompt(db, action: str) -> Optional[str]:
     """Fetch the mapped system prompt file content for an action, or None."""
-    mapping = db.appactionmapping.find_first(where={'action': action})
+    mapping = await db.appactionmapping.find_first(where={'action': action})
     if not mapping or not mapping.promptFile:
         return None
     filepath = os.path.join(PROMPTS_DIR, mapping.promptFile)
@@ -23,7 +23,7 @@ def get_system_prompt(db, action: str) -> Optional[str]:
 @router.get("/")
 async def list_projects(db: Any = Depends(get_db)):
     try:
-        projects = await db.project.find_many(include={'story': {}})
+        projects = await db.project.find_many(include={'story': {}, 'script': {}})
         return [p.dict() for p in projects]
     except Exception as e:
         print(f"DEBUG: Error fetching projects: {e}")
@@ -69,8 +69,8 @@ async def create_project(project: ProjectCreate, db: Any = Depends(get_db)):
         'narrativeArc': ''
     })
     
-    # Fetch the updated project with its story included
-    updated_project = await db.project.find_first(where={'id': new_project.id}, include={'story': {}})
+    # Fetch the updated project with its story and script included
+    updated_project = await db.project.find_first(where={'id': new_project.id}, include={'story': {}, 'script': {}})
     return updated_project.dict()
 
 @router.delete("/{id}")
@@ -94,16 +94,20 @@ async def delete_project(id: str, db: Any = Depends(get_db)):
     return {"status": "success"}
 
 @router.patch("/{id}")
-async def update_project(id: str, name: str, duration: Optional[int] = None, episodeCount: Optional[int] = None, db: Any = Depends(get_db)):
-    data: dict = {'name': name}
-    if duration is not None:
-        data['duration'] = duration
-    if episodeCount is not None:
-        data['episodeCount'] = episodeCount
-    updated_project = await db.project.update({
-        'where': {'id': id},
-        'data': data
-    })
+async def update_project(id: str, payload: dict, db: Any = Depends(get_db)):
+    data: dict = {}
+    if 'name' in payload:
+        data['name'] = payload['name']
+    if 'duration' in payload and payload['duration'] is not None:
+        data['duration'] = payload['duration']
+    if 'episodeCount' in payload and payload['episodeCount'] is not None:
+        data['episodeCount'] = payload['episodeCount']
+    if not data:
+        return {"status": "error", "details": "No fields to update"}
+    updated_project = await db.project.update(
+        where={'id': id},
+        data=data
+    )
     return updated_project.dict()
 
 @router.post("/{id}/generate-story")
@@ -137,19 +141,70 @@ async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get
         response.raise_for_status()
         result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
 
-        # 4. Update the story in the database
-        await db.story.update(
-            data={
-                'rawInput': story_input.rawInput,
-                'narrativeArc': result
-            },
-            where={'projectId': id}
-        )
-
         return {"status": "success", "narrative_arc": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_story: {e}")
         return {"status": "error", "details": str(e)}
+
+@router.post("/{id}/generate-script")
+async def generate_script(id: str, db: Any = Depends(get_db)):
+    # 1. Fetch the project and its story
+    project = await db.project.find_first(where={'id': id}, include={'story': {}})
+    if not project or not project.story:
+        return {"status": "error", "details": "Project or Story not found"}
+
+    # 2. Check for mapped system prompt
+    system_prompt = await get_system_prompt(db, "Generate Script")
+    if not system_prompt:
+        return {"status": "error", "details": "No system prompt mapped for 'Generate Script'. Go to Settings > App Settings and map a prompt first."}
+
+    # 3. Call the LLM using our dynamic settings
+    llm = await db.llmsettings.find_first()
+    ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
+
+    url = f"http://{ip}:{port}/v1/chat/completions"
+    payload = {
+        "model": modelName,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{project.story.narrativeArc}"}
+        ],
+        "temperature": temperature,
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        return {"status": "success", "script": result}
+    except Exception as e:
+        print(f"DEBUG: Error in generate_script: {e}")
+        return {"status": "error", "details": str(e)}
+
+@router.patch("/{id}/script")
+async def update_script(id: str, payload: dict, db: Any = Depends(get_db)):
+    # 1. Fetch the project
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+
+    content = payload.get('content', '')
+
+    # 2. Upsert the script
+    existing = await db.script.find_first(where={'projectId': id})
+    if existing:
+        await db.script.update(
+            where={'id': existing.id},
+            data={'content': content}
+        )
+    else:
+        await db.script.create({
+            'projectId': id,
+            'content': content
+        })
+
+    return {"status": "success"}
 
 @router.patch("/{id}/story")
 async def update_story(id: str, story_input: StoryInput, db: Any = Depends(get_db)):

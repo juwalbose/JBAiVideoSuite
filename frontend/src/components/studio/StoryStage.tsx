@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
-const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: number) => void }) => {
-  const { currentProject, updateStory, updateProject } = useProjectStore();
+const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
+  const { currentProject, updateProject, updateStory } = useProjectStore();
   const [rawInput, setRawInput] = useState('');
+  const [narrativeArc, setNarrativeArc] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [episodeCount, setEpisodeCount] = useState(1);
   const [duration, setDuration] = useState(120);
@@ -14,6 +16,7 @@ const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: n
   useEffect(() => {
     if (currentProject) {
       setRawInput(currentProject.story?.rawInput || '');
+      setNarrativeArc(currentProject.story?.narrativeArc || '');
       setDuration(currentProject.duration || 120);
       setEpisodeCount(currentProject.episodeCount || 1);
     }
@@ -36,12 +39,26 @@ const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: n
         return;
       }
       console.log("LLM Response received:", data);
-      await updateStory(data.narrative_arc, rawInput);
+      setNarrativeArc(data.narrative_arc);
     } catch (error) {
       console.error("Error generating story:", error);
       setError('Failed to generate story. Check backend connection.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setError('');
+    try {
+      await updateProject(currentProject.name, duration, currentProject.type === 'episodic' ? episodeCount : undefined);
+      await updateStory(narrativeArc, rawInput);
+    } catch (error) {
+      console.error("Error saving:", error);
+      setError('Failed to save. Check backend connection.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -61,24 +78,14 @@ const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: n
                 />
               </div>
             </div>
-            <button 
-              onClick={() => updateProject(
-                currentProject.name,
-                duration,
-                currentProject.type === 'episodic' ? episodeCount : undefined
-              )}
-              className="mt-2 px-4 py-1 bg-gray-800 text-white rounded text-sm hover:bg-black"
-            >
-              Save Details
-            </button>
           </section>
 
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold mb-2 text-blue-900">1. Raw Idea</h3>
               <textarea
-                className="w-full p-4 border rounded bg-white text-black"
-                rows={4}
+                className="w-full p-4 border rounded bg-white text-black resize-y"
+                rows={6}
                 placeholder="Enter your raw story idea here..."
                 value={rawInput}
                 onChange={(e) => setRawInput(e.target.value)}
@@ -112,9 +119,13 @@ const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: n
             {currentProject?.story && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <h3 className="text-lg font-semibold mb-2 text-blue-900">2. Narrative Arc</h3>
-                <div className="p-4 border rounded bg-blue-50 text-gray-800 whitespace-pre-wrap min-h-[100px] shadow-inner">
-                  {currentProject.story.narrativeArc || 'Narrative arc will appear here...'}
-                </div>
+                <textarea
+                  className="w-full p-4 border rounded bg-blue-50 text-gray-800 whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
+                  rows={10}
+                  value={narrativeArc}
+                  onChange={(e) => setNarrativeArc(e.target.value)}
+                  placeholder="Narrative arc will appear here..."
+                />
               </div>
             )}
           </section>
@@ -151,13 +162,21 @@ const StoryStage = ({ onEpisodeCountChange }: { onEpisodeCountChange?: (count: n
               disabled={isLoading || !rawInput}
               className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {isLoading ? 'Generating...' : currentProject.story?.narrativeArc ? 'Regenerate Narrative Arc' : 'Generate Narrative Arc'}
+              {isLoading ? 'Generating...' : narrativeArc ? 'Regenerate Arc' : 'Generate Narrative Arc'}
             </button>
             <button
-              disabled={!currentProject.story?.narrativeArc}
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-6 py-2 bg-gray-800 text-white rounded hover:bg-black disabled:opacity-50 transition-colors"
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={onNavigateToScript}
+              disabled={!narrativeArc}
               className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              Generate Script
+              Next
             </button>
           </div>
         </>

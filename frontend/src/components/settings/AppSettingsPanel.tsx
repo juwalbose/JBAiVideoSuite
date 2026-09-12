@@ -9,6 +9,43 @@ const APP_ACTIONS = [
   'Generate Shots',
 ];
 
+const ASSET_JSON_FORMAT = `{
+  "characters": [
+    {
+      "name": "Character Name",
+      "description": "Physical description, personality, role in story",
+      "states": [
+        {
+          "name": "State Name (e.g. 'Injured')",
+          "description": "Description of this specific state",
+          "scenes": ["Scene 1", "Scene 3"]
+        }
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "name": "Location Name",
+      "description": "Visual description of the environment",
+      "states": [
+        {
+          "name": "State Name (e.g. 'Day', 'Night')",
+          "description": "Description of this state",
+          "scenes": ["Scene 1"]
+        }
+      ]
+    }
+  ],
+  "props": [
+    {
+      "name": "Prop Name",
+      "description": "What the prop looks like",
+      "associatedCharacters": ["Character Name"],
+      "scenes": ["Scene 2"]
+    }
+  ]
+}`;
+
 const AppSettingsPanel = () => {
   const { backend } = useSettingsStore();
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
@@ -16,6 +53,7 @@ const AppSettingsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showJsonFormat, setShowJsonFormat] = useState(false);
 
   useEffect(() => {
     const baseUrl = backend.apiUrl;
@@ -95,6 +133,28 @@ const AppSettingsPanel = () => {
           {saving ? 'Saving...' : 'Save Mappings'}
         </button>
         {saved && <span className="text-green-600 text-sm">Saved!</span>}
+      </div>
+
+      <div className="border-t pt-4">
+        <button
+          onClick={() => setShowJsonFormat(!showJsonFormat)}
+          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+        >
+          {showJsonFormat ? '▼' : '▶'} Expected Asset JSON Format
+        </button>
+        {showJsonFormat && (
+          <div className="mt-3">
+            <p className="text-sm text-gray-600 mb-2">
+              This is the JSON structure the "Extract Cast" action should return,
+              and what the Extracted Assets box expects. Characters and Locations
+              have <code className="bg-gray-100 px-1 rounded">states</code> (different
+              appearances/conditions). Props are single-state.
+            </p>
+            <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
+              {ASSET_JSON_FORMAT}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );

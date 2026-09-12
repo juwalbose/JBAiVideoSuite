@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import StoryStage from '../components/studio/StoryStage';
+import ScriptStage from '../components/studio/ScriptStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
@@ -165,7 +166,7 @@ const Studio = () => {
                       {stageTab === 'story' && (
                         <div>
                           {currentProject?.story ? (
-                            <StoryStage story={currentProject.story} onEpisodeCountChange={setEpisodeCount} />
+                            <StoryStage story={currentProject.story} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
                           ) : (
                             <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
                               <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
@@ -189,13 +190,7 @@ const Studio = () => {
                               </select>
                             </div>
                           )}
-                          <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                            <p className="text-gray-400 italic">
-                              {currentProject?.type === 'episodic'
-                                ? `Script for Episode ${selectedEpisode} will appear here.`
-                                : 'Script will appear here after generating from the Story tab.'}
-                            </p>
-                          </div>
+                          <ScriptStage selectedEpisode={selectedEpisode} onNavigateToAssets={() => setStageTab('assets')} />
                         </div>
                       )}
                       {stageTab === 'assets' && (
