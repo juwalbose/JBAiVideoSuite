@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import StoryStage from '../components/studio/StoryStage';
 import ScriptStage from '../components/studio/ScriptStage';
+import AssetsStage from '../components/studio/AssetsStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
@@ -194,9 +195,7 @@ const Studio = () => {
                         </div>
                       )}
                       {stageTab === 'assets' && (
-                        <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                          <p className="text-gray-400 italic">Assets will appear here. Shared across all episodes.</p>
-                        </div>
+                        <AssetsStage />
                       )}
                       {stageTab === 'shotlist' && (
                         <div className="space-y-4">
