@@ -12,6 +12,7 @@ active_system_prompts: dict[str, Optional[str]] = {}
 class ChatMessage(BaseModel):
     role: str
     content: str
+    image: Optional[str] = None
 
 CLEAR_SENTINEL = "__CLEAR__"
 
@@ -43,7 +44,15 @@ async def chat(req: ChatRequest, db: Any = Depends(get_db)):
     if current_sp:
         messages.append({"role": "system", "content": current_sp})
     for msg in req.messages:
-        messages.append({"role": msg.role, "content": msg.content})
+        if msg.image:
+            # Multimodal: text + image_url parts
+            content_parts = []
+            if msg.content:
+                content_parts.append({"type": "text", "text": msg.content})
+            content_parts.append({"type": "image_url", "image_url": {"url": msg.image}})
+            messages.append({"role": msg.role, "content": content_parts})
+        else:
+            messages.append({"role": msg.role, "content": msg.content})
 
     url = f"http://{ip}:{port}/v1/chat/completions"
     payload = {

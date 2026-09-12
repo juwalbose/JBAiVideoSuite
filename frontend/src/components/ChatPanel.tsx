@@ -9,6 +9,13 @@ interface ChatPanelProps {
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  image?: string; // base64 data URL for attached image
+}
+
+interface Attachment {
+  file: File;
+  preview: string; // data URL for images, null for text
+  textContent?: string; // for .md/.txt files
 }
 
 interface PromptItem {
@@ -30,7 +37,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('none');
   const [activePromptContent, setActivePromptContent] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load persisted state on mount
   useEffect(() => {
@@ -91,14 +100,64 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleClear = () => {
+    setMessages([]);
+    localStorage.removeItem(STORAGE_KEY);
+    setSelectedPrompt('none');
+    setActivePromptContent(null);
+    localStorage.setItem(PROMPT_KEY, 'none');
+    fetch(`${baseUrl}/chat/clear?session_id=${SESSION_ID}`, { method: 'POST' }).catch(() => {});
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isText = /\.(md|txt)$/i.test(file.name);
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAttachment({ file, preview: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    } else if (isText) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAttachment({ file, preview: '', textContent: reader.result as string });
+      };
+      reader.readAsText(file);
+    } else {
+      console.warn('[Chat] Unsupported file type:', file.type);
+    }
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
+  };
+
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || isThinking) return;
+    if ((!text && !attachment) || isThinking) return;
 
-    const userMsg: ChatMessage = { role: 'user', content: text };
+    // Build message content with attachment
+    let content = text;
+    let image: string | undefined;
+    if (attachment) {
+      if (attachment.preview) {
+        image = attachment.preview;
+        if (!content) content = '[Image attached]';
+      } else if (attachment.textContent) {
+        content = content
+          ? `${content}\n\n---\n[Attached file: ${attachment.file.name}]\n${attachment.textContent}`
+          : `[Attached file: ${attachment.file.name}]\n${attachment.textContent}`;
+      }
+    }
+
+    const userMsg: ChatMessage = { role: 'user', content, image };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInput('');
+    setAttachment(null);
     setIsThinking(true);
 
     try {
@@ -147,13 +206,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
           <div className="p-4 border-b bg-gray-50">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-600">AI Assistant</h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-                title="Close Chat"
-              >
-                &times;
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleClear}
+                  className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                  title="Clear all messages"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={onClose}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  title="Close Chat"
+                >
+                  &times;
+                </button>
+              </div>
             </div>
             <select
               value={selectedPrompt}
@@ -183,6 +251,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
                       : 'bg-gray-100 self-start'
                   }`}
                 >
+                  {msg.image && (
+                    <img src={msg.image} alt="attachment" className="mb-2 max-h-48 rounded" />
+                  )}
                   {msg.content}
                 </div>
               ))
@@ -196,26 +267,62 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Input area */}
-          <div className="p-4 border-t flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type a message..."
-              className="flex-1 p-2 border rounded text-sm"
-            />
-            <button
-              onClick={handleSend}
-              disabled={isThinking}
-              className={`px-4 py-2 rounded text-sm transition-colors ${
-                isThinking
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              Send
-            </button>
+          <div className="p-4 border-t">
+            {/* Attachment preview */}
+            {attachment && (
+              <div className="mb-2 flex items-center gap-2">
+                {attachment.preview ? (
+                  <img src={attachment.preview} alt="attachment" className="h-16 rounded border" />
+                ) : (
+                  <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    📄 {attachment.file.name}
+                  </span>
+                )}
+                <button
+                  onClick={() => setAttachment(null)}
+                  className="text-xs text-red-500 hover:text-red-700"
+                  title="Remove attachment"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.md,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isThinking}
+                className="p-2 border rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                title="Attach file"
+              >
+                📎
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Type a message..."
+                className="flex-1 p-2 border rounded text-sm"
+              />
+              <button
+                onClick={handleSend}
+                disabled={isThinking}
+                className={`px-4 py-2 rounded text-sm transition-colors ${
+                  isThinking
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Send
+              </button>
+            </div>
           </div>
         </aside>
       )}
