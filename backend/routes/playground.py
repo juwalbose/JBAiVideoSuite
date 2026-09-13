@@ -24,17 +24,6 @@ def list_workflows():
         for f in workflow_files
     ]
 
-@router.get("/images")
-def list_generated_images():
-    """
-    Returns a list of all image files in the assets/generated directory.
-    """
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    image_dir = os.path.join(base_dir, "..", "assets", "generated")
-    
-    files = sorted([f for f in os.listdir(image_dir) if f.endswith(".png") or f.endswith(".jpg")])
-    return files
-
 class GenerateRequest(BaseModel):
     workflow_id: str
     inputs: Dict[str, Any]

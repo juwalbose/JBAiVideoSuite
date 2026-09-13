@@ -1,7 +1,6 @@
-import os
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from typing import Optional
+from fastapi.staticfiles import StaticFiles
 
 # Import Models
 from models import (
@@ -16,27 +15,29 @@ from models import (
 )
 
 # Import Routers
-from routes import settings, projects, handshake, comfyui, workflows, playground
+from routes import settings, projects, handshake, comfyui, workflows, playground, gallery, systemprompts, chat, appsettings, assets
 
 from database import db, get_db
 
 app = FastAPI(title="BionicProducer API")
 
+# --- Static Files Mounting ---
+# This allows the browser to access files in the assets folder via /assets/ path.
+# Since main.py is inside the backend folder, we go up one level (..) to find assets.
+app.mount("/assets", StaticFiles(directory="../assets"), name="assets")
+
 # Middleware for CORS
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Mount the assets directory to serve static files (images, workflows, etc.)
-base_dir = os.path.dirname(os.path.abspath(__file__))
-assets_dir = os.path.abspath(os.path.join(base_dir, "..", "assets"))
-print(f"DEBUG: Assets directory mounted at: {assets_dir}")
-app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 # --- Startup/Shutdown Events ---
 
@@ -85,6 +86,11 @@ app.include_router(handshake.router)
 app.include_router(workflows.router)
 app.include_router(comfyui.router)
 app.include_router(playground.router)
+app.include_router(gallery.router)
+app.include_router(systemprompts.router)
+app.include_router(chat.router)
+app.include_router(appsettings.router)
+app.include_router(assets.router)
 
 # --- Root Endpoint (Optional) ---
 @app.get("/")

@@ -1,11 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, File, HTTPException, UploadFile
 from pydantic import BaseModel
 import httpx
-
-import os
-from pathlib import Path
 from database import db
-from models import ComfyUISettingsModel
 
 router = APIRouter(prefix="/comfyui", tags=["ComfyUI"])
 
@@ -64,41 +60,48 @@ async def check_comfyui(host: str = Query("127.0.0.1"), port: int = Query(8188))
                 details=f"Error checking ComfyUI: {str(e)}"
             )
 
-@router.post("/upload/image")
-async def upload_image(filename: str = Query(...)):
-    # Fetch ComfyUI settings from DB
-    comfy_settings = await db.comfyuisettings.find_first()
-    if not comfy_settings:
-        return {"error": "ComfyUI settings not found in database."}
+@router.post("/upload")
+async def upload_to_comfy(file: UploadFile = File(...)):
+    print(f"Backend received upload request for file: {file.filename}")
+    # Fetch comfyui settings from DB
+    comfyui = await db.comfyuisettings.find_first()
+    if not comfyui:
+        raise HTTPException(status_code=500, detail="ComfyUI settings not found in database.")
 
-    target_url = f"http://{comfy_settings.ip}:{comfy_settings.port}/upload/image"
-    
-    # Use a more robust pathing system relative to the project root
-    base_path = Path(__file__).resolve().parent.parent
-    image_path = base_path / "assets" / "generated" / filename
+    # Accessing fields using dot notation for Prisma Model objects
+    host = comfyui.ip
+    port = comfyui.port
+    target_url = f"http://{host}:{port}"
 
-    if not image_path.exists():
-        return {"error": f"File not found at {image_path}"}
+    # Read binary bytes sent from React
+    file_bytes = await file.read()
 
-    try:
-        with open(image_path, "rb") as f:
-            file_bytes = f.read()
-
-        # ComfyUI strictly expects multipart form key named "image"
-        files = {
-            "image": (filename, file_bytes, "image/png"),
-        }
-        data = {"overwrite": "true"}
-
-        upload_res = await httpx.AsyncClient().post(
-            target_url, 
-            files=files, 
-            data=data
+    # ComfyUI strictly expects multipart form key named "image"
+    files = {
+        "image": (
+            file.filename,
+            file_bytes,
+            file.content_type or "image/png",
         )
+    }
+    data = {"overwrite": "true"}
 
-        if upload_res.status_code == 200:
-            return upload_res.json()
-        else:
-            return {"error": f"ComfyUI returned {upload_res.status_code}: {upload_res.text}"}
-    except Exception as e:
-        return {"error": str(e)}
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            res = await client.post(
+                f"{target_url}/upload/image", files=files, data=data
+            )
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail="ComfyUI is unreachable. Check if it is running.",
+            )
+
+        if res.status_code != 200:
+            raise HTTPException(
+                status_code=res.status_code,
+                detail=f"ComfyUI rejected upload: {res.text}",
+            )
+
+        # Returns: {"name": "my_image.png", "subfolder": "", "type": "input"}
+        return res.json()
