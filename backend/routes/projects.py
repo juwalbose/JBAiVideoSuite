@@ -200,11 +200,15 @@ async def generate_shots(id: str, db: Any = Depends(get_db)):
             {"role": "user", "content": f"Split this script into shots for MiniMax H3 video model:\n\n{project.script.content}"}
         ],
         "temperature": temperature,
+        "max_tokens": 16384,
     }
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        data = response.json()
+        result = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        finish_reason = data.get("choices", [{}])[0].get("finish_reason", "unknown")
+        print(f"DEBUG: generate_shots response length={len(result)}, finish_reason={finish_reason}")
         return {"status": "success", "shots": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_shots: {e}")

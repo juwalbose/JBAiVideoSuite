@@ -41,6 +41,7 @@ model Project {
   beats         Beat[]
   assets        Asset[]
   finalVideo    FinalVideo?
+  shotList      ShotList[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -124,9 +125,25 @@ model Script {
 
 model FinalVideo {
   id           String   @id @default(cuid())
-  projectId    String   @unique 
+  projectId    String   @unique
   project      Project  @relation(fields: [projectId], references: [id])
   totalDuration Float?
   exportPath   String?
   thumbnailUrl String?
+}
+
+model ShotList {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  shot        Int
+  frames      Int
+  duration    Float
+  camera      String
+  action      String
+  dialogue    String
+  note        String
+  prompt      String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

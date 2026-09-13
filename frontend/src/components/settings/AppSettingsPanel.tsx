@@ -52,6 +52,20 @@ const ASSET_JSON_FORMAT = `{
   ]
 }`;
 
+const SHOT_JSON_FORMAT = `{
+  "shots": [
+    {
+      "shot": 1,
+      "frames": 158,
+      "duration": 6.5,
+      "camera": "Explicit placement and cropping instructions",
+      "action": "Staggered emotional beats, hiding transitions via blinks or movement",
+      "dialogue": "<d>[Language] Text</d> or VO notes, leave blank if none",
+      "note": "Brief justification based on empirical rules"
+    }
+  ]
+}`;
+
 const AppSettingsPanel = () => {
   const { backend } = useSettingsStore();
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
@@ -60,6 +74,7 @@ const AppSettingsPanel = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showJsonFormat, setShowJsonFormat] = useState(false);
+  const [showShotFormat, setShowShotFormat] = useState(false);
 
   useEffect(() => {
     const baseUrl = backend.apiUrl;
@@ -141,26 +156,49 @@ const AppSettingsPanel = () => {
         {saved && <span className="text-green-600 text-sm">Saved!</span>}
       </div>
 
-      <div className="border-t pt-4">
-        <button
-          onClick={() => setShowJsonFormat(!showJsonFormat)}
-          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-        >
-          {showJsonFormat ? '▼' : '▶'} Expected Asset JSON Format
-        </button>
-        {showJsonFormat && (
-          <div className="mt-3">
-            <p className="text-sm text-gray-600 mb-2">
-              This is the JSON structure the "Extract Cast" action should return,
-              and what the Extracted Assets box expects. All asset types
-              (Characters, Locations, Props) have <code className="bg-gray-100 px-1 rounded">states</code>
-              (different appearances/conditions — e.g. a suitcase can be "Closed" or "Open").
-            </p>
-            <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
-              {ASSET_JSON_FORMAT}
-            </pre>
-          </div>
-        )}
+      <div className="border-t pt-4 space-y-4">
+        <div>
+          <button
+            onClick={() => setShowJsonFormat(!showJsonFormat)}
+            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+          >
+            {showJsonFormat ? '▼' : '▶'} Expected Asset JSON Format
+          </button>
+          {showJsonFormat && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-2">
+                This is the JSON structure the "Extract Cast" action should return,
+                and what the Extracted Assets box expects. All asset types
+                (Characters, Locations, Props) have <code className="bg-gray-100 px-1 rounded">states</code>
+                (different appearances/conditions — e.g. a suitcase can be "Closed" or "Open").
+              </p>
+              <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
+                {ASSET_JSON_FORMAT}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <button
+            onClick={() => setShowShotFormat(!showShotFormat)}
+            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+          >
+            {showShotFormat ? '▼' : '▶'} Expected Shot JSON Format
+          </button>
+          {showShotFormat && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-2">
+                This is the JSON structure the "Generate Shots" action should return.
+                Each shot has a <code className="bg-gray-100 px-1 rounded">frames</code> value
+                matching the 17n+5 grid, and a <code className="bg-gray-100 px-1 rounded">duration</code> in seconds.
+              </p>
+              <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
+                {SHOT_JSON_FORMAT}
+              </pre>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
