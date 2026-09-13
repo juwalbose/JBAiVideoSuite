@@ -5,6 +5,7 @@ const APP_ACTIONS = [
   'Develop Raw Story',
   'Extract Cast',
   'Generate Script',
+  'Generate Prompt',
   'Refine Dialog',
   'Generate Shots',
 ];
