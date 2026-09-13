@@ -25,32 +25,25 @@ const Studio = () => {
     loadSettings().then(() => {
       fetchProjects();
       const { backend, comfyui } = useSettingsStore.getState();
-      fetch(`${backend.apiUrl}/handshake`)
+      if (!backend?.apiUrl) return;
+      const timeout = 3000;
+      const llmPromise = fetch(`${backend.apiUrl}/handshake`)
         .then(res => res.json())
         .then(data => {
-          if (data.status === 'healthy') {
-            setLlmStatus(`🟢 ${data.active_model}`);
-          } else if (data.status === 'no_models') {
-            setLlmStatus('🔵 No Models Loaded');
-          } else {
-            setLlmStatus(`🔴 ${data.status.toUpperCase()}: ${data.details}`);
-          }
+          if (data.status === 'healthy') setLlmStatus(`🟢 ${data.active_model}`);
+          else if (data.status === 'no_models') setLlmStatus('🔵 No Models Loaded');
+          else setLlmStatus(`🔴 ${data.status.toUpperCase()}`);
         })
-        .catch(() => {
-          setLlmStatus('🔴 Unreachable');
-        });
-      fetch(`${backend.apiUrl}/comfyui/check?host=${comfyui.ip}&port=${comfyui.port}`)
+        .catch(() => setLlmStatus('🔴 Unreachable'));
+      const comfyPromise = fetch(`${backend.apiUrl}/comfyui/check?host=${comfyui.ip}&port=${comfyui.port}`)
         .then(res => res.json())
         .then(data => {
-          if (data.available) {
-            setComfyStatus('🟢 Online');
-          } else {
-            setComfyStatus('🔴 Offline');
-          }
+          if (data.available) setComfyStatus('🟢 Online');
+          else setComfyStatus('🔴 Offline');
         })
-        .catch(() => {
-          setComfyStatus('🔴 Unreachable');
-        });
+        .catch(() => setComfyStatus('🔴 Unreachable'));
+      Promise.race([llmPromise, new Promise(r => setTimeout(r, timeout))]);
+      Promise.race([comfyPromise, new Promise(r => setTimeout(r, timeout))]);
     });
   }, [loadSettings]);
 

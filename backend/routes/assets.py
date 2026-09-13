@@ -6,6 +6,22 @@ from .llm_helper import get_system_prompt, call_llm
 
 router = APIRouter(prefix="/projects", tags=["Assets"])
 
+@router.post("/{id}/refine-dialog")
+async def refine_dialog(id: str, payload: dict, db: Any = Depends(get_db)):
+    project = await db.project.find_first(where={'id': id}, include={'script': {}})
+    if not project or not project.script:
+        return {"status": "error", "details": "Project or Script not found"}
+    system_prompt = await get_system_prompt(db, "Refine Dialog")
+    if not system_prompt:
+        return {"status": "error", "details": "No system prompt mapped for 'Refine Dialog'."}
+    try:
+        script = payload.get('script', project.script.content)
+        result = await call_llm(db, system_prompt, f"Refine the dialog in this script:\n\n{script}")
+        return {"status": "success", "script": result}
+    except Exception as e:
+        print(f"DEBUG: Error in refine_dialog: {e}")
+        return {"status": "error", "details": str(e)}
+
 @router.post("/{id}/extract-cast")
 async def extract_cast(id: str, db: Any = Depends(get_db)):
     project = await db.project.find_first(where={'id': id}, include={'script': {}})
@@ -54,7 +70,9 @@ async def save_assets(id: str, payload: dict, db: Any = Depends(get_db)):
             await db.assetstate.create({'assetId': asset.id, 'name': state.get('name', ''), 'description': state.get('description', ''), 'prompt': state.get('description', ''), 'scenes': str(state.get('scenes', []))})
         created += 1
     for prop in data.get('props', []):
-        await db.asset.create({'projectId': id, 'type': 'PROP', 'name': prop.get('name', ''), 'description': prop.get('description', '')})
+        asset = await db.asset.create({'projectId': id, 'type': 'PROP', 'name': prop.get('name', ''), 'description': prop.get('description', '')})
+        for state in prop.get('states', []):
+            await db.assetstate.create({'assetId': asset.id, 'name': state.get('name', ''), 'description': state.get('description', ''), 'prompt': state.get('description', ''), 'scenes': str(state.get('scenes', []))})
         created += 1
     return {"status": "success", "assetsCreated": created}
 
@@ -67,12 +85,8 @@ async def get_assets(id: str, db: Any = Depends(get_db)):
     result = {"characters": [], "locations": [], "props": []}
     for a in assets:
         entry = {"id": a.id, "name": a.name, "description": a.description or ""}
-        if a.type in ("CHARACTER", "LOCATION"):
-            entry["states"] = [{"id": s.id, "name": s.name, "description": s.description or "", "prompt": s.prompt or "", "scenes": s.scenes, "imagePath": s.imagePath or "", "characterSheet": s.characterSheet or ""} for s in a.states]
-            result["characters" if a.type == "CHARACTER" else "locations"].append(entry)
-        elif a.type == "PROP":
-            entry["scenes"] = a.states[0].scenes if a.states else None
-            result["props"].append(entry)
+        entry["states"] = [{"id": s.id, "name": s.name, "description": s.description or "", "prompt": s.prompt or "", "scenes": s.scenes, "imagePath": s.imagePath or "", "characterSheet": s.characterSheet or ""} for s in a.states]
+        result["characters" if a.type == "CHARACTER" else "locations" if a.type == "LOCATION" else "props"].append(entry)
     return {"status": "success", "assets": result}
 
 @router.patch("/{id}/assets/{asset_id}")

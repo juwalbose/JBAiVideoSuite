@@ -41,8 +41,13 @@ const ASSET_JSON_FORMAT = `{
     {
       "name": "Prop Name",
       "description": "What the prop looks like",
-      "associatedCharacters": ["Character Name"],
-      "scenes": ["Scene 2"]
+      "states": [
+        {
+          "name": "State Name (e.g. 'Closed', 'Open')",
+          "description": "Description of this state",
+          "scenes": ["Scene 2"]
+        }
+      ]
     }
   ]
 }`;
@@ -147,9 +152,9 @@ const AppSettingsPanel = () => {
           <div className="mt-3">
             <p className="text-sm text-gray-600 mb-2">
               This is the JSON structure the "Extract Cast" action should return,
-              and what the Extracted Assets box expects. Characters and Locations
-              have <code className="bg-gray-100 px-1 rounded">states</code> (different
-              appearances/conditions). Props are single-state.
+              and what the Extracted Assets box expects. All asset types
+              (Characters, Locations, Props) have <code className="bg-gray-100 px-1 rounded">states</code>
+              (different appearances/conditions — e.g. a suitcase can be "Closed" or "Open").
             </p>
             <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
               {ASSET_JSON_FORMAT}

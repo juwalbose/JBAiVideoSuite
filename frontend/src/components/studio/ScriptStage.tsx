@@ -12,6 +12,8 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [hasSavedAssets, setHasSavedAssets] = useState(false);
+  const [refinedScript, setRefinedScript] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
 
   // Sync local state with project data when currentProject changes
   useEffect(() => {
@@ -91,6 +93,36 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     } finally {
       setIsExtracting(false);
     }
+  };
+
+  const handleRefineDialog = async () => {
+    if (!currentProject) return;
+    setIsRefining(true);
+    setError('');
+    try {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/refine-dialog`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script }),
+      });
+      const data = await response.json();
+      if (data.status === 'error') {
+        setError(data.details);
+        return;
+      }
+      setRefinedScript(data.script || '');
+    } catch (error) {
+      console.error("Error refining dialog:", error);
+      setError('Failed to refine dialog. Check backend connection.');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleApplyRefinement = () => {
+    setScript(refinedScript);
+    setRefinedScript('');
   };
 
   const formatCast = (json: string): string => {
@@ -234,6 +266,13 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           {isLoading ? 'Generating...' : script ? 'Regenerate Script' : 'Generate Script'}
         </button>
         <button
+          onClick={handleRefineDialog}
+          disabled={isRefining || !script}
+          className="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 transition-colors"
+        >
+          {isRefining ? 'Refining...' : 'Refine Dialog'}
+        </button>
+        <button
           onClick={handleExtractCast}
           disabled={isExtracting || !script}
           className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 transition-colors"
@@ -241,6 +280,26 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           {isExtracting ? 'Extracting...' : 'Extract Assets'}
         </button>
       </div>
+
+      {refinedScript && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-lg font-semibold text-teal-900">Refined Dialog</h3>
+          <textarea
+            className="w-full p-4 border border-teal-300 rounded bg-teal-50 text-gray-800 resize-y"
+            rows={15}
+            value={refinedScript}
+            onChange={(e) => setRefinedScript(e.target.value)}
+          />
+          <div className="flex justify-center">
+            <button
+              onClick={handleApplyRefinement}
+              className="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+            >
+              Apply Dialog Refinement
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2 mt-4">
         <h3 className="text-lg font-semibold text-blue-900">Extracted Assets</h3>
