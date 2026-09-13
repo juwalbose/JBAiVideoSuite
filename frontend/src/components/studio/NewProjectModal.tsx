@@ -3,7 +3,12 @@ import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { X } from 'lucide-react';
 
-const NewProjectModal = ({ isOpen, onClose }) => {
+interface NewProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
   const [name, setName] = useState('');
   const [type, setType] = useState<'single' | 'episodic'>('single');
   const [isCreating, setIsCreating] = useState(false);

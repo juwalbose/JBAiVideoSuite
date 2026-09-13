@@ -32,7 +32,7 @@ const SystemPromptsPanel: React.FC = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async () => {
-      const content = reader.result;
+      const content = reader.result as string;
       const baseUrl = backend.apiUrl.endsWith('/') ? backend.apiUrl.slice(0, -1) : backend.apiUrl;
       const url = `${baseUrl}/systemprompts/add?name=${file.name.replace('.txt', '')}&content=${encodeURIComponent(content)}`;
       console.log('Adding system prompt:', url);

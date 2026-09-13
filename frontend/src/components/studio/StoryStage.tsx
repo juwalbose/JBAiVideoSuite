@@ -23,6 +23,7 @@ const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCou
   }, [currentProject?.id]);
 
   const handleGenerateStory = async () => {
+    if (!currentProject) return;
     setIsLoading(true);
     setError('');
     try {
@@ -49,6 +50,7 @@ const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCou
   };
 
   const handleSave = async () => {
+    if (!currentProject) return;
     setIsSaving(true);
     setError('');
     try {

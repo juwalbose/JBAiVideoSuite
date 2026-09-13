@@ -32,7 +32,7 @@ export interface SettingsState {
   backend: BackendSettings;
   comfyui: ComfyUISettings;
   workflows: Workflow[];
-  availableModels: string[];
+  availableModels: any[];
   
   setLLM: (settings: Partial<LLMSettings>) => void;
   setBackend: (settings: Partial<BackendSettings>) => void;
