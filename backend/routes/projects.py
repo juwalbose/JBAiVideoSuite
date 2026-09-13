@@ -182,6 +182,34 @@ async def generate_script(id: str, db: Any = Depends(get_db)):
         print(f"DEBUG: Error in generate_script: {e}")
         return {"status": "error", "details": str(e)}
 
+@router.post("/{id}/generate-shots")
+async def generate_shots(id: str, db: Any = Depends(get_db)):
+    project = await db.project.find_first(where={'id': id}, include={'script': {}})
+    if not project or not project.script:
+        return {"status": "error", "details": "Project or Script not found"}
+    system_prompt = await get_system_prompt(db, "Generate Shots")
+    if not system_prompt:
+        return {"status": "error", "details": "No system prompt mapped for 'Generate Shots'. Go to Settings > App Settings and map a prompt first."}
+    llm = await db.llmsettings.find_first()
+    ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
+    url = f"http://{ip}:{port}/v1/chat/completions"
+    payload = {
+        "model": modelName,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Split this script into shots for MiniMax H3 video model:\n\n{project.script.content}"}
+        ],
+        "temperature": temperature,
+    }
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        return {"status": "success", "shots": result}
+    except Exception as e:
+        print(f"DEBUG: Error in generate_shots: {e}")
+        return {"status": "error", "details": str(e)}
+
 @router.patch("/{id}/script")
 async def update_script(id: str, payload: dict, db: Any = Depends(get_db)):
     # 1. Fetch the project

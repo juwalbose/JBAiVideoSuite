@@ -69,9 +69,9 @@ const AppSettingsPanel = () => {
     ])
       .then(([m, p]) => {
         setPrompts(p);
-        const validIds = new Set(p.map((x) => x.id));
+        const validIds = new Set(p.map((x: { id: string }) => x.id));
         const cleaned: Record<string, string | null> = {};
-        for (const [action, file] of Object.entries(m)) {
+        for (const [action, file] of Object.entries(m as Record<string, string>)) {
           cleaned[action] = file && validIds.has(file) ? file : null;
         }
         setMappings(cleaned);

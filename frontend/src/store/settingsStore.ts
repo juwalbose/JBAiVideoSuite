@@ -45,11 +45,12 @@ export interface SettingsState {
   saveBackend: () => Promise<void>;
   saveComfyUI: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  testComfyuiConnection: () => Promise<string>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       llm: {
         ip: '192.168.1.66',
         port: 1234,
@@ -77,23 +78,22 @@ export const useSettingsStore = create<SettingsState>()(
       setWorkflows: (workflows) => set({ workflows }),
       setAvailableModels: (models) => set({ availableModels: models }),
 
-      testComfyuiConnection: async () => {
-        const state = useSettingsStore.getState();
+      testComfyuiConnection: async (): Promise<string> => {
+        const state = get();
         try {
-          // Call the new /check route using the dynamic IP and Port from settings as query parameters
           const response = await fetch(`${state.backend.apiUrl}/comfyui/check?host=${state.comfyui.ip}&port=${state.comfyui.port}`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
-          const data = await response.json();
+          const data: { details: string } = await response.json();
           return data.details;
         } catch (error) {
-          return `🔴 Unreachable (${error.message})`;
+          return `🔴 Unreachable (${(error as Error).message})`;
         }
       },
 
       saveLLM: async () => {
-        const state = useSettingsStore.getState();
+        const state = get();
         await fetch(`${state.backend.apiUrl}/settings/save-llm`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -101,7 +101,7 @@ export const useSettingsStore = create<SettingsState>()(
         });
       },
       saveBackend: async () => {
-        const state = useSettingsStore.getState();
+        const state = get();
         await fetch(`${state.backend.apiUrl}/settings/save-backend`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -109,7 +109,7 @@ export const useSettingsStore = create<SettingsState>()(
         });
       },
       saveComfyUI: async () => {
-        const state = useSettingsStore.getState();
+        const state = get();
         await fetch(`${state.backend.apiUrl}/settings/save-comfyui`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -119,7 +119,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       loadSettings: async () => {
         try {
-          const state = useSettingsStore.getState();
+          const state = get();
           const response = await fetch(`${state.backend.apiUrl}/settings/`);
           if (response.ok) {
             const data = await response.json();

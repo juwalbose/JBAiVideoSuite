@@ -3,6 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import StoryStage from '../components/studio/StoryStage';
 import ScriptStage from '../components/studio/ScriptStage';
 import AssetsStage from '../components/studio/AssetsStage';
+import ShotListStage from '../components/studio/ShotListStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
@@ -160,7 +161,7 @@ const Studio = () => {
                       {stageTab === 'story' && (
                         <div>
                           {currentProject?.story ? (
-                            <StoryStage story={currentProject.story} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
+                            <StoryStage onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
                           ) : (
                             <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
                               <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
@@ -206,13 +207,7 @@ const Studio = () => {
                               </select>
                             </div>
                           )}
-                          <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                            <p className="text-gray-400 italic">
-                              {currentProject?.type === 'episodic'
-                                ? `Shot list for Episode ${selectedEpisode} will appear here.`
-                                : 'Shot list will appear here.'}
-                            </p>
-                          </div>
+                          <ShotListStage selectedEpisode={selectedEpisode} />
                         </div>
                       )}
                       {stageTab === 'final' && (

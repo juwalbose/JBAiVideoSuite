@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useProjectStore } from '../../store/projectStore';
+import { useProjectStore, Script } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
 const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode: number; onNavigateToAssets?: () => void }) => {
@@ -42,6 +42,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   }, [currentProject?.id]);
 
   const handleGenerateScript = async () => {
+    if (!currentProject) return;
     setIsLoading(true);
     setError('');
     try {
@@ -68,6 +69,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   };
 
   const handleExtractCast = async () => {
+    if (!currentProject) return;
     setIsExtracting(true);
     setError('');
     try {
@@ -179,6 +181,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   };
 
   const handleSave = async () => {
+    if (!currentProject) return;
     setIsSaving(true);
     setError('');
     try {
@@ -221,7 +224,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       const { setCurrentProject } = useProjectStore.getState();
       setCurrentProject({
         ...currentProject,
-        script: { id: currentProject.script?.id || 'pending', content: script }
+        script: { id: currentProject.script?.id || 'pending', content: script } as Script
       });
     } catch (error) {
       console.error("Error saving:", error);

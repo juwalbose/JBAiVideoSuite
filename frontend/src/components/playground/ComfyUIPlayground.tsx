@@ -7,9 +7,11 @@ import WorkflowInputManager from './WorkflowInputManager';
 interface PlaygroundObject {
   workflow_name: string;
   inputs: Record<string, any>;
+  nodes: Record<string, any>;
   output_type: string;
   is_valid: boolean;
   invalid_reason?: string;
+  image_node_map: Record<string, string>;
   id: string;
 }
 

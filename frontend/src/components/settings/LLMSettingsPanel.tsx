@@ -38,7 +38,7 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
         setTestStatus('🔴 Unreachable (Check IP/Port or if LM Studio is open)');
       } else {
-        setTestStatus(`🔴 Error: ${error.message}`);
+        setTestStatus(`🔴 Error: ${(error as Error).message}`);
       }
     } finally {
       setIsTesting(false);
