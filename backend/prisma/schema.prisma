@@ -27,18 +27,22 @@ model ComfyUISettings {
   ip          String
   port        Int
   deviceId    String
+  pollInterval Int     @default(4000)
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  story       Story?
-  beats       Beat[]
-  assets      Asset[]
-  finalVideo  FinalVideo?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  type          String   @default("single")
+  duration      Int      @default(120)
+  episodeCount  Int      @default(1)
+  story         Story?
+  script        Script?
+  beats         Beat[]
+  assets        Asset[]
+  finalVideo    FinalVideo?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Story {
@@ -61,15 +65,33 @@ model Beat {
 }
 
 model Asset {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
-  beatId      String?
-  beat        Beat?    @relation(fields: [beatId], references: [id])
-  type        String   // Changed from Enum to String (e.g., "CHARACTER", "ENVIRONMENT", "PROP")
-  name        String
-  imagePath   String?
-  prompt      String?
+  id              String        @id @default(cuid())
+  projectId       String
+  project         Project       @relation(fields: [projectId], references: [id])
+  beatId          String?
+  beat            Beat?         @relation(fields: [beatId], references: [id])
+  type            String   // "CHARACTER", "LOCATION", "PROP"
+  name            String
+  description     String?
+  imagePath       String?
+  prompt          String?
+  states          AssetState[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model AssetState {
+  id              String   @id @default(cuid())
+  assetId         String
+  asset           Asset    @relation(fields: [assetId], references: [id])
+  name            String
+  description     String?
+  prompt          String?
+  imagePath       String?
+  characterSheet  String?
+  scenes          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Shot {
@@ -81,6 +103,23 @@ model Shot {
   cameraMovement String?
   duration       Float?
   videoPath      String?
+}
+
+model AppActionMapping {
+  id           String   @id @default(cuid())
+  action       String   @unique
+  promptFile   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Script {
+  id           String   @id @default(cuid())
+  projectId    String   @unique
+  project      Project  @relation(fields: [projectId], references: [id])
+  content      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model FinalVideo {

@@ -47,10 +47,17 @@ const ProjectLibrary = () => {
                 currentProject?.id === project.id ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-200 bg-white'
               }`}
             >
+              <div className="w-full h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                <span className="text-gray-300 text-xs uppercase tracking-wider">No Preview</span>
+              </div>
               <h3 className="text-xl font-bold mb-1">{project.name || 'Untitled Project'}</h3>
-              <p className="text-gray-500 text-sm line-clamp-2">
-                {project.description && project.description.trim().length > 0 ? project.description : 'No description yet.'}
-              </p>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                project.type === 'episodic'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
+                {project.type === 'episodic' ? 'Episodic' : 'Single Video'}
+              </span>
             </div>
           ))}
         </div>

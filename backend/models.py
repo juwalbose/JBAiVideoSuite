@@ -17,7 +17,7 @@ class Beat(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    type: str = "single"
 
 # --- Settings Models ---
 
@@ -36,6 +36,7 @@ class ComfyUISettingsModel(BaseModel):
     ip: str
     port: int
     deviceId: str
+    pollInterval: int = 4000
 
 # --- Handshake Model ---
 

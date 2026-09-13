@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Generated assets (ignore contents, keep folder)
+assets/generated/*
+!assets/generated/.gitkeep
+
+# Env files
+.env*
+
+# OS
+.DS_Store
+Thumbs.db

@@ -35,11 +35,13 @@ class PlaygroundParser:
         playground_obj = {
             "workflow_name": full_path.split('/')[-1].replace('.json', '').replace('_', ' '),
             "inputs": {},
+            "nodes": data,
             "output_type": None,
-            "is_valid": False
+            "is_valid": False,
+            "image_node_map": {}
         }
 
-        output_nodes = []
+        image_nodes = []
 
         for node_id, node_data in data.items():
             title = node_data.get('_meta', {}).get('title', '')
@@ -57,16 +59,40 @@ class PlaygroundParser:
                         if isinstance(default_val, list):
                             default_val = default_val[0]
 
-                        playground_obj["inputs"][role] = {
-                            "type": self.role_definitions[role],
-                            "value": default_val
-                        }
+                        # If it's an image role, store it to handle numbering later
+                        if role == "image":
+                            image_nodes.append({
+                                "id": node_id,
+                                "title": title,
+                                "value": default_val
+                            })
+                        else:
+                            playground_obj["inputs"][role] = {
+                                "type": self.role_definitions[role],
+                                "value": default_val
+                            }
                 
                 elif tag == "output":
                     if role in ["image", "video"]:
-                        output_nodes.append(role)
+                        if "output_nodes" not in playground_obj:
+                            playground_obj["output_nodes"] = []
+                        playground_obj["output_nodes"].append(role)
+
+        # Now handle the image nodes with correct numbering sequence
+        # Sort by the number extracted from the title (e.g., "(Input:image) Image1")
+        image_nodes.sort(key=lambda x: int(re.search(r'\d+', x['title']).group()) if re.search(r'\d+', x['title']) else 0)
+
+        for i, node in enumerate(image_nodes):
+            role = f"image{i+1}"
+            playground_obj["inputs"][role] = {
+                "type": "image",
+                "value": node["value"]
+            }
+            # Store the mapping of role name to actual Node ID
+            playground_obj["image_node_map"][role] = node["id"]
 
         # A workflow is valid only if it has exactly one output node
+        output_nodes = playground_obj.get("output_nodes", [])
         if len(output_nodes) == 1:
             playground_obj["output_type"] = output_nodes[0]
             playground_obj["is_valid"] = True
