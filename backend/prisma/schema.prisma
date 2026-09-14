@@ -147,7 +147,13 @@ model ShotList {
   action      String
   dialogue    String
   note        String
-  prompt      String   @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  prompt                String   @default("")
+  locationAssetId       String?
+  locationStateId       String?
+  characterAssetIds     String?
+  characterStateIds     String?
+  propAssetIds          String?
+  propStateIds          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

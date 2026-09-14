@@ -15,6 +15,25 @@ interface ShotData {
   dialogue: string;
   note: string;
   prompt: string;
+  locationAssetId: string | null;
+  locationStateId: string | null;
+  characterAssetIds: string[];
+  characterStateIds: string[];
+  propAssetIds: string[];
+  propStateIds: string[];
+}
+
+interface AssetState {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface AssetItem {
+  id: string;
+  name: string;
+  description: string;
+  states: AssetState[];
 }
 
 const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
@@ -54,6 +73,12 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     dialogue: s.dialogue || '',
     note: s.note || '',
     prompt: s.prompt || '',
+    locationAssetId: s.locationAssetId || null,
+    locationStateId: s.locationStateId || null,
+    characterAssetIds: Array.isArray(s.characterAssetIds) ? s.characterAssetIds : (typeof s.characterAssetIds === 'string' && s.characterAssetIds.startsWith('[') ? JSON.parse(s.characterAssetIds) : []),
+    characterStateIds: Array.isArray(s.characterStateIds) ? s.characterStateIds : (typeof s.characterStateIds === 'string' && s.characterStateIds.startsWith('[') ? JSON.parse(s.characterStateIds) : []),
+    propAssetIds: Array.isArray(s.propAssetIds) ? s.propAssetIds : (typeof s.propAssetIds === 'string' && s.propAssetIds.startsWith('[') ? JSON.parse(s.propAssetIds) : []),
+    propStateIds: Array.isArray(s.propStateIds) ? s.propStateIds : (typeof s.propStateIds === 'string' && s.propStateIds.startsWith('[') ? JSON.parse(s.propStateIds) : []),
   });
 
   const parseShots = (raw: string): ShotData[] => {
@@ -152,6 +177,16 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [genPromptLoading, setGenPromptLoading] = useState(false);
   const [genAll, setGenAll] = useState<{ active: boolean; current: number; total: number; done: number; failed: number } | null>(null);
   const abortRef = useRef(false);
+  const [projectAssets, setProjectAssets] = useState<{ characters: AssetItem[]; locations: AssetItem[]; props: AssetItem[] }>({ characters: [], locations: [], props: [] });
+
+  useEffect(() => {
+    if (!currentProject) return;
+    const baseUrl = useSettingsStore.getState().backend.apiUrl;
+    fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
+      .then((r) => r.json())
+      .then((data) => { if (data.status === 'success') setProjectAssets(data.assets); })
+      .catch(console.error);
+  }, [currentProject?.id]);
 
   const generatePrompt = async (index: number) => {
     if (!currentProject) return;
@@ -203,7 +238,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     setSaved(false);
   };
 
-  const updateShot = (index: number, field: keyof ShotData, value: string | number | number[]) => {
+  const updateShot = (index: number, field: keyof ShotData, value: string | number | number[] | string[] | null) => {
     setShots((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
     setSaved(false);
   };
@@ -219,7 +254,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const addShot = () => {
     const nextNum = shots.length > 0 ? Math.max(...shots.map((s) => s.shot)) + 1 : 1;
-    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '' }]);
+    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '', locationAssetId: null, locationStateId: null, characterAssetIds: [], characterStateIds: [], propAssetIds: [], propStateIds: [] }]);
     setSelectedIdx(shots.length);
     setSaved(false);
   };
@@ -314,6 +349,132 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           </div>
           {textField('Dialogue', shot.dialogue, (v) => updateShot(selectedIdx, 'dialogue', v))}
           {textField('Note', shot.note, (v) => updateShot(selectedIdx, 'note', v), 1)}
+          <div className="border-t pt-3">
+            <h4 className="text-xs font-medium text-gray-500 mb-2">Linked Assets</h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Location</label>
+                <select
+                  className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+                  value={shot.locationStateId || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) {
+                      updateShot(selectedIdx, 'locationAssetId', null);
+                      updateShot(selectedIdx, 'locationStateId', null);
+                    } else {
+                      const [aid, sid] = val.split('|');
+                      updateShot(selectedIdx, 'locationAssetId', aid);
+                      updateShot(selectedIdx, 'locationStateId', sid);
+                    }
+                  }}
+                >
+                  <option value="">None</option>
+                  {projectAssets.locations.map((a) => (
+                    <optgroup key={a.id} label={a.name}>
+                      {a.states.map((st) => (
+                        <option key={st.id} value={`${a.id}|${st.id}`}>{st.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Characters</label>
+                {shot.characterAssetIds.map((aid, i) => (
+                  <select
+                    key={i}
+                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black mb-1"
+                    value={shot.characterStateIds[i] ? `${aid}|${shot.characterStateIds[i]}` : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        const newIds = shot.characterAssetIds.filter((_, j) => j !== i);
+                        const newStates = shot.characterStateIds.filter((_, j) => j !== i);
+                        updateShot(selectedIdx, 'characterAssetIds', newIds);
+                        updateShot(selectedIdx, 'characterStateIds', newStates);
+                      } else {
+                        const [newAid, newSid] = val.split('|');
+                        const newIds = [...shot.characterAssetIds];
+                        const newStates = [...shot.characterStateIds];
+                        newIds[i] = newAid;
+                        newStates[i] = newSid;
+                        updateShot(selectedIdx, 'characterAssetIds', newIds);
+                        updateShot(selectedIdx, 'characterStateIds', newStates);
+                      }
+                    }}
+                  >
+                    <option value="">Character {i + 1}: None</option>
+                    {projectAssets.characters.map((a) => (
+                      <optgroup key={a.id} label={a.name}>
+                        {a.states.map((st) => (
+                          <option key={st.id} value={`${a.id}|${st.id}`}>{st.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                ))}
+                {shot.characterAssetIds.length < 4 && (
+                  <button
+                    onClick={() => {
+                      updateShot(selectedIdx, 'characterAssetIds', [...shot.characterAssetIds, '']);
+                      updateShot(selectedIdx, 'characterStateIds', [...shot.characterStateIds, '']);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    + Add Character
+                  </button>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Props</label>
+                {shot.propAssetIds.map((aid, i) => (
+                  <select
+                    key={i}
+                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black mb-1"
+                    value={shot.propStateIds[i] ? `${aid}|${shot.propStateIds[i]}` : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        const newIds = shot.propAssetIds.filter((_, j) => j !== i);
+                        const newStates = shot.propStateIds.filter((_, j) => j !== i);
+                        updateShot(selectedIdx, 'propAssetIds', newIds);
+                        updateShot(selectedIdx, 'propStateIds', newStates);
+                      } else {
+                        const [newAid, newSid] = val.split('|');
+                        const newIds = [...shot.propAssetIds];
+                        const newStates = [...shot.propStateIds];
+                        newIds[i] = newAid;
+                        newStates[i] = newSid;
+                        updateShot(selectedIdx, 'propAssetIds', newIds);
+                        updateShot(selectedIdx, 'propStateIds', newStates);
+                      }
+                    }}
+                  >
+                    <option value="">Prop {i + 1}: None</option>
+                    {projectAssets.props.map((a) => (
+                      <optgroup key={a.id} label={a.name}>
+                        {a.states.map((st) => (
+                          <option key={st.id} value={`${a.id}|${st.id}`}>{st.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                ))}
+                {shot.propAssetIds.length < 4 && (
+                  <button
+                    onClick={() => {
+                      updateShot(selectedIdx, 'propAssetIds', [...shot.propAssetIds, '']);
+                      updateShot(selectedIdx, 'propStateIds', [...shot.propStateIds, '']);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    + Add Prop
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="flex items-start gap-2">
             <div className="flex-1">
               {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 4)}

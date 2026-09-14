@@ -123,7 +123,7 @@ const Studio = () => {
                                 deleteProject(currentProject.id);
                               }
                             }}
-                            className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                            className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
                           >
                             Delete Project
                           </button>

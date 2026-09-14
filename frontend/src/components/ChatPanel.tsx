@@ -209,7 +209,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleClear}
-                  className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                  className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
                   title="Clear all messages"
                 >
                   Clear
