@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
 interface ShotData {
   shot: number;
+  scene: number;
+  beats: number[];
+  loc: string;
+  subs: string;
   frames: number;
   duration: number;
   camera: string;
@@ -39,6 +43,10 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const mapShot = (s: any): ShotData => ({
     shot: Number(s.shot) || 0,
+    scene: Number(s.scene) || 0,
+    beats: Array.isArray(s.beats) ? s.beats.map(Number) : (typeof s.beats === 'string' ? s.beats.replace(/[\[\]]/g, '').split(',').map((x: string) => Number(x.trim())).filter((n: number) => !isNaN(n)) : []),
+    loc: s.loc || '',
+    subs: Array.isArray(s.subs) ? s.subs.join(', ') : (typeof s.subs === 'string' ? (s.subs.startsWith('[') ? JSON.parse(s.subs).join(', ') : s.subs) : ''),
     frames: Number(s.frames) || 0,
     duration: Number(s.duration) || 0,
     camera: s.camera || '',
@@ -141,7 +149,61 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     }
   };
 
-  const updateShot = (index: number, field: keyof ShotData, value: string | number) => {
+  const [genPromptLoading, setGenPromptLoading] = useState(false);
+  const [genAll, setGenAll] = useState<{ active: boolean; current: number; total: number; done: number; failed: number } | null>(null);
+  const abortRef = useRef(false);
+
+  const generatePrompt = async (index: number) => {
+    if (!currentProject) return;
+    setGenPromptLoading(true);
+    setError('');
+    try {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const shot = shots[index];
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shot),
+      });
+      const data = await response.json();
+      if (data.status === 'error') { setError(data.details); return; }
+      setShots((prev) => prev.map((s, i) => (i === index ? { ...s, prompt: data.prompt } : s)));
+      setSaved(false);
+    } catch (err) {
+      console.error('Error generating prompt:', err);
+      setError('Failed to generate prompt.');
+    } finally {
+      setGenPromptLoading(false);
+    }
+  };
+
+  const handleGenerateAll = async () => {
+    if (!currentProject || shots.length === 0) return;
+    abortRef.current = false;
+    const baseUrl = useSettingsStore.getState().backend.apiUrl;
+    setGenAll({ active: true, current: 0, total: shots.length, done: 0, failed: 0 });
+    let done = 0, failed = 0;
+    for (let i = 0; i < shots.length; i++) {
+      if (abortRef.current) break;
+      setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
+      try {
+        const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(shots[i]),
+        });
+        const data = await response.json();
+        if (data.status === 'error') throw new Error(data.details);
+        setShots((prev) => prev.map((s, idx) => (idx === i ? { ...s, prompt: data.prompt } : s)));
+        done++;
+      } catch { failed++; }
+      setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
+    }
+    setGenAll({ active: false, current: shots.length, total: shots.length, done, failed });
+    setSaved(false);
+  };
+
+  const updateShot = (index: number, field: keyof ShotData, value: string | number | number[]) => {
     setShots((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
     setSaved(false);
   };
@@ -157,7 +219,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const addShot = () => {
     const nextNum = shots.length > 0 ? Math.max(...shots.map((s) => s.shot)) + 1 : 1;
-    setShots((prev) => [...prev, { shot: nextNum, frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '' }]);
+    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '' }]);
     setSelectedIdx(shots.length);
     setSaved(false);
   };
@@ -191,10 +253,24 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-blue-900">Shot List ({shots.length} shots)</h3>
-        <button onClick={addShot} className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">
-          + Add Shot
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={addShot} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+            + Add Shot
+          </button>
+          <button onClick={handleGenerateAll} disabled={genAll?.active || shots.length === 0}
+            className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm disabled:opacity-50">
+            {genAll?.active ? `Generating ${genAll.current}/${genAll.total}...` : '⚡ Generate All Prompts'}
+          </button>
+          {genAll?.active && (
+            <button onClick={() => { abortRef.current = true; }} className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+              Stop
+            </button>
+          )}
+        </div>
       </div>
+      {genAll && !genAll.active && (genAll.done > 0 || genAll.failed > 0) && (
+        <p className="text-xs text-gray-500">{genAll.done} done, {genAll.failed} failed</p>
+      )}
 
       {shots.length > 0 && shot && (
         <div className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
@@ -208,20 +284,57 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 <option key={i} value={i}>Shot {s.shot}</option>
               ))}
             </select>
-            <button onClick={() => deleteShot(selectedIdx)} className="text-red-500 hover:text-red-700 text-xs underline">
+            <button onClick={() => deleteShot(selectedIdx)} className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
               Delete Shot
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             {numField('Shot #', shot.shot, (v) => updateShot(selectedIdx, 'shot', v))}
+            {numField('Scene', shot.scene, (v) => updateShot(selectedIdx, 'scene', v))}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">Beats</label>
+              <input type="text" className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+                value={shot.beats.join(', ')}
+                onChange={(e) => {
+                  const nums = e.target.value.split(',').map((x) => Number(x.trim())).filter((n) => !isNaN(n));
+                  updateShot(selectedIdx, 'beats', nums);
+                }}
+              />
+            </div>
             {numField('Frames', shot.frames, (v) => updateShot(selectedIdx, 'frames', v))}
             {numField('Duration (s)', shot.duration, (v) => updateShot(selectedIdx, 'duration', v))}
           </div>
-          {textField('Camera', shot.camera, (v) => updateShot(selectedIdx, 'camera', v))}
-          {textField('Action', shot.action, (v) => updateShot(selectedIdx, 'action', v))}
+          <div className="grid grid-cols-2 gap-3">
+            {textField('Location', shot.loc, (v) => updateShot(selectedIdx, 'loc', v), 1)}
+            {textField('Subjects', shot.subs, (v) => updateShot(selectedIdx, 'subs', v), 1)}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {textField('Camera', shot.camera, (v) => updateShot(selectedIdx, 'camera', v))}
+            {textField('Action', shot.action, (v) => updateShot(selectedIdx, 'action', v))}
+          </div>
           {textField('Dialogue', shot.dialogue, (v) => updateShot(selectedIdx, 'dialogue', v))}
-          {textField('Note', shot.note, (v) => updateShot(selectedIdx, 'note', v))}
-          {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 4)}
+          {textField('Note', shot.note, (v) => updateShot(selectedIdx, 'note', v), 1)}
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 4)}
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => generatePrompt(selectedIdx)}
+                disabled={genPromptLoading}
+                className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 whitespace-nowrap disabled:opacity-50"
+              >
+                {genPromptLoading ? 'Generating...' : 'Generate Prompt'}
+              </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(shot.prompt)}
+                disabled={!shot.prompt}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 whitespace-nowrap disabled:opacity-50"
+              >
+                Copy Prompt
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

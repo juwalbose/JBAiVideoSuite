@@ -6,6 +6,7 @@ const APP_ACTIONS = [
   'Extract Cast',
   'Generate Script',
   'Generate Prompt',
+  'Generate Video Prompt',
   'Refine Dialog',
   'Generate Shots',
 ];
@@ -56,12 +57,16 @@ const SHOT_JSON_FORMAT = `{
   "shots": [
     {
       "shot": 1,
+      "scene": 1,
+      "beats": [1],
+      "loc": "Dense emerald forest, morning light filtering through heavy canopy",
+      "subs": ["Sage Kanva", "Shakuntala"],
       "frames": 158,
       "duration": 6.5,
-      "camera": "Explicit placement and cropping instructions",
-      "action": "Staggered emotional beats, hiding transitions via blinks or movement",
-      "dialogue": "<d>[Language] Text</d> or VO notes, leave blank if none",
-      "note": "Brief justification based on empirical rules"
+      "camera": "Wide shot, camera positioned low to ground level looking up at the trees",
+      "action": "The birds scatter violently from a bed of ferns toward the upper canopy",
+      "dialogue": "",
+      "note": "Action-heavy opening; wide framing allows for large bird movement without clipping."
     }
   ]
 }`;
