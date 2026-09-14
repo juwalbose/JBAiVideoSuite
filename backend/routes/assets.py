@@ -2,9 +2,22 @@ from fastapi import APIRouter, Depends
 from typing import Any
 from database import get_db
 import json
+import os
+import uuid
+import random
+import httpx
 from .llm_helper import get_system_prompt, call_llm
 
 router = APIRouter(prefix="/projects", tags=["Assets"])
+
+# Separate task tracker for asset image generation (independent from playground)
+asset_gen_tasks: dict = {}
+
+DEFAULT_RESOLUTIONS = {
+    "character": {"w": 1024, "h": 1024},
+    "location": {"w": 1920, "h": 1080},
+    "prop": {"w": 1024, "h": 1024},
+}
 
 @router.post("/{id}/refine-dialog")
 async def refine_dialog(id: str, payload: dict, db: Any = Depends(get_db)):
@@ -199,4 +212,220 @@ async def add_asset(id: str, payload: dict, db: Any = Depends(get_db)):
             return {"status": "success"}
     except Exception as e:
         print(f"DEBUG: Error in add_asset: {e}")
+        return {"status": "error", "details": str(e)}
+
+@router.post("/{id}/assets/{asset_id}/generate-image")
+async def generate_image(id: str, asset_id: str, payload: dict, db: Any = Depends(get_db)):
+    """Generate an image for an asset state using the mapped ComfyUI workflow."""
+    try:
+        asset = await db.asset.find_first(where={'id': asset_id, 'projectId': id})
+        if not asset:
+            return {"status": "error", "details": "Asset not found"}
+
+        state_id = payload.get('stateId', '')
+        state = await db.assetstate.find_first(where={'id': state_id, 'assetId': asset_id})
+        if not state:
+            return {"status": "error", "details": "State not found"}
+
+        prompt = state.prompt or state.description or ''
+        if not prompt:
+            return {"status": "error", "details": "No prompt available for this state"}
+
+        # Get the mapped workflow file
+        wf_mapping = await db.comfyworkflowmapping.find_first(where={'action': 'Asset Generation'})
+        if not wf_mapping or not wf_mapping.workflowFile:
+            return {"status": "error", "details": "No workflow mapped for Asset Generation"}
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        workflow_path = os.path.join(base_dir, "..", "assets", "workflows", wf_mapping.workflowFile)
+        if not os.path.exists(workflow_path):
+            return {"status": "error", "details": f"Workflow file not found: {wf_mapping.workflowFile}"}
+
+        with open(workflow_path, "r", encoding="utf-8") as f:
+            workflow_data = json.load(f)
+
+        # Get resolution settings
+        res = DEFAULT_RESOLUTIONS
+        if wf_mapping.resolutionJson:
+            try:
+                res = json.loads(wf_mapping.resolutionJson)
+            except Exception:
+                pass
+
+        type_key = asset.type.lower()  # character, location, prop
+        w = res.get(type_key, {}).get('w', 1024)
+        h = res.get(type_key, {}).get('h', 1024)
+        seed = random.randint(0, 2**32 - 1)
+
+        # Inject inputs into workflow nodes
+        for node_id, node_data in workflow_data.items():
+            title = node_data.get('_meta', {}).get('title', '')
+            if '(Input:prompt)' in title:
+                node_data.setdefault('inputs', {})['text'] = prompt
+            elif '(Input:seed)' in title:
+                node_data.setdefault('inputs', {})['value'] = seed
+            elif '(Input:width)' in title:
+                node_data.setdefault('inputs', {})['value'] = w
+            elif '(Input:height)' in title:
+                node_data.setdefault('inputs', {})['value'] = h
+
+        # Get ComfyUI settings
+        comfyui = await db.comfyuisettings.find_first()
+        if not comfyui:
+            return {"status": "error", "details": "ComfyUI settings not found"}
+
+        comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
+        task_id = str(uuid.uuid4())
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            queue_res = await client.post(f"{comfy_http}/prompt", json={"prompt": workflow_data})
+            if queue_res.status_code != 200:
+                return {"status": "error", "details": f"ComfyUI rejected prompt: {queue_res.text}"}
+            prompt_id = queue_res.json()["prompt_id"]
+            asset_gen_tasks[task_id] = prompt_id
+            asset_gen_tasks[f"{task_id}_state"] = state_id
+
+        print(f"[AssetGen] task_id={task_id} prompt_id={prompt_id} asset={asset.name} state={state.name}")
+        return {"status": "success", "task_id": task_id}
+    except Exception as e:
+        print(f"DEBUG: Error in generate_image: {e}")
+        return {"status": "error", "details": str(e)}
+
+@router.get("/{id}/assets/{asset_id}/generate-image/status/{task_id}")
+async def check_image_status(id: str, asset_id: str, task_id: str, db: Any = Depends(get_db)):
+    """Check if an asset image generation is complete. Returns image or pending."""
+    if task_id not in asset_gen_tasks:
+        return {"status": "error", "details": "Task not found"}
+
+    prompt_id = asset_gen_tasks[task_id]
+    comfyui = await db.comfyuisettings.find_first()
+    if not comfyui:
+        return {"status": "error", "details": "ComfyUI settings not found"}
+
+    comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        history_res = await client.get(f"{comfy_http}/history/{prompt_id}")
+        history_data = history_res.json()
+        outputs = history_data.get(prompt_id, {}).get("outputs", {})
+        image_info = None
+        for node_output in outputs.values():
+            if "images" in node_output and len(node_output["images"]) > 0:
+                image_info = node_output["images"][0]
+                break
+
+        if not image_info:
+            return {"status": "pending", "task_id": task_id}
+
+        params = {
+            "filename": image_info["filename"],
+            "subfolder": image_info.get("subfolder", ""),
+            "type": image_info.get("type", "output"),
+        }
+        img_res = await client.get(f"{comfy_http}/view", params=params)
+
+        # Save to assets/generated/
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        gen_dir = os.path.join(base_dir, "..", "assets", "generated")
+        os.makedirs(gen_dir, exist_ok=True)
+        save_path = os.path.join(gen_dir, image_info["filename"])
+        with open(save_path, "wb") as f:
+            f.write(img_res.content)
+
+        image_path = f"/assets/generated/{image_info['filename']}"
+
+        # Update the state's imagePath in DB (stored in task tracker)
+        state_id = asset_gen_tasks.get(f"{task_id}_state")
+        field = asset_gen_tasks.get(f"{task_id}_field", "imagePath")
+        if state_id:
+            await db.assetstate.update(where={'id': state_id}, data={field: image_path})
+
+        # Remove task from tracker
+        asset_gen_tasks.pop(task_id, None)
+        asset_gen_tasks.pop(f"{task_id}_state", None)
+        asset_gen_tasks.pop(f"{task_id}_field", None)
+
+        print(f"[AssetGen] task_id={task_id} -> COMPLETE ({image_info['filename']})")
+        return {"status": "complete", "imagePath": image_path, "task_id": task_id}
+
+@router.post("/{id}/assets/{asset_id}/generate-sheet")
+async def generate_sheet(id: str, asset_id: str, payload: dict, db: Any = Depends(get_db)):
+    """Generate a character sheet using the mapped ComfyUI workflow. Requires an existing image."""
+    try:
+        asset = await db.asset.find_first(where={'id': asset_id, 'projectId': id})
+        if not asset:
+            return {"status": "error", "details": "Asset not found"}
+
+        state_id = payload.get('stateId', '')
+        state = await db.assetstate.find_first(where={'id': state_id, 'assetId': asset_id})
+        if not state:
+            return {"status": "error", "details": "State not found"}
+
+        image_path = state.imagePath or ''
+        if not image_path:
+            return {"status": "error", "details": "No image assigned to this state. Generate or assign an image first."}
+
+        # Get the mapped workflow file
+        wf_mapping = await db.comfyworkflowmapping.find_first(where={'action': 'Character Sheet Generation'})
+        if not wf_mapping or not wf_mapping.workflowFile:
+            return {"status": "error", "details": "No workflow mapped for Character Sheet Generation"}
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        workflow_path = os.path.join(base_dir, "..", "assets", "workflows", wf_mapping.workflowFile)
+        if not os.path.exists(workflow_path):
+            return {"status": "error", "details": f"Workflow file not found: {wf_mapping.workflowFile}"}
+
+        with open(workflow_path, "r", encoding="utf-8") as f:
+            workflow_data = json.load(f)
+
+        # Get ComfyUI settings
+        comfyui = await db.comfyuisettings.find_first()
+        if not comfyui:
+            return {"status": "error", "details": "ComfyUI settings not found"}
+
+        comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
+
+        # Upload the image to ComfyUI
+        # image_path is like /assets/generated/filename.png
+        local_path = os.path.join(base_dir, "..", image_path)
+        if not os.path.exists(local_path):
+            return {"status": "error", "details": f"Image file not found: {image_path}"}
+
+        with open(local_path, "rb") as f:
+            file_bytes = f.read()
+
+        filename = os.path.basename(image_path)
+        files = {"image": (filename, file_bytes, "image/png")}
+        data = {"overwrite": "true"}
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            upload_res = await client.post(f"{comfy_http}/upload/image", files=files, data=data)
+            if upload_res.status_code != 200:
+                return {"status": "error", "details": f"ComfyUI rejected upload: {upload_res.text}"}
+            uploaded_name = upload_res.json()["name"]
+
+        # Inject image + seed into workflow
+        seed = random.randint(0, 2**32 - 1)
+        for node_id, node_data in workflow_data.items():
+            title = node_data.get('_meta', {}).get('title', '')
+            if '(Input:image)' in title:
+                node_data.setdefault('inputs', {})['image'] = uploaded_name
+            elif '(Input:seed)' in title:
+                node_data.setdefault('inputs', {})['value'] = seed
+
+        task_id = str(uuid.uuid4())
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            queue_res = await client.post(f"{comfy_http}/prompt", json={"prompt": workflow_data})
+            if queue_res.status_code != 200:
+                return {"status": "error", "details": f"ComfyUI rejected prompt: {queue_res.text}"}
+            prompt_id = queue_res.json()["prompt_id"]
+            asset_gen_tasks[task_id] = prompt_id
+            asset_gen_tasks[f"{task_id}_state"] = state_id
+            asset_gen_tasks[f"{task_id}_field"] = "characterSheet"
+
+        print(f"[SheetGen] task_id={task_id} prompt_id={prompt_id} asset={asset.name} state={state.name}")
+        return {"status": "success", "task_id": task_id}
+    except Exception as e:
+        print(f"DEBUG: Error in generate_sheet: {e}")
         return {"status": "error", "details": str(e)}

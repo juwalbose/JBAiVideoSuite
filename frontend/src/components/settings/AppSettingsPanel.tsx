@@ -71,10 +71,25 @@ const SHOT_JSON_FORMAT = `{
   ]
 }`;
 
+const COMFY_ACTIONS = [
+  'Asset Generation',
+  'Character Sheet Generation',
+  'MinimaxH3 Ref2VA Generation',
+];
+
+type ResSettings = { character: { w: number; h: number }; location: { w: number; h: number }; prop: { w: number; h: number } };
+
 const AppSettingsPanel = () => {
   const { backend } = useSettingsStore();
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
   const [prompts, setPrompts] = useState<{ id: string; name: string }[]>([]);
+  const [comfyMappings, setComfyMappings] = useState<Record<string, string | null>>({});
+  const [workflowFiles, setWorkflowFiles] = useState<string[]>([]);
+  const [resSettings, setResSettings] = useState<ResSettings>({
+    character: { w: 1024, h: 1024 },
+    location: { w: 1920, h: 1080 },
+    prop: { w: 1024, h: 1024 },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -86,8 +101,11 @@ const AppSettingsPanel = () => {
     Promise.all([
       fetch(`${baseUrl}/appsettings/`).then(r => r.json()),
       fetch(`${baseUrl}/systemprompts/`).then(r => r.json()),
+      fetch(`${baseUrl}/appsettings/workflows`).then(r => r.json()),
+      fetch(`${baseUrl}/appsettings/workflows/files`).then(r => r.json()),
+      fetch(`${baseUrl}/appsettings/resolutions`).then(r => r.json()),
     ])
-      .then(([m, p]) => {
+      .then(([m, p, cm, wf, res]) => {
         setPrompts(p);
         const validIds = new Set(p.map((x: { id: string }) => x.id));
         const cleaned: Record<string, string | null> = {};
@@ -95,6 +113,9 @@ const AppSettingsPanel = () => {
           cleaned[action] = file && validIds.has(file) ? file : null;
         }
         setMappings(cleaned);
+        setComfyMappings(cm as Record<string, string | null>);
+        setWorkflowFiles(wf as string[]);
+        if (res && res.character) setResSettings(res as ResSettings);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -105,15 +126,27 @@ const AppSettingsPanel = () => {
     setSaving(true);
     setSaved(false);
     try {
-      await Promise.all(
-        Object.entries(mappings).map(([action, promptFile]) =>
+      await Promise.all([
+        ...Object.entries(mappings).map(([action, promptFile]) =>
           fetch(`${baseUrl}/appsettings/save`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, promptFile }),
           })
-        )
-      );
+        ),
+        ...Object.entries(comfyMappings).map(([action, workflowFile]) =>
+          fetch(`${baseUrl}/appsettings/workflows/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, workflowFile }),
+          })
+        ),
+        fetch(`${baseUrl}/appsettings/resolutions/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(resSettings),
+        }),
+      ]);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -132,22 +165,74 @@ const AppSettingsPanel = () => {
         <p className="text-gray-600">Map system prompts to app actions. Leave as "None" to use default behavior.</p>
       </div>
 
-      <div className="space-y-4">
-        {APP_ACTIONS.map((action) => (
-          <div key={action} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
-            <span className="font-medium text-gray-800">{action}</span>
-            <select
-              value={mappings[action] || ''}
-              onChange={(e) => setMappings(prev => ({ ...prev, [action]: e.target.value || null }))}
-              className="p-2 border rounded bg-white text-sm max-w-xs"
-            >
-              <option value="">None</option>
-              {prompts.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        ))}
+      <div>
+        <h3 className="text-lg font-semibold mb-3">LLM System Prompt Mapping</h3>
+        <div className="space-y-4">
+          {APP_ACTIONS.map((action) => (
+            <div key={action} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+              <span className="font-medium text-gray-800">{action}</span>
+              <select
+                value={mappings[action] || ''}
+                onChange={(e) => setMappings(prev => ({ ...prev, [action]: e.target.value || null }))}
+                className="p-2 border rounded bg-white text-sm max-w-xs"
+              >
+                <option value="">None</option>
+                {prompts.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-3">ComfyUI Generation Mapping</h3>
+        <p className="text-sm text-gray-500 mb-3">Map generation actions to ComfyUI workflow JSON files in <code className="bg-gray-100 px-1 rounded">assets/workflows/</code>.</p>
+        <div className="space-y-4">
+          {COMFY_ACTIONS.map((action) => (
+            <div key={action} className="p-4 border rounded-lg bg-gray-50">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-800">{action}</span>
+                <select
+                  value={comfyMappings[action] || ''}
+                  onChange={(e) => setComfyMappings(prev => ({ ...prev, [action]: e.target.value || null }))}
+                  className="p-2 border rounded bg-white text-sm max-w-xs"
+                >
+                  <option value="">None</option>
+                  {workflowFiles.map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              {action === 'Asset Generation' && (
+                <div className="mt-3 pt-3 border-t space-y-2">
+                  <p className="text-xs font-medium text-gray-500">Resolution Settings</p>
+                  {(['character', 'location', 'prop'] as const).map((type) => (
+                    <div key={type} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600 w-24 capitalize">{type}</span>
+                      <input
+                        type="number"
+                        className="w-20 p-1 border rounded text-sm"
+                        value={resSettings[type].w}
+                        onChange={(e) => setResSettings(prev => ({ ...prev, [type]: { ...prev[type], w: Number(e.target.value) } }))}
+                        placeholder="Width"
+                      />
+                      <span className="text-gray-400">×</span>
+                      <input
+                        type="number"
+                        className="w-20 p-1 border rounded text-sm"
+                        value={resSettings[type].h}
+                        onChange={(e) => setResSettings(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
+                        placeholder="Height"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

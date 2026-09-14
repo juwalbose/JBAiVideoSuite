@@ -39,6 +39,8 @@ const AssetsStage = () => {
   const [addStateDesc, setAddStateDesc] = useState('');
   const [adding, setAdding] = useState(false);
   const [genAll, setGenAll] = useState<{ active: boolean; current: number; total: number; done: number; failed: number } | null>(null);
+  const [genImage, setGenImage] = useState(false);
+  const [genSheet, setGenSheet] = useState(false);
   const abortRef = React.useRef(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -194,6 +196,84 @@ const AssetsStage = () => {
       setGenAll(null);
     }
     await refreshAssets();
+  };
+
+  const handleGenerateImage = async () => {
+    if (!selected || !editing?.states?.[0] || !currentProject) return;
+    setGenImage(true); setError('');
+    try {
+      const assetId = getAssetId();
+      const stateId = getStateId();
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-image`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateId }),
+      });
+      const data = await res.json();
+      if (data.status === 'error') { setError(data.details); setGenImage(false); return; }
+      const taskId = data.task_id;
+      // Poll for completion
+      const poll = async () => {
+        try {
+          const sRes = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-image/status/${taskId}`);
+          const sData = await sRes.json();
+          if (sData.status === 'complete') {
+            setGenImage(false);
+            await refreshAssets();
+          } else if (sData.status === 'pending') {
+            setTimeout(poll, 3000);
+          } else {
+            setError(sData.details || 'Generation failed');
+            setGenImage(false);
+          }
+        } catch {
+          setError('Polling failed');
+          setGenImage(false);
+        }
+      };
+      setTimeout(poll, 3000);
+    } catch (e: any) {
+      setError(e.message || 'Failed to generate image');
+      setGenImage(false);
+    }
+  };
+
+  const handleGenerateSheet = async () => {
+    if (!selected || !editing?.states?.[0] || !currentProject) return;
+    if (!editing.states[0].imagePath) { setError('Assign an image first'); return; }
+    setGenSheet(true); setError('');
+    try {
+      const assetId = getAssetId();
+      const stateId = getStateId();
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-sheet`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateId }),
+      });
+      const data = await res.json();
+      if (data.status === 'error') { setError(data.details); setGenSheet(false); return; }
+      const taskId = data.task_id;
+      const poll = async () => {
+        try {
+          const sRes = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-image/status/${taskId}`);
+          const sData = await sRes.json();
+          if (sData.status === 'complete') {
+            setGenSheet(false);
+            await refreshAssets();
+          } else if (sData.status === 'pending') {
+            setTimeout(poll, 3000);
+          } else {
+            setError(sData.details || 'Sheet generation failed');
+            setGenSheet(false);
+          }
+        } catch {
+          setError('Polling failed');
+          setGenSheet(false);
+        }
+      };
+      setTimeout(poll, 3000);
+    } catch (e: any) {
+      setError(e.message || 'Failed to generate sheet');
+      setGenSheet(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -414,21 +494,42 @@ const AssetsStage = () => {
             {editing.states?.[0] && (
               <div className="flex gap-3">
                 <div className="flex-1 border rounded bg-gray-50 p-2">
-                  <p className="text-xs text-gray-500 mb-1">Image</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-gray-500">Image <span className="text-gray-400">(assign from gallery)</span></p>
+                    <button
+                      onClick={handleGenerateImage}
+                      disabled={genImage}
+                      className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {genImage ? 'Generating...' : 'Generate Image'}
+                    </button>
+                  </div>
                   {editing.states[0].imagePath ? (
                     <img src={`${baseUrl}${editing.states[0].imagePath}`} alt="Image" className="w-full h-32 object-cover rounded" />
                   ) : (
                     <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded text-xs text-gray-400">No image</div>
                   )}
                 </div>
-                <div className="flex-1 border rounded bg-gray-50 p-2">
-                  <p className="text-xs text-gray-500 mb-1">Character Sheet</p>
-                  {editing.states[0].characterSheet ? (
-                    <img src={`${baseUrl}${editing.states[0].characterSheet}`} alt="Sheet" className="w-full h-32 object-cover rounded" />
-                  ) : (
-                    <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded text-xs text-gray-400">No sheet</div>
-                  )}
-                </div>
+                {selected?.type !== 'locations' && (
+                  <div className="flex-1 border rounded bg-gray-50 p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-gray-500">Character Sheet <span className="text-gray-400">(assign from gallery)</span></p>
+                      <button
+                        onClick={handleGenerateSheet}
+                        disabled={genSheet || !editing.states[0].imagePath}
+                        className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50"
+                        title={!editing.states[0].imagePath ? 'Assign an image first' : ''}
+                      >
+                        {genSheet ? 'Generating...' : 'Generate Sheet'}
+                      </button>
+                    </div>
+                    {editing.states[0].characterSheet ? (
+                      <img src={`${baseUrl}${editing.states[0].characterSheet}`} alt="Sheet" className="w-full h-32 object-cover rounded" />
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded text-xs text-gray-400">No sheet</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             {/* Prompt */}
