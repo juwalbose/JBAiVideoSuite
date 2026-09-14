@@ -48,6 +48,11 @@ async def save_shotlist(id: str, payload: dict, db: Any = Depends(get_db)):
             'characterStateIds': json.dumps(char_states) if char_states else None,
             'propAssetIds': json.dumps(prop_ids) if prop_ids else None,
             'propStateIds': json.dumps(prop_states) if prop_states else None,
+            'sceneDialogAudioId': s.get('sceneDialogAudioId') or None,
+            'characterAudioIds': json.dumps([x for x in s.get('characterAudioIds', []) if x]) if s.get('characterAudioIds') else None,
+            'characterAudioTypes': json.dumps(s.get('characterAudioTypes', [])) if s.get('characterAudioTypes') else None,
+            'musicOn': s.get('musicOn', False),
+            'musicDesc': s.get('musicDesc', ''),
         })
     return {"status": "success", "count": len(shots)}
 
@@ -141,6 +146,31 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
         )
         if asset_lines:
             parts.append("Reference Assets:\n" + '\n'.join(asset_lines))
+
+        audio_lines = []
+        scene_audio_id = shot.get('sceneDialogAudioId')
+        if scene_audio_id:
+            audio_lines.append("Use the attached audio reference as the complete synchronized dialogue track for this entire video.")
+        else:
+            char_audio_ids = shot.get('characterAudioIds', [])
+            if isinstance(char_audio_ids, str):
+                char_audio_ids = json.loads(char_audio_ids) if char_audio_ids.startswith('[') else []
+            for i, caid in enumerate(char_audio_ids):
+                if not caid:
+                    continue
+                char_name = f"Character {i + 1}"
+                if i < len(char_ids) and char_ids[i]:
+                    ch = await db.asset.find_first(where={'id': char_ids[i], 'projectId': id})
+                    if ch:
+                        char_name = ch.name
+                audio_lines.append(f"Use audio reference {i + 1} as the voice-timbre reference for {char_name}.")
+        if audio_lines:
+            parts.append("Audio Instructions:\n" + '\n'.join(audio_lines))
+
+        if shot.get('musicOn'):
+            parts.append(f"Background Music: {shot.get('musicDesc', '')}")
+        else:
+            parts.append("Background Music: None — do not include any background music.")
 
         user_content = '\n\n'.join(parts)
         print(f"\n{'='*60}\n[GENERATE PROMPT] Shot {shot.get('shot', '?')} — user content sent to LLM:\n{'='*60}\n{user_content}\n{'='*60}\n")

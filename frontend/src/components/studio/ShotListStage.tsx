@@ -21,6 +21,11 @@ interface ShotData {
   characterStateIds: string[];
   propAssetIds: string[];
   propStateIds: string[];
+  sceneDialogAudioId: string | null;
+  characterAudioIds: string[];
+  characterAudioTypes: string[];
+  musicOn: boolean;
+  musicDesc: string;
 }
 
 interface AssetState {
@@ -79,6 +84,11 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     characterStateIds: Array.isArray(s.characterStateIds) ? s.characterStateIds : (typeof s.characterStateIds === 'string' && s.characterStateIds.startsWith('[') ? JSON.parse(s.characterStateIds) : []),
     propAssetIds: Array.isArray(s.propAssetIds) ? s.propAssetIds : (typeof s.propAssetIds === 'string' && s.propAssetIds.startsWith('[') ? JSON.parse(s.propAssetIds) : []),
     propStateIds: Array.isArray(s.propStateIds) ? s.propStateIds : (typeof s.propStateIds === 'string' && s.propStateIds.startsWith('[') ? JSON.parse(s.propStateIds) : []),
+    sceneDialogAudioId: s.sceneDialogAudioId || null,
+    characterAudioIds: Array.isArray(s.characterAudioIds) ? s.characterAudioIds : (typeof s.characterAudioIds === 'string' && s.characterAudioIds.startsWith('[') ? JSON.parse(s.characterAudioIds) : []),
+    characterAudioTypes: Array.isArray(s.characterAudioTypes) ? s.characterAudioTypes : (typeof s.characterAudioTypes === 'string' && s.characterAudioTypes.startsWith('[') ? JSON.parse(s.characterAudioTypes) : []),
+    musicOn: s.musicOn === true || s.musicOn === 'true',
+    musicDesc: s.musicDesc || '',
   });
 
   const parseShots = (raw: string): ShotData[] => {
@@ -178,6 +188,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [genAll, setGenAll] = useState<{ active: boolean; current: number; total: number; done: number; failed: number } | null>(null);
   const abortRef = useRef(false);
   const [projectAssets, setProjectAssets] = useState<{ characters: AssetItem[]; locations: AssetItem[]; props: AssetItem[] }>({ characters: [], locations: [], props: [] });
+  const [audioAssets, setAudioAssets] = useState<{ id: string; name: string; audioType: string }[]>([]);
 
   useEffect(() => {
     if (!currentProject) return;
@@ -185,6 +196,10 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
       .then((r) => r.json())
       .then((data) => { if (data.status === 'success') setProjectAssets(data.assets); })
+      .catch(console.error);
+    fetch(`${baseUrl}/projects/${currentProject.id}/audio`)
+      .then((r) => r.json())
+      .then((data) => { if (data.status === 'success') setAudioAssets(data.audio); })
       .catch(console.error);
   }, [currentProject?.id]);
 
@@ -256,7 +271,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const addShot = () => {
     const nextNum = shots.length > 0 ? Math.max(...shots.map((s) => s.shot)) + 1 : 1;
-    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '', locationAssetId: null, locationStateId: null, characterAssetIds: [], characterStateIds: [], propAssetIds: [], propStateIds: [] }]);
+    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '', locationAssetId: null, locationStateId: null, characterAssetIds: [], characterStateIds: [], propAssetIds: [], propStateIds: [], sceneDialogAudioId: null, characterAudioIds: [], characterAudioTypes: [], musicOn: false, musicDesc: '' }]);
     setSelectedIdx(shots.length);
     setSaved(false);
   };
@@ -312,15 +327,31 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       {shots.length > 0 && shot && (
         <div className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <select
-              className="px-3 py-1 border rounded text-sm bg-white text-black"
-              value={selectedIdx}
-              onChange={(e) => setSelectedIdx(Number(e.target.value))}
-            >
-              {shots.map((s, i) => (
-                <option key={i} value={i}>Shot {s.shot}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIdx(Math.max(0, selectedIdx - 1))}
+                disabled={selectedIdx === 0}
+                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              <select
+                className="px-3 py-1 border rounded text-sm bg-white text-black"
+                value={selectedIdx}
+                onChange={(e) => setSelectedIdx(Number(e.target.value))}
+              >
+                {shots.map((s, i) => (
+                  <option key={i} value={i}>Shot {s.shot}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setSelectedIdx(Math.min(shots.length - 1, selectedIdx + 1))}
+                disabled={selectedIdx === shots.length - 1}
+                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
             <button onClick={() => deleteShot(selectedIdx)} className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
               Delete Shot
             </button>
@@ -353,7 +384,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           {textField('Note', shot.note, (v) => updateShot(selectedIdx, 'note', v), 1)}
           <div className="border-t pt-3">
             <h4 className="text-xs font-medium text-gray-500 mb-2">Linked Assets</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-5 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Location</label>
                 <select
@@ -393,8 +424,12 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       if (!val) {
                         const newIds = shot.characterAssetIds.filter((_, j) => j !== i);
                         const newStates = shot.characterStateIds.filter((_, j) => j !== i);
+                        const newAudioIds = shot.characterAudioIds.filter((_, j) => j !== i);
+                        const newAudioTypes = shot.characterAudioTypes.filter((_, j) => j !== i);
                         updateShot(selectedIdx, 'characterAssetIds', newIds);
                         updateShot(selectedIdx, 'characterStateIds', newStates);
+                        updateShot(selectedIdx, 'characterAudioIds', newAudioIds);
+                        updateShot(selectedIdx, 'characterAudioTypes', newAudioTypes);
                       } else {
                         const [newAid, newSid] = val.split('|');
                         const newIds = [...shot.characterAssetIds];
@@ -421,11 +456,85 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     onClick={() => {
                       updateShot(selectedIdx, 'characterAssetIds', [...shot.characterAssetIds, '']);
                       updateShot(selectedIdx, 'characterStateIds', [...shot.characterStateIds, '']);
+                      updateShot(selectedIdx, 'characterAudioIds', [...shot.characterAudioIds, '']);
+                      updateShot(selectedIdx, 'characterAudioTypes', [...shot.characterAudioTypes, 'voice']);
                     }}
                     className="text-xs text-blue-600 hover:text-blue-800"
                   >
                     + Add Character
                   </button>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Audio Type</label>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      updateShot(selectedIdx, 'sceneDialogAudioId', null);
+                      updateShot(selectedIdx, 'characterAudioIds', []);
+                      updateShot(selectedIdx, 'characterAudioTypes', []);
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId === null && shot.characterAudioIds.length === 0 ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    None
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateShot(selectedIdx, 'characterAudioIds', []);
+                      updateShot(selectedIdx, 'characterAudioTypes', []);
+                      if (!shot.sceneDialogAudioId) updateShot(selectedIdx, 'sceneDialogAudioId', '');
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId !== null && shot.sceneDialogAudioId !== undefined ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    Scene Dialog
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateShot(selectedIdx, 'sceneDialogAudioId', null);
+                      if (shot.characterAudioIds.length === 0) {
+                        updateShot(selectedIdx, 'characterAudioIds', ['']);
+                        updateShot(selectedIdx, 'characterAudioTypes', ['voice']);
+                      }
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-medium ${!shot.sceneDialogAudioId && shot.characterAudioIds.length > 0 ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    Voice Samples
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Audio</label>
+                {shot.sceneDialogAudioId !== null && shot.sceneDialogAudioId !== undefined ? (
+                  <select
+                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+                    value={shot.sceneDialogAudioId}
+                    onChange={(e) => updateShot(selectedIdx, 'sceneDialogAudioId', e.target.value || null)}
+                  >
+                    <option value="">None</option>
+                    {audioAssets.filter((a) => a.audioType === 'SCENE_DIALOG').map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  shot.characterAudioIds.map((aid, i) => (
+                    <select
+                      key={i}
+                      className="w-full px-1 py-1 border rounded text-xs bg-white text-black mb-1"
+                      value={aid}
+                      onChange={(e) => {
+                        const newIds = [...shot.characterAudioIds];
+                        newIds[i] = e.target.value;
+                        updateShot(selectedIdx, 'characterAudioIds', newIds);
+                      }}
+                    >
+                      <option value="">Char {i + 1}: None</option>
+                      {audioAssets
+                        .filter((a) => a.audioType === 'VOICE_SAMPLE')
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                    </select>
+                  ))
                 )}
               </div>
               <div>
@@ -477,6 +586,27 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               </div>
             </div>
           </div>
+          <div className="border-t pt-3">
+            <h4 className="text-xs font-medium text-gray-500 mb-2">Music</h4>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => updateShot(selectedIdx, 'musicOn', !shot.musicOn)}
+                className={`px-3 py-1 rounded text-xs font-medium ${shot.musicOn ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                {shot.musicOn ? 'On' : 'Off'}
+              </button>
+              {shot.musicOn && (
+                <input
+                  type="text"
+                  className="flex-1 px-2 py-1 border rounded text-sm bg-white text-black"
+                  placeholder="Describe background music…"
+                  value={shot.musicDesc}
+                  onChange={(e) => updateShot(selectedIdx, 'musicDesc', e.target.value)}
+                />
+              )}
+            </div>
+          </div>
+
           <div className="flex items-start gap-2">
             <div className="flex-1">
               {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 12)}

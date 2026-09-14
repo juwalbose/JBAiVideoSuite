@@ -167,6 +167,11 @@ model ShotList {
   characterStateIds     String?
   propAssetIds          String?
   propStateIds          String?
+  sceneDialogAudioId    String?
+  characterAudioIds     String?
+  characterAudioTypes   String?
+  musicOn               Boolean  @default(false)
+  musicDesc             String   @default("")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
