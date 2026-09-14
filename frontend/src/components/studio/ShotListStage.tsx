@@ -235,7 +235,9 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
     }
     setGenAll({ active: false, current: shots.length, total: shots.length, done, failed });
-    setSaved(false);
+    if (!abortRef.current && done > 0) {
+      await handleSave();
+    }
   };
 
   const updateShot = (index: number, field: keyof ShotData, value: string | number | number[] | string[] | null) => {
@@ -356,7 +358,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 <label className="text-xs font-medium text-gray-600 block mb-1">Location</label>
                 <select
                   className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
-                  value={shot.locationStateId || ''}
+                  value={shot.locationAssetId && shot.locationStateId ? `${shot.locationAssetId}|${shot.locationStateId}` : ''}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (!val) {
@@ -477,20 +479,20 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           </div>
           <div className="flex items-start gap-2">
             <div className="flex-1">
-              {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 4)}
+              {textField('Prompt', shot.prompt, (v) => updateShot(selectedIdx, 'prompt', v), 12)}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => generatePrompt(selectedIdx)}
                 disabled={genPromptLoading}
-                className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 whitespace-nowrap disabled:opacity-50"
+                className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 whitespace-nowrap disabled:opacity-50"
               >
                 {genPromptLoading ? 'Generating...' : 'Generate Prompt'}
               </button>
               <button
                 onClick={() => navigator.clipboard.writeText(shot.prompt)}
                 disabled={!shot.prompt}
-                className="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 whitespace-nowrap disabled:opacity-50"
+                className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 whitespace-nowrap disabled:opacity-50"
               >
                 Copy Prompt
               </button>

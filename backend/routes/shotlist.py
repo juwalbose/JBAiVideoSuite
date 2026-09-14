@@ -96,7 +96,7 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
         loc_id = shot.get('locationAssetId')
         loc_state = shot.get('locationStateId')
         if loc_id:
-            loc = await db.asset.find_first(where={'id': loc_id, 'projectId': id})
+            loc = await db.asset.find_first(where={'id': loc_id, 'projectId': id}, include={'states': True})
             if loc:
                 asset_lines.append(f"- Location: {loc.name} — {get_state_desc(loc, loc_state)}")
 
@@ -109,7 +109,7 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
         for i, cid in enumerate(char_ids):
             if not cid:
                 continue
-            ch = await db.asset.find_first(where={'id': cid, 'projectId': id})
+            ch = await db.asset.find_first(where={'id': cid, 'projectId': id}, include={'states': True})
             if ch:
                 state_id = char_states[i] if i < len(char_states) else None
                 asset_lines.append(f"- Character: {ch.name} — {get_state_desc(ch, state_id)}")
@@ -123,7 +123,7 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
         for i, pid in enumerate(prop_ids):
             if not pid:
                 continue
-            pr = await db.asset.find_first(where={'id': pid, 'projectId': id})
+            pr = await db.asset.find_first(where={'id': pid, 'projectId': id}, include={'states': True})
             if pr:
                 state_id = prop_states[i] if i < len(prop_states) else None
                 asset_lines.append(f"- Prop: {pr.name} — {get_state_desc(pr, state_id)}")
@@ -143,6 +143,7 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
             parts.append("Reference Assets:\n" + '\n'.join(asset_lines))
 
         user_content = '\n\n'.join(parts)
+        print(f"\n{'='*60}\n[GENERATE PROMPT] Shot {shot.get('shot', '?')} — user content sent to LLM:\n{'='*60}\n{user_content}\n{'='*60}\n")
         result = await call_llm(db, system_prompt, user_content)
         return {"status": "success", "prompt": result}
     except Exception as e:

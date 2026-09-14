@@ -10,12 +10,21 @@ type AssetItem = {
   scenes?: string;
 };
 
+type AudioItem = {
+  id: string;
+  name: string;
+  audioPath: string;
+  audioType: string;
+  transcript: string;
+};
+
 const AssetsStage = () => {
   const { currentProject } = useProjectStore();
   const { backend } = useSettingsStore();
   const baseUrl = backend?.apiUrl || 'http://127.0.0.1:8000';
   const [assets, setAssets] = useState<{ characters: AssetItem[]; locations: AssetItem[]; props: AssetItem[] }>({ characters: [], locations: [], props: [] });
-  const [activeTab, setActiveTab] = useState<'characters' | 'locations' | 'props'>('characters');
+  const [audioList, setAudioList] = useState<AudioItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'characters' | 'locations' | 'props' | 'audio'>('characters');
   const [selected, setSelected] = useState<{ type: string; index: number; stateIndex: number } | null>(null);
   const [editing, setEditing] = useState<AssetItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -31,6 +40,13 @@ const AssetsStage = () => {
   const [adding, setAdding] = useState(false);
   const [genAll, setGenAll] = useState<{ active: boolean; current: number; total: number; done: number; failed: number } | null>(null);
   const abortRef = React.useRef(false);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioName, setAudioName] = useState('');
+  const [audioType, setAudioType] = useState('VOICE_SAMPLE');
+  const [audioTranscript, setAudioTranscript] = useState('');
+  const [audioImporting, setAudioImporting] = useState(false);
+  const [selectedAudio, setSelectedAudio] = useState<AudioItem | null>(null);
 
   const refreshAssets = async () => {
     if (!currentProject) return;
@@ -45,6 +61,10 @@ const AssetsStage = () => {
       .then(r => r.json())
       .then(data => { if (data.status === 'success') setAssets(data.assets); })
       .catch(err => setError('Failed to load assets'));
+    fetch(`${baseUrl}/projects/${currentProject.id}/audio`)
+      .then(r => r.json())
+      .then(data => { if (data.status === 'success') setAudioList(data.audio); })
+      .catch(console.error);
   }, [currentProject?.id]);
 
   useEffect(() => {
@@ -213,6 +233,50 @@ const AssetsStage = () => {
     } catch (e: any) { setError(e.message || 'Failed to add'); } finally { setAdding(false); }
   };
 
+  const handleImportAudio = async () => {
+    if (!currentProject || !audioFile) return;
+    setAudioImporting(true); setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', audioFile);
+      formData.append('name', audioName);
+      formData.append('audio_type', audioType);
+      formData.append('transcript', audioTranscript);
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.status === 'error') throw new Error(data.details);
+      setShowAudioModal(false);
+      setAudioFile(null); setAudioName(''); setAudioType('VOICE_SAMPLE'); setAudioTranscript('');
+      const audioRes = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`);
+      const audioData = await audioRes.json();
+      if (audioData.status === 'success') setAudioList(audioData.audio);
+    } catch (e: any) { setError(e.message || 'Failed to import audio'); } finally { setAudioImporting(false); }
+  };
+
+  const handleDeleteAudio = async (audioId: string) => {
+    if (!currentProject) return;
+    try {
+      await fetch(`${baseUrl}/projects/${currentProject.id}/audio/${audioId}`, { method: 'DELETE' });
+      setSelectedAudio(null);
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`);
+      const data = await res.json();
+      if (data.status === 'success') setAudioList(data.audio);
+    } catch { setError('Failed to delete audio'); }
+  };
+
+  const handleSaveAudio = async () => {
+    if (!currentProject || !selectedAudio) return;
+    try {
+      await fetch(`${baseUrl}/projects/${currentProject.id}/audio/${selectedAudio.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selectedAudio.name, audioType: selectedAudio.audioType, transcript: selectedAudio.transcript }),
+      });
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`);
+      const data = await res.json();
+      if (data.status === 'success') setAudioList(data.audio);
+    } catch { setError('Failed to save audio'); }
+  };
+
   const items = getItems();
 
   return (
@@ -220,45 +284,103 @@ const AssetsStage = () => {
       {/* Left: asset list */}
       <div className="w-64 border rounded-lg overflow-y-auto h-full flex flex-col">
         <div className="flex border-b">
-          {(['characters', 'locations', 'props'] as const).map(t => (
-            <button key={t} onClick={() => { setActiveTab(t); setSelected(null); setEditing(null); }}
+          {(['characters', 'locations', 'props', 'audio'] as const).map(t => (
+            <button key={t} onClick={() => { setActiveTab(t); setSelected(null); setEditing(null); setSelectedAudio(null); }}
               className={`flex-1 py-2 text-xs font-medium ${activeTab === t ? 'bg-blue-100 text-blue-700' : 'text-gray-500'}`}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
         <div className="p-2 space-y-1 flex-1 overflow-y-auto">
-          {items.length === 0 && <p className="text-xs text-gray-400 p-2">No assets yet</p>}
-          {items.map((item, i) => (
-            <button key={i} onClick={() => handleSelect(item)}
-              className={`w-full text-left p-2 rounded text-xs hover:bg-gray-100 ${selected?.index === item.index && selected?.stateIndex === item.stateIndex ? 'bg-blue-50 border border-blue-200' : ''}`}>
-              <span className="font-medium">{item.label}</span>
-              <p className="text-gray-500 truncate">{item.desc}</p>
-            </button>
-          ))}
+          {activeTab === 'audio' ? (
+            <>
+              {audioList.length === 0 && <p className="text-xs text-gray-400 p-2">No audio assets yet</p>}
+              {audioList.map((a) => (
+                <button key={a.id} onClick={() => setSelectedAudio(a)}
+                  className={`w-full text-left p-2 rounded text-xs hover:bg-gray-100 ${selectedAudio?.id === a.id ? 'bg-blue-50 border border-blue-200' : ''}`}>
+                  <span className="font-medium">{a.name}</span>
+                  <p className="text-gray-500 truncate">{a.audioType.replace('_', ' ')}</p>
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              {items.length === 0 && <p className="text-xs text-gray-400 p-2">No assets yet</p>}
+              {items.map((item, i) => (
+                <button key={i} onClick={() => handleSelect(item)}
+                  className={`w-full text-left p-2 rounded text-xs hover:bg-gray-100 ${selected?.index === item.index && selected?.stateIndex === item.stateIndex ? 'bg-blue-50 border border-blue-200' : ''}`}>
+                  <span className="font-medium">{item.label}</span>
+                  <p className="text-gray-500 truncate">{item.desc}</p>
+                </button>
+              ))}
+            </>
+          )}
         </div>
         <div className="p-2 border-t space-y-1">
-          <button onClick={() => setShowAddModal(true)} className="w-full py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-            + Add Asset / State
-          </button>
-          <button onClick={handleGenerateAll} disabled={genAll?.active}
-            className="w-full py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50">
-            {genAll?.active ? `Generating ${genAll.current}/${genAll.total}...` : '⚡ Generate All Prompts'}
-          </button>
-          {genAll?.active && (
-            <button onClick={() => { abortRef.current = true; }} className="w-full py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-              Stop
+          {activeTab === 'audio' ? (
+            <button onClick={() => setShowAudioModal(true)} className="w-full py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+              + Import Audio
             </button>
-          )}
-          {genAll && !genAll.active && (genAll.done > 0 || genAll.failed > 0) && (
-            <p className="text-xs text-gray-500 text-center">{genAll.done} done, {genAll.failed} failed</p>
+          ) : (
+            <>
+              <button onClick={() => setShowAddModal(true)} className="w-full py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                + Add Asset / State
+              </button>
+              <button onClick={handleGenerateAll} disabled={genAll?.active}
+                className="w-full py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50">
+                {genAll?.active ? `Generating ${genAll.current}/${genAll.total}...` : '⚡ Generate All Prompts'}
+              </button>
+              {genAll?.active && (
+                <button onClick={() => { abortRef.current = true; }} className="w-full py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                  Stop
+                </button>
+              )}
+              {genAll && !genAll.active && (genAll.done > 0 || genAll.failed > 0) && (
+                <p className="text-xs text-gray-500 text-center">{genAll.done} done, {genAll.failed} failed</p>
+              )}
+            </>
           )}
         </div>
       </div>
 
       {/* Right: detail preview */}
       <div className="flex-1 border rounded-lg p-4 overflow-y-auto h-full">
-        {editing ? (
+        {activeTab === 'audio' ? (
+          selectedAudio ? (
+            <div className="space-y-4">
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-gray-500">Name</label>
+                  <input className="w-full p-2 border rounded text-sm font-semibold" value={selectedAudio.name} onChange={e => setSelectedAudio({ ...selectedAudio, name: e.target.value })} />
+                </div>
+                <div className="w-40">
+                  <label className="text-xs font-medium text-gray-500">Type</label>
+                  <select className="w-full p-2 border rounded text-sm" value={selectedAudio.audioType} onChange={e => setSelectedAudio({ ...selectedAudio, audioType: e.target.value })}>
+                    <option value="VOICE_SAMPLE">Voice Sample</option>
+                    <option value="CHARACTER_DIALOG">Character Dialog</option>
+                    <option value="SCENE_DIALOG">Scene Dialog</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500">Audio File</label>
+                <div className="mt-1 p-2 bg-gray-50 rounded text-sm text-gray-600">{selectedAudio.audioPath}</div>
+                <audio controls src={`${baseUrl}${selectedAudio.audioPath}`} className="w-full mt-2" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500">Transcript</label>
+                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={4} value={selectedAudio.transcript} onChange={e => setSelectedAudio({ ...selectedAudio, transcript: e.target.value })} placeholder="Transcription of the audio..." />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleSaveAudio} className="flex-1 py-2 bg-gray-800 text-white text-xs rounded hover:bg-black">Save Audio</button>
+                <button onClick={() => handleDeleteAudio(selectedAudio.id)} className="flex-1 py-2 bg-red-600 text-white text-xs rounded hover:bg-red-700">Delete</button>
+              </div>
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+            </div>
+          ) : (
+            <p className="text-gray-400 italic">Select an audio asset to view details</p>
+          )
+        ) : editing ? (
           <div className="space-y-4">
             {/* Header: Name | State | Type */}
             <div className="flex gap-3 items-end">
@@ -395,6 +517,49 @@ const AssetsStage = () => {
               <button onClick={handleAdd} disabled={adding || (!addExisting && !addType) || !addStateName || !addStateDesc || (!addExisting && !addAssetName)}
                 className="w-full py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50">
                 {adding ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audio Import Modal */}
+      {showAudioModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowAudioModal(false)}>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Import Audio</h3>
+              <button onClick={() => setShowAudioModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Audio File</label>
+                <input type="file" accept="audio/*" id="audio-file-input" className="hidden" onChange={e => setAudioFile(e.target.files?.[0] || null)} />
+                <button type="button" onClick={() => document.getElementById('audio-file-input')?.click()}
+                  className="w-full mt-1 p-3 border-2 border-dashed border-blue-300 rounded text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-400">
+                  {audioFile ? `📁 ${audioFile.name}` : '📂 Choose Audio File...'}
+                </button>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Name</label>
+                <input className="w-full p-2 border rounded mt-1 text-sm" value={audioName} onChange={e => setAudioName(e.target.value)} placeholder="Audio name" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Type</label>
+                <select className="w-full p-2 border rounded mt-1 text-sm" value={audioType} onChange={e => setAudioType(e.target.value)}>
+                  <option value="VOICE_SAMPLE">Voice Sample</option>
+                  <option value="CHARACTER_DIALOG">Character Dialog</option>
+                  <option value="SCENE_DIALOG">Scene Dialog</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Transcript</label>
+                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={3} value={audioTranscript} onChange={e => setAudioTranscript(e.target.value)} placeholder="Transcription of the audio..." />
+              </div>
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+              <button onClick={handleImportAudio} disabled={audioImporting || !audioFile || !audioName}
+                className="w-full py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50">
+                {audioImporting ? 'Importing...' : 'Import Audio'}
               </button>
             </div>
           </div>
