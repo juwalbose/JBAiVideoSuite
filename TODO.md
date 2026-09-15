@@ -6,3 +6,5 @@
 - [ ] Properly implement Assemble Clips (foundation for future editing features)
 - [x] Import/export for projects
 - [ ] Check sequencing of reference assets in prompt vs attachment
+- [ ] Theme UI
+- [ ] Update images in docs & copy in internal docs

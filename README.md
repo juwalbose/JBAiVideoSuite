@@ -1,5 +1,7 @@
 # JBAiVideoSuite
 
+> 📖 **Access detailed documentation:** [https://juwalbose.github.io/JBAiVideoSuite/](https://juwalbose.github.io/JBAiVideoSuite/)
+
 An AI-powered video production pipeline that takes you from a raw story idea to a final video through five stages:
 
 **Story → Script → Assets → Shot List → Final Video**
