@@ -118,11 +118,19 @@ async def save_resolutions(payload: dict, db: Any = Depends(get_db)):
             where={'id': existing.id}
         )
     else:
-        await db.comfyworkflowmapping.create({
-            'action': 'Asset Generation',
-            'workflowFile': None,
-            'resolutionJson': data
-        })
+        try:
+            await db.comfyworkflowmapping.create({
+                'action': 'Asset Generation',
+                'workflowFile': None,
+                'resolutionJson': data
+            })
+        except Exception:
+            existing = await db.comfyworkflowmapping.find_first(where={'action': 'Asset Generation'})
+            if existing:
+                await db.comfyworkflowmapping.update(
+                    data={'resolutionJson': data},
+                    where={'id': existing.id}
+                )
     return {"status": "success"}
 
 DEFAULT_VIDEO_RESOLUTIONS = {
@@ -152,9 +160,17 @@ async def save_video_resolutions(payload: dict, db: Any = Depends(get_db)):
             where={'id': existing.id}
         )
     else:
-        await db.comfyworkflowmapping.create({
-            'action': 'MinimaxH3 Ref2VA Generation',
-            'workflowFile': None,
-            'resolutionJson': data
-        })
+        try:
+            await db.comfyworkflowmapping.create({
+                'action': 'MinimaxH3 Ref2VA Generation',
+                'workflowFile': None,
+                'resolutionJson': data
+            })
+        except Exception:
+            existing = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA Generation'})
+            if existing:
+                await db.comfyworkflowmapping.update(
+                    data={'resolutionJson': data},
+                    where={'id': existing.id}
+                )
     return {"status": "success"}
