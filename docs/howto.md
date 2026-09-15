@@ -17,8 +17,20 @@ A step-by-step guide to installing, configuring, and using **BionicProducer** (J
    - [ComfyUI Workflows](#comfyui-workflows)
    - [System Prompts](#system-prompts)
 3. [Status Indicators](#status-indicators)
-4. [Comfy Generation Tab](#comfy-generation-tab)
-5. [Direct The Video Tab](#direct-the-video-tab) *(coming soon)*
+4. [AI Assistant Chat](#ai-assistant-chat)
+5. [Comfy Generation Tab](#comfy-generation-tab)
+6. [Direct The Video Tab](#direct-the-video-tab)
+   - [Creating a Project](#creating-a-project)
+   - [Opening a Project](#opening-a-project)
+   - [Exporting a Project](#exporting-a-project)
+   - [Importing a Project](#importing-a-project)
+   - [Deleting a Project](#deleting-a-project)
+   - [Single Video vs. Episodic Flow](#single-video-vs-episodic-flow)
+   - [Story Stage](#story-stage)
+   - [Script Stage](#script-stage)
+   - [Assets Stage](#assets-stage)
+   - [Shot List Stage](#shot-list-stage)
+   - [Final Video Stage](#final-video-stage)
 
 ---
 
@@ -245,6 +257,55 @@ The **ComfyUI** indicator shows whether your ComfyUI server is online:
 
 ---
 
+## AI Assistant Chat
+
+A collapsible chat panel is available on **every screen** of the app. It gives you a persistent conversation with your LLM that persists across tabs and projects.
+
+![AI Assistant chat panel](images/placeholder.svg)
+
+### Opening & Closing
+
+- **Open** — click the vertical **CHAT** tab on the right edge of the screen (visible when the panel is closed)
+- **Close** — click the **×** button in the panel header
+
+The panel takes up the right quarter of the screen when open. The main content area shrinks to make room.
+
+### Header Controls
+
+| Control | Description |
+|---------|-------------|
+| **System Prompt dropdown** | Select a system prompt from `assets/systemprompts/` to shape the assistant's behavior. Choose *No System Prompt* for a generic assistant. |
+| **Clear** | Wipes all messages, resets the system prompt to *None*, and clears the backend session |
+| **×** | Closes the panel (reveals the CHAT tab) |
+
+> Changing the system prompt mid-conversation injects a reset message so the LLM drops the previous prompt's influence.
+
+### Messages
+
+- **User messages** appear right-aligned in blue
+- **Assistant messages** appear left-aligned in gray
+- A **"Thinking..."** indicator shows while the LLM is generating a response
+- Messages persist in `localStorage` — they survive page refreshes and tab switches
+
+### Attachments
+
+Click the **📎** button to attach a file to your next message:
+
+| File type | Behavior |
+|-----------|----------|
+| **Images** (`image/*`) | Shown as a thumbnail preview above the input. Sent to the LLM as a base64 image. |
+| **Text** (`.md`, `.txt`) | Shown as a filename chip. The file contents are appended to your message text. |
+
+Remove an attachment by clicking the **×** next to its preview.
+
+### Tips
+
+- Use the chat to brainstorm story ideas, refine dialogue, or ask questions about your project — the conversation is independent of any specific project
+- Attach a character sheet image and ask the assistant to describe it for use in a prompt
+- Attach a `.txt` file with reference material and ask the assistant to summarize or extract details
+
+---
+
 ## Comfy Generation Tab
 
 The **Comfy Generation** tab is a standalone playground for running ComfyUI workflows directly — no project required. It's useful for testing prompts, generating reference images, or producing assets outside the main video pipeline.
@@ -297,4 +358,360 @@ A grid of all images and videos in `assets/generated/`.
 
 ## Direct The Video Tab
 
-*(Coming soon — see next update)*
+The **Direct The Video** tab is the main production pipeline. It takes you from a raw story idea all the way to a finished video through five stages: **Story → Script → Assets → Shot List → Final Video**.
+
+Before you can work on any stage, you need a project. Projects are managed from the **Project Library**, which is the first screen you see when the tab is open.
+
+![Project Library](images/placeholder.svg)
+
+### Creating a Project
+
+Click the **+ New Project** button at the bottom of the Project Library. A modal appears:
+
+![New Project modal](images/placeholder.svg)
+
+| Field | Description |
+|-------|-------------|
+| **Project Name** | A short name for your project (e.g. *The Mars Explorer*). Required. |
+| **Video Type** | **Single Video** — one continuous video. **Episodic** — a series with multiple episodes. |
+
+Click **Create Project** to save it. The project appears in the library grid with a cover preview (the first character sheet, if one exists) and a type badge.
+
+> **Tip:** The project name is used as the default export filename. Spaces are replaced with underscores.
+
+### Opening a Project
+
+Click any project card in the grid to open it. The active project is highlighted with a blue border. Once inside, you'll see the project name, its type badge, and the five stage tabs across the top.
+
+A **← Back to Library** button in the top-left takes you back to the project grid.
+
+### Exporting a Project
+
+Each project card in the library has an **Export** button (download icon) in its bottom-right corner. Clicking it opens an export modal:
+
+![Export modal](images/placeholder.svg)
+
+| Field | Description |
+|-------|-------------|
+| **Filename** | The export filename. Defaults to `<project_name>_export.json`. Editable. |
+| **Include settings & mappings** | When checked, the export includes your current LLM prompt mappings, ComfyUI workflow mappings, and resolution settings. Uncheck to export only project data. |
+
+Click **Export** to download the JSON file. The file contains:
+
+- Project metadata (name, type, ID)
+- Story, script, beats
+- Assets (characters, locations, props) and their states
+- Shot list
+- Final video references
+- *(Optional)* Settings and mappings
+
+> **Tip:** Keep a copy of your export file as a backup. You can re-import it at any time to restore the project.
+
+### Importing a Project
+
+Click the **Import Project** button at the bottom of the Project Library. Select a previously exported `.json` file. The project is created in your library with all its data intact.
+
+> **Note:** Importing creates a *new* project — it does not merge with an existing one. If you import a file that was exported from a project with the same name, you'll have two separate projects.
+
+### Deleting a Project
+
+There are two ways to delete projects:
+
+**Delete a single project** — open the project, then click the **Delete Project** button (red, top-right of the project header). A confirmation dialog asks: *Delete "<name>"? This cannot be undone.* Click OK to proceed. All associated data (story, script, assets, shots, final video) is removed from the database.
+
+**Delete all projects** — in the Project Library, click the **Delete All** button (red, top-right of the header). A confirmation dialog asks: *Do you want to remove all projects?* Click OK to wipe every project and its data.
+
+> ⚠️ **Warning:** Deletion is permanent. Export your project first if you might need it later.
+
+### Single Video vs. Episodic Flow
+
+The two project types differ only in one way: **episodic projects have an episode selector**, while single video projects do not.
+
+An episodic project is simply a **collection of single video flows** — each episode runs through the exact same five stages (Story → Script → Assets → Shot List → Final Video) independently.
+
+| | Single Video | Episodic |
+|---|---|---|
+| **Episodes** | One (implicit) | Multiple — switch with the episode selector |
+| **Stage tabs** | Story, Script, Assets, Shot List, Final Video | Same five tabs, but scoped to the selected episode |
+| **Data** | All data belongs to the single project | Each episode has its own story, script, assets, shots, and final video |
+
+**How it works in practice:**
+
+1. Create an **Episodic** project
+2. An episode selector appears (e.g. *Episode 1*, *Episode 2*, …)
+3. Work through the five stages for Episode 1
+4. Switch to Episode 2 — the stages reset and you start fresh
+5. Repeat for as many episodes as you need
+
+> **Tip:** Assets (characters, locations, props) are shared across episodes within the same project. You define them once in Episode 1 and they're available in every subsequent episode.
+
+> **Note:** A Single Video project behaves identically to a one-episode Episodic project — it just hides the episode selector since there's only one.
+
+### Story Stage
+
+The **Story** stage is where you start your production. It has two main sections: your raw idea and the AI-generated narrative arc.
+
+![Story stage](images/placeholder.svg)
+
+**Project Details** — the project name is editable here. Changes are saved when you click **Save**.
+
+**1. Raw Idea** — a large textarea where you type your story concept. This can be as short as a sentence or as long as a paragraph. Examples:
+
+- *"A lonely astronaut discovers a signal from a dead planet"*
+- *"Two rival chefs compete in an underground cooking contest"*
+
+**Duration** — a stepper control (− / +) that sets the target video length in 15-second increments. For single video projects this is the total video duration; for episodic projects it's the duration per episode. Default is 2 minutes.
+
+**2. Narrative Arc** — appears after you generate. This is the LLM's expanded version of your raw idea: a structured narrative with a beginning, middle, and end. It's editable, so you can tweak the arc before moving on.
+
+**Episodes** *(episodic projects only)* — a number input to set how many episodes the series will have. Changing this updates the episode selector in the header.
+
+**Buttons:**
+
+| Button | What it does |
+|--------|--------------|
+| **Generate Narrative Arc** | Sends your raw idea to the LLM and fills the Narrative Arc box. The button becomes **Regenerate Arc** if an arc already exists. |
+| **Save** | Persists the project name, duration, episode count, raw idea, and narrative arc to the database. |
+| **Next** | Jumps to the Script stage. Disabled until a narrative arc exists. |
+
+> **Tip:** You can edit the narrative arc freely before saving. The LLM uses it as the source for script generation, so make sure it captures the story you want.
+
+### Script Stage
+
+The **Script** stage turns your narrative arc into a full screenplay-style script, extracts the cast, and lets you refine dialogue.
+
+![Script stage](images/placeholder.svg)
+
+**Script** — a large textarea showing the generated script. It's fully editable. The script is generated from the narrative arc you saved in the Story stage.
+
+**Buttons:**
+
+| Button | What it does |
+|--------|--------------|
+| **Generate Script** | Sends the narrative arc to the LLM and fills the Script box. Becomes **Regenerate Script** if a script already exists. Disabled until a narrative arc exists. |
+| **Refine Dialog** | Sends the current script to the LLM for dialogue polishing. The refined version appears in a separate **Refined Dialog** box below. |
+| **Extract Assets** | Sends the script to the LLM to extract characters, locations, and props. The result appears in the **Extracted Assets** box below. |
+
+**Refined Dialog** *(appears after Refine Dialog)* — a teal-bordered textarea showing the LLM's polished version of your script. Edit it if needed, then click **Apply Dialog Refinement** to replace the main script with the refined version.
+
+**Extracted Assets** — a purple-bordered textarea showing the cast as formatted text:
+
+```
+CHARACTERS
+========================================
+
+• Captain Nova
+  A seasoned explorer...
+  - Default: Standard uniform (Scenes: 1, 3, 5)
+  - Injured: Bandaged arm (Scenes: 7, 8)
+
+LOCATIONS
+========================================
+
+• Mars Base
+  A modular habitat...
+  - Day: Bright exterior (Scenes: 1, 2)
+
+PROPS
+========================================
+
+• Signal Device
+  A handheld scanner...
+  Characters: Captain Nova
+  Scenes: 3, 4, 5
+```
+
+The raw JSON is stored behind the scenes and saved to the database when you click **Save**. The formatted view is for readability — you can edit it, but only valid JSON changes will be persisted.
+
+**Save** — persists the script and (if valid) the extracted assets to the database.
+
+**Next** — jumps to the Assets stage. Only appears after assets have been saved.
+
+> **Tip:** The Extract Assets step is what feeds the Assets stage. If your cast looks wrong, edit the script and re-extract rather than manually editing the JSON.
+
+### Assets Stage
+
+The **Assets** stage is where you manage all the visual and audio elements for your project. It's split into a left panel (asset list) and a right panel (detail editor).
+
+![Assets stage](images/placeholder.svg)
+
+**Left Panel — Asset List**
+
+Four tabs at the top: **Characters**, **Locations**, **Props**, **Audio**.
+
+- **Characters / Locations / Props** — each item in the list is either an asset (no states) or an asset + state pair (e.g. *Captain Nova — Default*, *Captain Nova — Injured*). Click an item to load it in the right panel.
+- **Audio** — lists imported audio files. Click to load in the right panel.
+
+**Buttons at the bottom of the left panel:**
+
+| Button | Tab | What it does |
+|--------|-----|--------------|
+| **+ Add Asset / State** | Characters, Locations, Props | Opens a modal to add a new asset or a new state to an existing asset |
+| **⚡ Generate All Prompts** | Characters, Locations, Props | Iterates through every state and generates an image prompt for each. Shows progress (*Generating 3/12…*) and a **Stop** button |
+| **+ Import Audio** | Audio | Opens a modal to import an audio file |
+
+**Right Panel — Detail Editor**
+
+For **Characters / Locations / Props**, the detail editor shows:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Asset name (editable) |
+| **State** | State name (editable, only if the asset has states) |
+| **Type** | Character, Location, or Prop (read-only) |
+| **Asset Description** | What the asset looks like overall |
+| **State Description** | What this specific state looks like |
+| **Image** | Preview of the assigned image. Has a **Generate Image** button that sends the prompt to ComfyUI |
+| **Character Sheet** | *(Characters only)* Preview of the character sheet. Has a **Generate Sheet** button (requires an image to be assigned first) |
+| **Prompt** | The image generation prompt. Editable. Has **Generate Prompt** (LLM), **Copy Prompt**, **Save Asset**, and **Delete** buttons |
+
+> **Tip:** You can assign images from the Gallery (Comfy Generation tab → Map to Asset) instead of generating them. The **Generate Image** button uses the prompt you've written or generated.
+
+For **Audio**, the detail editor shows:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Audio file name (editable) |
+| **Type** | Voice Sample, Character Dialog, or Scene Dialog |
+| **Audio File** | Path + audio player |
+| **Transcript** | Text transcription of the audio (editable) |
+| **Save Audio / Delete** | Persist changes or remove the file |
+
+**Add Asset / State Modal**
+
+| Field | Description |
+|-------|-------------|
+| **Asset** | Dropdown: pick an existing asset (to add a state) or choose *+ New Character/Location/Prop* |
+| **Asset Name** | *(New only)* Name for the new asset |
+| **Asset Description** | *(New only)* Description for the new asset |
+| **State Name** | Name for the state (e.g. *Default*, *Injured*, *Night*) |
+| **State Description** | Description for the state |
+
+**Import Audio Modal**
+
+| Field | Description |
+|-------|-------------|
+| **Audio File** | File picker (accepts any audio format) |
+| **Name** | Display name for the audio |
+| **Type** | Voice Sample, Character Dialog, or Scene Dialog |
+| **Transcript** | Text transcription |
+
+### Shot List Stage
+
+The **Shot List** stage breaks your script into individual shots — the building blocks for video generation. Each shot has a location, subjects, camera direction, action, dialogue, and a generation prompt.
+
+![Shot List stage](images/placeholder.svg)
+
+**Header**
+
+- **Shot List (N shots)** — title with shot count
+- **+ Add Shot** — adds a blank shot at the end
+- **⚡ Generate All Prompts** — generates a video prompt for every shot. Shows progress and a **Stop** button
+
+**Shot Navigation**
+
+- **← Prev / Next →** — step through shots
+- **Dropdown** — jump to a specific shot
+- **Delete Shot** — removes the current shot
+
+**Shot Fields**
+
+| Field | Description |
+|-------|-------------|
+| **Shot #** | Shot number |
+| **Scene** | Scene number |
+| **Beats** | Comma-separated beat numbers (e.g. `1, 2, 3`) |
+| **Frames** | Frame count for the shot |
+| **Duration (s)** | Shot duration in seconds |
+| **Location** | Where the shot takes place |
+| **Subjects** | Who/what is in the shot |
+| **Camera** | Camera direction (e.g. *wide shot, slow pan left*) |
+| **Action** | What happens in the shot |
+| **Dialogue** | Any spoken lines |
+| **Note** | Additional notes |
+
+**Linked Assets**
+
+Each shot can be linked to project assets:
+
+| Field | Description |
+|-------|-------------|
+| **Location** | Dropdown: pick a location asset + state |
+| **Characters** | Up to 4 character slots. Each slot: pick a character asset + state. **+ Add Character** to add more |
+| **Audio Type** | Toggle: **None**, **Scene Dialog**, or **Voice Samples** |
+| **Audio** | If *Scene Dialog*: pick a scene dialog audio file. If *Voice Samples*: pick a voice sample per character |
+| **Props** | Up to 4 prop slots. Each slot: pick a prop asset + state. **+ Add Prop** to add more |
+
+**Music**
+
+- **On / Off** toggle
+- When **On**, a text field appears for describing the background music
+
+**Prompt**
+
+- A large textarea for the video generation prompt
+- **Generate Prompt** — sends the shot data to the LLM to build a prompt
+- **Copy Prompt** — copies the prompt to clipboard
+
+**Raw JSON**
+
+A textarea at the bottom where you can paste the raw JSON output from the LLM. Click **Load Shots** to parse it into the shot list. This is useful if the auto-parse fails.
+
+**Buttons**
+
+| Button | What it does |
+|--------|--------------|
+| **Generate Shots** | Sends the script to the LLM and generates a full shot list. Becomes **Regenerate Shots** if shots already exist. Disabled until a script exists. |
+| **Save Shots** | Persists all shots to the database. Shows a green confirmation when successful. |
+
+> **Tip:** The shot list is what feeds the Final Video stage. Each shot's prompt, linked assets, and audio are used to generate the video clip for that shot.
+
+### Final Video Stage
+
+The **Final Video** stage is where you generate video clips for each shot and preview the assembled sequence. It has two sub-tabs: **Generate Clips** and **Assemble Clips**.
+
+![Final Video stage](images/placeholder.svg)
+
+#### Generate Clips
+
+The main working area for producing video clips.
+
+**Shot Selector** — **← Prev / Next →** buttons and a dropdown to jump between shots. Shows the current shot number and duration.
+
+**Video Preview** — a large video player (960×544 aspect ratio). Shows the generated clip once complete, or *"Video preview will appear here"* while waiting.
+
+**Shot Detail** — a panel below the preview showing:
+
+| Field | Description |
+|-------|-------------|
+| **Prompt** | The video generation prompt (editable). This is the prompt you wrote or generated in the Shot List stage. |
+| **Asset Previews** | Small thumbnails of the linked location, characters (uses character sheet if available), and props. Shows *"Image missing"* if an asset has no image. |
+| **Audio** | Audio players for any linked audio files (scene dialog or voice samples) |
+| **Duration** | Shot duration in seconds (editable, 0.1s steps) |
+| **Seed** | Numeric seed for the generation. **Randomize** button for a random seed |
+
+**Buttons:**
+
+| Button | What it does |
+|--------|--------------|
+| **Gen Low Res** | Generates the clip at low resolution (faster, for previewing). The result appears in the video preview. |
+| **Gen High Res** | Generates the clip at high resolution (final quality). The result is saved to the shot's `videoPath`. |
+| **Save** | Persists all shots (including any prompt edits) to the database. |
+
+> **Tip:** Use **Gen Low Res** to quickly check if the prompt and assets look right before committing to a full high-res render.
+
+> **Note:** If no shots exist, the stage shows *"No shots found. Generate shots in the Shot List tab first."*
+
+#### Assemble Clips
+
+A preview mode for watching your shots play in sequence.
+
+**Video Preview** — a video player showing the clip for the currently selected shot. Shows *"No video generated for Shot N"* if the shot hasn't been rendered yet.
+
+**Play Sequence** — a button that plays all shots in order. Shots without a generated video are skipped (1.5s pause). Click **Stop** to halt playback.
+
+**Shot Strip** — a horizontal scrollable strip of thumbnails, one per shot. Each thumbnail shows the video (or *"No video"* if not generated) with the shot number overlaid. Click a thumbnail to jump to that shot.
+
+**Export Video** — currently disabled. Export functionality is coming soon.
+
+> **Tip:** Generate all your clips in the Generate Clips tab first, then switch to Assemble Clips to preview the full sequence before exporting.
