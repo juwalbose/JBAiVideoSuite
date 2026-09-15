@@ -1,6 +1,6 @@
-# BionicProducer — How-To Guide
+# JBAiVideoSuite — How-To Guide
 
-A step-by-step guide to installing, configuring, and using **BionicProducer** (JBAiVideoSuite).
+A step-by-step guide to installing, configuring, and using **JBAiVideoSuite**.
 
 > **Status:** Work in progress. Screenshots are placeholders and will be replaced with real captures as the UI stabilizes.
 
@@ -38,7 +38,7 @@ A step-by-step guide to installing, configuring, and using **BionicProducer** (J
 
 ## Installation
 
-BionicProducer is a local-first video production suite. It has two halves:
+JBAiVideoSuite is a local-first video production suite. It has two halves:
 
 - **Backend** — a FastAPI + Prisma (SQLite) service on port `8000`
 - **Frontend** — a Next.js dev server on port `3000`
@@ -57,8 +57,8 @@ Both are launched together by the `StartApp.bat` script at the repo root.
 ### Step 1 — Clone the repository
 
 ```powershell
-git clone <repo-url> BionicProducer
-cd BionicProducer
+git clone <repo-url> JBAiVideoSuite
+cd JBAiVideoSuite
 ```
 
 ### Step 2 — Set up the backend
@@ -102,7 +102,7 @@ From the repo root, double-click **`StartApp.bat`** (or run it from a terminal).
 
 ### Step 5 — Verify the install
 
-- Backend health: open `http://127.0.0.1:8000/` — you should see `{"message": "BionicProducer API is running"}`
+- Backend health: open `http://127.0.0.1:8000/` — you should see `{"message": "JBAiVideoSuite API is running"}`
 - Frontend: the app header should read **JBAiVideoSuite** with the tabs *Direct The Video* and *Comfy Generation*
 
 ---
