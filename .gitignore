@@ -13,8 +13,9 @@ backend/prisma/database.db
 # System prompts (each user generates their own)
 assets/systemprompts/*.txt
 
-# Generated assets
-assets/generated/
+# Generated assets (track folder, ignore contents)
+assets/generated/*
+!assets/generated/.gitkeep
 assets/audio/
 
 # Env files
