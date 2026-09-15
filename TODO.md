@@ -1,8 +1,8 @@
 # BionicProducer — Pending Tasks
 
 - [x] Refine playground UI
-- [ ] Implement Final Video tab
-- [ ] Save all current mappings to persist in DB on first initialisation
-- [ ] Project picker to have an image
-- [ ] Import/export for projects
+- [x] Implement Final Video tab
+- [x] Project picker to have an image
+- [ ] Properly implement Assemble Clips (foundation for future editing features)
+- [x] Import/export for projects
 - [ ] Check sequencing of reference assets in prompt vs attachment

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Folder } from 'lucide-react';
@@ -9,6 +9,69 @@ const ProjectLibrary = () => {
   const { projects, currentProject, setCurrentProject, fetchProjects, deleteAllProjects } = useProjectStore();
   const baseUrl = useSettingsStore.getState().backend.apiUrl;
   const [coverImages, setCoverImages] = useState<Record<string, string | null>>({});
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    if (!currentProject) {
+      alert('Select a project first, then export it.');
+      return;
+    }
+    setExporting(true);
+    try {
+      const res = await fetch(`${baseUrl}/export/project/${currentProject.id}`);
+      const data = await res.json();
+      if (data.status === 'error') {
+        alert(data.details);
+        return;
+      }
+      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentProject.name.replace(/\s+/g, '_')}_export.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export failed:', e);
+      alert('Export failed. Check backend connection.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await fetch(`${baseUrl}/export/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.status === 'error') {
+        alert(result.details);
+        return;
+      }
+      await fetchProjects();
+      alert('Project imported successfully!');
+    } catch (err) {
+      console.error('Import failed:', err);
+      alert('Import failed. Is the file a valid export?');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     fetchProjects();
@@ -112,13 +175,34 @@ const ProjectLibrary = () => {
         </div>
       )}
 
-      <div className="mt-12 flex justify-center">
-        <button 
+      <div className="mt-12 flex justify-center gap-4">
+        <button
           className="px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-colors shadow-lg"
           onClick={() => setModalOpen(true)}
         >
           + New Project
         </button>
+        <button
+          className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold hover:bg-gray-700 transition-colors shadow-lg"
+          onClick={handleExport}
+          disabled={exporting}
+        >
+          {exporting ? 'Exporting...' : 'Export Project'}
+        </button>
+        <button
+          className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold hover:bg-gray-700 transition-colors shadow-lg"
+          onClick={handleImport}
+          disabled={importing}
+        >
+          {importing ? 'Importing...' : 'Import Project'}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
       </div>
 
       <NewProjectModal 
