@@ -47,41 +47,41 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">LLM Settings</h2>
+      <h2 className="text-xl font-bold text-foreground mb-4">LLM Settings</h2>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium">IP Address</label>
+          <label className="block text-sm font-medium text-muted-foreground">IP Address</label>
           <input
             type="text"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.ip}
             onChange={(e) => setLLM({ ip: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Port</label>
+          <label className="block text-sm font-medium text-muted-foreground">Port</label>
           <input
             type="number"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.port}
             onChange={(e) => setLLM({ port: parseInt(e.target.value) })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Model Name</label>
+          <label className="block text-sm font-medium text-muted-foreground">Model Name</label>
           <input
             type="text"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.modelName}
             onChange={(e) => setLLM({ modelName: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Temperature</label>
+          <label className="block text-sm font-medium text-muted-foreground">Temperature</label>
           <input
             type="number"
             step="0.1"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.temperature}
             onChange={(e) => setLLM({ temperature: parseFloat(e.target.value) })}
           />
@@ -91,18 +91,18 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
         <button
           onClick={runLLMTest}
           disabled={isTesting}
-          className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+          className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground hover:opacity-90'}`}
         >
           {isTesting ? 'Testing...' : 'Test Connection & List Models'}
         </button>
         {testStatus && (
-          <p className="mt-2 font-mono text-sm">{testStatus}</p>
+          <p className="mt-2 font-mono text-sm text-foreground">{testStatus}</p>
         )}
       </div>
       {availableModels.length > 0 && (
         <div>
-          <h3 className="text-sm font-bold mb-2">Available Models:</h3>
-          <ul className="list-disc ml-5 text-sm">
+          <h3 className="text-sm font-bold text-foreground mb-2">Available Models:</h3>
+          <ul className="list-disc ml-5 text-sm text-muted-foreground">
             {availableModels.map((m, i) => (
               <li key={i}>
                 {typeof m === 'object' ? (m.id || m.name || m.object?.name || JSON.stringify(m)) : m}
@@ -111,10 +111,10 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
           </ul>
         </div>
       )}
-      <div className="mt-8 pt-4 border-t">
+      <div className="mt-8 pt-4 border-t border-border">
         <button
           onClick={saveLLM}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors"
+          className="bg-success text-white px-6 py-2 rounded hover:opacity-90 transition-colors"
         >
           Save LLM Settings
         </button>

@@ -54,15 +54,15 @@ const Settings = () => {
   };
 
   return (
-    <div className="flex h-full w-full bg-white">
-      <aside className="w-64 border-r p-4 flex flex-col gap-4 bg-gray-50">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">Settings</h3>
+    <div className="flex h-full w-full bg-background">
+      <aside className="w-64 border-r border-border p-4 flex flex-col gap-4 bg-card">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">Settings</h3>
         <nav className="flex flex-col gap-2">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`p-2 rounded ${activeTab === tab.id ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'}`}
+              className={`p-2 rounded text-sm ${activeTab === tab.id ? 'bg-accent-soft text-accent border border-accent/40' : 'text-muted-foreground hover:bg-muted'}`}
             >
               {tab.label}
             </button>

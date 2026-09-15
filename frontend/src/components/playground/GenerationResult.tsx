@@ -11,7 +11,7 @@ interface GenerationResultProps {
 
 const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resultImage, resultType = 'image' }) => {
   return (
-    <div className="w-full aspect-[960/544] bg-black rounded shadow-md border overflow-hidden">
+    <div className="w-full aspect-[960/544] bg-black rounded shadow-md border border-border overflow-hidden">
       {resultImage ? (
         resultType === 'video' ? (
           <video src={resultImage} controls className="w-full h-full object-contain" />
@@ -19,7 +19,7 @@ const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, resul
           <img src={resultImage} alt="Generated result" className="w-full h-full object-contain" />
         )
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-gray-400 italic">
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground italic">
           Result will appear here
         </div>
       )}

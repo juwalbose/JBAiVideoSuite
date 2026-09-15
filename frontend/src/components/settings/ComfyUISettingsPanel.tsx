@@ -25,40 +25,40 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">ComfyUI Settings</h2>
+      <h2 className="text-xl font-bold text-foreground mb-4">ComfyUI Settings</h2>
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div>
-          <label className="block text-sm font-medium">IP Address</label>
+          <label className="block text-sm font-medium text-muted-foreground">IP Address</label>
           <input
             type="text"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={comfyui.ip}
             onChange={(e) => setComfyUI({ ip: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Port</label>
+          <label className="block text-sm font-medium text-muted-foreground">Port</label>
           <input
             type="number"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={comfyui.port}
             onChange={(e) => setComfyUI({ port: parseInt(e.target.value) })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Device ID</label>
+          <label className="block text-sm font-medium text-muted-foreground">Device ID</label>
           <input
             type="text"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={comfyui.deviceId}
             onChange={(e) => setComfyUI({ deviceId: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Poll Interval (ms)</label>
+          <label className="block text-sm font-medium text-muted-foreground">Poll Interval (ms)</label>
           <input
             type="number"
-            className="border p-2 rounded w-full"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={comfyui.pollInterval}
             onChange={(e) => setComfyUI({ pollInterval: parseInt(e.target.value) || 4000 })}
           />
@@ -67,23 +67,23 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
       <div className="mb-6">
         <button
           onClick={handleTest}
-          className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+          className={`px-4 py-2 rounded transition-colors ${isTesting ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground hover:opacity-90'}`}
         >
           {isTesting ? 'Testing...' : 'Test Connection & Status'}
         </button>
         <div className="mt-2">
-          <p className="text-xs text-gray-500 mb-1">
-            Calling: <span className="font-mono">{comfyui.ip}:{comfyui.port}</span>
+          <p className="text-xs text-muted-foreground mb-1">
+            Calling: <span className="font-mono text-foreground">{comfyui.ip}:{comfyui.port}</span>
           </p>
           {testStatus && (
-            <p className="font-mono text-sm">{testStatus}</p>
+            <p className="font-mono text-sm text-foreground">{testStatus}</p>
           )}
         </div>
       </div>
-      <div className="mt-8 pt-4 border-t">
+      <div className="mt-8 pt-4 border-t border-border">
         <button
           onClick={saveComfyUI}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors"
+          className="bg-success text-white px-6 py-2 rounded hover:opacity-90 transition-colors"
         >
           Save ComfyUI Settings
         </button>

@@ -87,10 +87,10 @@ const ComfyUIPlayground = () => {
   if (workflows.length === 0 && !isLoadingList) {
     return (
       <div className="flex flex-col gap-8 p-4">
-        <h3 className="text-lg font-bold">Workflow Selection</h3>
-        <p className="text-gray-500 italic">No workflows available. Add some in the Settings tab!</p>
-        <section className="border p-6 rounded-xl bg-gray-50">
-          <p className="text-gray-400 italic">Select a workflow to see its inputs.</p>
+        <h3 className="text-lg font-bold text-foreground">Workflow Selection</h3>
+        <p className="text-muted-foreground italic">No workflows available. Add some in the Settings tab!</p>
+        <section className="border border-border p-6 rounded-xl bg-card">
+          <p className="text-muted-foreground italic">Select a workflow to see its inputs.</p>
         </section>
       </div>
     );
@@ -105,7 +105,7 @@ const ComfyUIPlayground = () => {
         </div>
 
         {/* Right Column: Workflow Selection + Preview */}
-        <div className="w-2/3 border p-6 rounded-xl bg-gray-50 shadow-sm flex flex-col gap-8 overflow-y-auto">
+        <div className="w-2/3 border border-border p-6 rounded-xl bg-card shadow-sm flex flex-col gap-8 overflow-y-auto">
           <WorkflowSelector 
             workflows={workflows} 
             selectedId={selectedWorkflowId} 
@@ -114,9 +114,9 @@ const ComfyUIPlayground = () => {
           />
 
           <section>
-            <h3 className="text-lg font-bold mb-4">Preview</h3>
+            <h3 className="text-lg font-bold text-foreground mb-4">Preview</h3>
             {isLoadingParse ? (
-              <p className="text-gray-500 italic">Parsing workflow...</p>
+              <p className="text-muted-foreground italic">Parsing workflow...</p>
             ) : activeWorkflowData ? (
               <WorkflowInputManager 
                 activeWorkflowData={activeWorkflowData} 
@@ -128,7 +128,7 @@ const ComfyUIPlayground = () => {
                 onQueueChange={setQueueCount}
               />
             ) : (
-              !isLoadingParse && <p className="text-gray-500">Select a workflow to begin.</p>
+              !isLoadingParse && <p className="text-muted-foreground">Select a workflow to begin.</p>
             )}
           </section>
         </div>

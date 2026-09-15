@@ -41,16 +41,16 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+      <div className="bg-card border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">New Project</h2>
+          <h2 className="text-2xl font-bold text-foreground">New Project</h2>
           <button 
             type="button"
             onClick={() => {
               console.log("DEBUG: Close button clicked");
               onClose();
             }}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground"
           >
             <X size={24} />
           </button>
@@ -58,17 +58,17 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
         
         <div className="space-y-4 mb-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Project Name</label>
             <input 
               type="text" 
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+              className="w-full p-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-accent outline-none transition-shadow"
               placeholder="e.g., The Mars Explorer"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Video Type</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Video Type</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -77,9 +77,9 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
                   value="single"
                   checked={type === 'single'}
                   onChange={() => setType('single')}
-                  className="accent-blue-600"
+                  className="accent-[#6366f1]"
                 />
-                <span className="text-sm">Single Video</span>
+                <span className="text-sm text-foreground">Single Video</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -88,9 +88,9 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
                   value="episodic"
                   checked={type === 'episodic'}
                   onChange={() => setType('episodic')}
-                  className="accent-blue-600"
+                  className="accent-[#6366f1]"
                 />
-                <span className="text-sm">Episodic</span>
+                <span className="text-sm text-foreground">Episodic</span>
               </label>
             </div>
           </div>
@@ -103,7 +103,7 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
               console.log("DEBUG: Close button clicked");
               onClose();
             }}
-            className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-6 py-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -114,7 +114,7 @@ const NewProjectModal = ({ isOpen, onClose }: NewProjectModalProps) => {
               handleCreate();
             }}
             disabled={!name || isCreating}
-            className={`px-6 py-2 bg-blue-600 text-white rounded-lg transition-colors shadow-md active:scale-95 ${isCreating ? 'opacity-50' : ''}`}
+            className={`px-6 py-2 bg-accent text-accent-foreground rounded-lg transition-colors shadow-md active:scale-95 ${isCreating ? 'opacity-50' : ''}`}
           >
             {isCreating ? 'Creating...' : 'Create Project'}
           </button>

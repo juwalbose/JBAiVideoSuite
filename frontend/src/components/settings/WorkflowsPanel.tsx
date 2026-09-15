@@ -39,19 +39,19 @@ const WorkflowsPanel: React.FC = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">ComfyUI Workflows</h2>
+        <h2 className="text-xl font-bold text-foreground">ComfyUI Workflows</h2>
         <button
           onClick={fetchWorkflows}
-          className="px-3 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors"
+          className="px-3 py-1 text-xs bg-muted text-muted-foreground border border-border rounded hover:bg-muted/80 transition-colors"
         >
           Refresh
         </button>
       </div>
       <div className="mb-4">
-        <label className="block text-sm font-medium">Add New Workflow JSON:</label>
+        <label className="block text-sm font-medium text-muted-foreground">Add New Workflow JSON:</label>
         <input type="file" accept=".json" id="workflow-file-input" className="hidden" onChange={handleFileUpload} />
         <button type="button" onClick={() => document.getElementById('workflow-file-input')?.click()}
-          className="mt-1 w-full p-3 border-2 border-dashed border-blue-300 rounded text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-400">
+          className="mt-1 w-full p-3 border-2 border-dashed border-accent/40 rounded text-sm text-accent hover:bg-accent-soft hover:border-accent/60">
           📂 Choose .json File...
         </button>
       </div>
@@ -61,13 +61,13 @@ const WorkflowsPanel: React.FC = () => {
             <button
               key={w.id}
               onClick={() => setSelectedWorkflow(w.id)}
-              className={`p-4 border rounded text-left transition-colors ${selectedWorkflow === w.id ? 'bg-blue-100 border-blue-500' : 'hover:bg-gray-50'}`}
+              className={`p-4 border rounded text-left transition-colors ${selectedWorkflow === w.id ? 'bg-accent-soft border-accent/40 text-accent' : 'border-border bg-card text-foreground hover:bg-muted'}`}
             >
               <span className="font-bold">{w.name}</span>
             </button>
           ))
         ) : (
-          <p className="text-gray-500 italic">No workflows found in assets/workflows/</p>
+          <p className="text-muted-foreground italic">No workflows found in assets/workflows/</p>
         )}
       </div>
     </div>

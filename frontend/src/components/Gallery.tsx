@@ -135,15 +135,15 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   const canAssign = mapAsset && mapState && mapField;
 
   return (
-    <div className={`flex flex-col w-full h-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
-      <div className="flex justify-between items-center mb-4 border-b pb-2">
-        <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Gallery</h2>
+    <div className={`flex flex-col w-full h-full border border-border rounded-xl bg-card shadow-sm p-4 ${className}`}>
+      <div className="flex justify-between items-center mb-4 border-b border-border pb-2">
+        <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Gallery</h2>
         <div className="flex gap-2">
-          <label className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors shadow-sm cursor-pointer">
+          <label className="px-3 py-1.5 bg-success text-white text-sm rounded-md hover:opacity-90 transition-colors shadow-sm cursor-pointer">
             {uploading ? 'Adding...' : 'Add'}
             <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
           </label>
-          <button onClick={fetchImages} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+          <button onClick={fetchImages} className="px-3 py-1.5 bg-accent text-accent-foreground text-sm rounded-md hover:opacity-90 transition-colors shadow-sm">
             Refresh
           </button>
         </div>
@@ -151,13 +151,13 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
 
       <div className="flex flex-col flex-1 min-h-0">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-slate-400 italic animate-pulse">Loading assets...</div>
+          <div className="flex items-center justify-center h-full text-muted-foreground italic animate-pulse">Loading assets...</div>
         ) : error ? (
-          <div className="flex items-center justify-center h-full text-red-400 italic">{error}</div>
+          <div className="flex items-center justify-center h-full text-destructive italic">{error}</div>
         ) : images.length > 0 ? (
           <div className="grid grid-cols-3 gap-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 items-start">
             {images.map((img, index) => (
-              <div key={index} className="relative group overflow-hidden bg-slate-50 w-full aspect-square cursor-pointer" onClick={() => setSelectedImage(img)}>
+              <div key={index} className="relative group overflow-hidden bg-muted w-full aspect-square cursor-pointer" onClick={() => setSelectedImage(img)}>
                 {types[img] === 'video' ? (
                   <video src={`${baseUrl}${img}`} muted preload="metadata" className="w-full h-full object-cover" />
                 ) : (
@@ -174,9 +174,9 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
             ))}
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400 italic">No images found in assets/generated/</div>
+          <div className="flex items-center justify-center h-full text-muted-foreground italic">No images found in assets/generated/</div>
         )}
-        <div className="mt-2 pt-2 border-t text-[10px] text-slate-400 flex justify-between">
+        <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground flex justify-between">
           <span>Base URL: {baseUrl}</span>
           <span>Items Found: {images.length}</span>
         </div>
@@ -185,34 +185,34 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
       {/* Modal */}
       {selectedImage && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setSelectedImage(null)}>
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-slate-800">{types[selectedImage] === 'video' ? 'Video Details' : 'Image Details'}</h3>
-              <button onClick={() => { setSelectedImage(null); setMapType(''); setMapAsset(''); setMapState(''); setMapField(''); }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+              <h3 className="text-lg font-bold text-foreground">{types[selectedImage] === 'video' ? 'Video Details' : 'Image Details'}</h3>
+              <button onClick={() => { setSelectedImage(null); setMapType(''); setMapAsset(''); setMapState(''); setMapField(''); }} className="text-muted-foreground hover:text-foreground text-2xl leading-none">&times;</button>
             </div>
             {types[selectedImage] === 'video' ? (
               <video src={`${baseUrl}${selectedImage}`} controls className="w-full max-h-[400px] rounded-lg mb-4 bg-black" />
             ) : (
-              <img src={`${baseUrl}${selectedImage}`} alt={selectedImage} className="w-full max-h-[400px] object-contain rounded-lg mb-4 bg-slate-100" />
+              <img src={`${baseUrl}${selectedImage}`} alt={selectedImage} className="w-full max-h-[400px] object-contain rounded-lg mb-4 bg-muted" />
             )}
-            <p className="text-xs text-slate-500 mb-4">{selectedImage}</p>
+            <p className="text-xs text-muted-foreground mb-4">{selectedImage}</p>
 
             <div className="flex gap-3 mb-4">
-              <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50">
+              <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 bg-destructive text-white text-sm rounded-md hover:opacity-90 disabled:opacity-50">
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
               {types[selectedImage] !== 'video' && (
-                <button onClick={() => setMapType(mapType ? '' : 'characters')} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                <button onClick={() => setMapType(mapType ? '' : 'characters')} className="px-4 py-2 bg-accent text-accent-foreground text-sm rounded-md hover:opacity-90">
                   {mapType ? 'Cancel Map' : 'Map to Asset'}
                 </button>
               )}
             </div>
 
             {mapType && (
-              <div className="space-y-3 border-t pt-4">
+              <div className="space-y-3 border-t border-border pt-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-700">Type</label>
-                  <select value={mapType} onChange={e => { setMapType(e.target.value); setMapAsset(''); setMapState(''); setMapField(''); }} className="w-full p-2 border rounded mt-1 text-sm">
+                  <label className="text-sm font-medium text-muted-foreground">Type</label>
+                  <select value={mapType} onChange={e => { setMapType(e.target.value); setMapAsset(''); setMapState(''); setMapField(''); }} className="w-full p-2 border border-border rounded mt-1 text-sm bg-card text-foreground">
                     <option value="">Select type</option>
                     <option value="characters">Character</option>
                     <option value="locations">Location</option>
@@ -221,8 +221,8 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
                 </div>
                 {mapType && (
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Asset</label>
-                    <select value={mapAsset} onChange={e => { setMapAsset(e.target.value); setMapState(''); setMapField(''); }} className="w-full p-2 border rounded mt-1 text-sm">
+                    <label className="text-sm font-medium text-muted-foreground">Asset</label>
+                    <select value={mapAsset} onChange={e => { setMapAsset(e.target.value); setMapState(''); setMapField(''); }} className="w-full p-2 border border-border rounded mt-1 text-sm bg-card text-foreground">
                       <option value="">Select asset</option>
                       {assetList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
@@ -230,16 +230,16 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
                 )}
                 {mapAsset && selectedAsset?.states?.length ? (
                   <div>
-                    <label className="text-sm font-medium text-slate-700">State</label>
-                    <select value={mapState} onChange={e => { setMapState(e.target.value); setMapField(''); }} className="w-full p-2 border rounded mt-1 text-sm">
+                    <label className="text-sm font-medium text-muted-foreground">State</label>
+                    <select value={mapState} onChange={e => { setMapState(e.target.value); setMapField(''); }} className="w-full p-2 border border-border rounded mt-1 text-sm bg-card text-foreground">
                       <option value="">Select state</option>
                       {selectedAsset.states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
                 ) : mapAsset && (
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Type</label>
-                    <select value={mapField} onChange={e => setMapField(e.target.value)} className="w-full p-2 border rounded mt-1 text-sm">
+                    <label className="text-sm font-medium text-muted-foreground">Type</label>
+                    <select value={mapField} onChange={e => setMapField(e.target.value)} className="w-full p-2 border border-border rounded mt-1 text-sm bg-card text-foreground">
                       <option value="">Select type</option>
                       <option value="imagePath">Asset Image</option>
                       <option value="characterSheet">Character Sheet</option>
@@ -248,8 +248,8 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
                 )}
                 {mapState && (
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Image Type</label>
-                    <select value={mapField} onChange={e => setMapField(e.target.value)} className="w-full p-2 border rounded mt-1 text-sm">
+                    <label className="text-sm font-medium text-muted-foreground">Image Type</label>
+                    <select value={mapField} onChange={e => setMapField(e.target.value)} className="w-full p-2 border border-border rounded mt-1 text-sm bg-card text-foreground">
                       <option value="">Select type</option>
                       <option value="imagePath">Asset Image</option>
                       <option value="characterSheet">Character Sheet</option>
@@ -257,7 +257,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
                   </div>
                 )}
                 {canAssign && (
-                  <button onClick={handleAssign} disabled={assigning} className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50">
+                  <button onClick={handleAssign} disabled={assigning} className="px-4 py-2 bg-success text-white text-sm rounded-md hover:opacity-90 disabled:opacity-50">
                     {assigning ? 'Assigning...' : 'Assign'}
                   </button>
                 )}

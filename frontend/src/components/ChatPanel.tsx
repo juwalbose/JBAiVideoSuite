@@ -192,7 +192,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
       {!isOpen && (
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-chat'))}
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-24 bg-blue-600 text-white rounded-l-lg flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-24 bg-accent text-accent-foreground rounded-l-lg flex items-center justify-center shadow-lg hover:opacity-90 transition-colors z-50"
           title="Open Chat"
         >
           <span className="text-xs font-bold" style={{ writingMode: 'vertical-rl' }}>CHAT</span>
@@ -201,22 +201,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
 
       {/* Panel (visible when open) */}
       {isOpen && (
-        <aside className="w-1/4 border-l bg-white flex flex-col h-full shadow-2xl">
+        <aside className="w-1/4 border-l border-border bg-card flex flex-col h-full shadow-2xl">
           {/* Header */}
-          <div className="p-4 border-b bg-gray-50">
+          <div className="p-4 border-b border-border bg-muted/30">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-600">AI Assistant</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">AI Assistant</h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleClear}
-                  className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="text-xs px-2 py-1 rounded bg-destructive text-white hover:opacity-90 transition-colors"
                   title="Clear all messages"
                 >
                   Clear
                 </button>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  className="text-muted-foreground hover:text-foreground text-xl leading-none"
                   title="Close Chat"
                 >
                   &times;
@@ -226,7 +226,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
             <select
               value={selectedPrompt}
               onChange={handlePromptChange}
-              className="w-full p-2 border rounded text-sm bg-white"
+              className="w-full p-2 border border-border rounded text-sm bg-card text-foreground"
             >
               <option value="none">No System Prompt</option>
               {prompts.map(p => (
@@ -238,7 +238,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
             {messages.length === 0 && !isThinking ? (
-              <p className="text-gray-400 italic text-sm text-center mt-8">
+              <p className="text-muted-foreground italic text-sm text-center mt-8">
                 Chat with your AI assistant. Messages will appear here.
               </p>
             ) : (
@@ -247,8 +247,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
                   key={i}
                   className={`max-w-[85%] p-3 rounded-lg text-sm ${
                     msg.role === 'user'
-                      ? 'bg-blue-100 self-end'
-                      : 'bg-gray-100 self-start'
+                      ? 'bg-accent-soft text-accent self-end'
+                      : 'bg-muted text-foreground self-start'
                   }`}
                 >
                   {msg.image && (
@@ -259,7 +259,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
               ))
             )}
             {isThinking && (
-              <div className="bg-gray-100 self-start p-3 rounded-lg text-sm text-gray-500 italic">
+              <div className="bg-muted self-start p-3 rounded-lg text-sm text-muted-foreground italic">
                 Thinking...
               </div>
             )}
@@ -267,20 +267,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Input area */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-border">
             {/* Attachment preview */}
             {attachment && (
               <div className="mb-2 flex items-center gap-2">
                 {attachment.preview ? (
-                  <img src={attachment.preview} alt="attachment" className="h-16 rounded border" />
+                  <img src={attachment.preview} alt="attachment" className="h-16 rounded border border-border" />
                 ) : (
-                  <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
                     📄 {attachment.file.name}
                   </span>
                 )}
                 <button
                   onClick={() => setAttachment(null)}
-                  className="text-xs text-red-500 hover:text-red-700"
+                  className="text-xs text-destructive hover:opacity-80"
                   title="Remove attachment"
                 >
                   &times;
@@ -298,7 +298,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isThinking}
-                className="p-2 border rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                className="p-2 border border-border rounded text-sm text-muted-foreground hover:bg-muted disabled:opacity-50"
                 title="Attach file"
               >
                 📎
@@ -309,15 +309,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 p-2 border rounded text-sm"
+                className="flex-1 p-2 border border-border rounded text-sm bg-card text-foreground placeholder:text-muted-foreground"
               />
               <button
                 onClick={handleSend}
                 disabled={isThinking}
                 className={`px-4 py-2 rounded text-sm transition-colors ${
                   isThinking
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-accent text-accent-foreground hover:opacity-90'
                 }`}
               >
                 Send

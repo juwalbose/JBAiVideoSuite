@@ -217,20 +217,20 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     const name = result ? `${result.asset.name}${state?.name ? ` — ${state.name}` : ''}` : '';
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-[10px] font-bold text-gray-400 uppercase">{label}</span>
-        {name && <span className="text-[10px] text-gray-600 truncate max-w-[96px]">{name}</span>}
+        <span className="text-[10px] font-bold text-muted-foreground uppercase">{label}</span>
+        {name && <span className="text-[10px] text-muted-foreground truncate max-w-[96px]">{name}</span>}
         {imgPath ? (
           <img
             src={`${baseUrl}${imgPath}`}
             alt={label}
-            className="w-24 h-24 object-cover rounded border"
+            className="w-24 h-24 object-cover rounded border border-border"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
               (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
             }}
           />
         ) : null}
-        <div className={`w-24 h-24 bg-gray-100 rounded border flex items-center justify-center text-[10px] text-gray-400 ${imgPath ? 'hidden' : ''}`}>
+        <div className={`w-24 h-24 bg-muted rounded border border-border flex items-center justify-center text-[10px] text-muted-foreground ${imgPath ? 'hidden' : ''}`}>
           Image missing
         </div>
       </div>
@@ -240,11 +240,11 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   return (
     <div className="space-y-4">
       {/* Sub-tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b border-border">
         <button
           onClick={() => setSubTab('generate')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            subTab === 'generate' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            subTab === 'generate' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Generate Clips
@@ -252,7 +252,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         <button
           onClick={() => setSubTab('assemble')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            subTab === 'assemble' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            subTab === 'assemble' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Assemble Clips
@@ -267,12 +267,12 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               <button
                 onClick={() => setSelectedIdx(Math.max(0, selectedIdx - 1))}
                 disabled={selectedIdx === 0}
-                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Prev
               </button>
               <select
-                className="px-3 py-1 border rounded text-sm bg-white text-black"
+                className="px-3 py-1 border border-border rounded text-sm bg-card text-foreground"
                 value={selectedIdx}
                 onChange={(e) => setSelectedIdx(Number(e.target.value))}
               >
@@ -283,22 +283,22 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               <button
                 onClick={() => setSelectedIdx(Math.min(shots.length - 1, selectedIdx + 1))}
                 disabled={selectedIdx === shots.length - 1}
-                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next →
               </button>
-              <span className="ml-auto text-xs text-gray-500">
+              <span className="ml-auto text-xs text-muted-foreground">
                 Shot {shot.shot} · {shot.duration}s
               </span>
             </div>
           )}
 
           {/* Video preview pane */}
-          <div className="w-full aspect-[960/544] bg-black rounded shadow-md border overflow-hidden">
+          <div className="w-full aspect-[960/544] bg-black rounded shadow-md border border-border overflow-hidden">
             {videoUrl ? (
               <video src={videoUrl} controls className="w-full h-full object-contain" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 italic">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground italic">
                 Video preview will appear here
               </div>
             )}
@@ -306,12 +306,12 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
           {/* Shot detail pane */}
           {shot && (
-            <div className="p-4 border rounded-lg bg-white shadow-sm space-y-4">
+            <div className="p-4 border border-border rounded-lg bg-card shadow-sm space-y-4">
               {/* Prompt */}
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Prompt</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Prompt</label>
                 <textarea
-                  className="w-full px-2 py-1 border rounded text-sm bg-white text-black resize-y"
+                  className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground resize-y"
                   rows={4}
                   value={shot.prompt}
                   onChange={(e) => {
@@ -334,11 +334,11 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               {/* Audio */}
               {shotAudios.length > 0 && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-2">Audio</label>
+                  <label className="text-xs font-medium text-muted-foreground block mb-2">Audio</label>
                   <div className="flex flex-col gap-2">
                     {shotAudios.map((a) => (
                       <div key={a.id} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-32 truncate">{a.name}</span>
+                        <span className="text-xs text-muted-foreground w-32 truncate">{a.name}</span>
                         <audio src={`${baseUrl}${a.audioPath}`} controls className="flex-1 h-8" />
                       </div>
                     ))}
@@ -347,30 +347,30 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               )}
 
               {/* Seed + Generate buttons */}
-              <div className="flex items-center gap-4 pt-2 border-t">
+              <div className="flex items-center gap-4 pt-2 border-t border-border">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-medium text-gray-600">Duration</label>
+                  <label className="text-xs font-medium text-muted-foreground">Duration</label>
                   <input
                     type="number"
                     step="0.1"
-                    className="px-2 py-1 border rounded text-sm bg-white text-black w-20"
+                    className="px-2 py-1 border border-border rounded text-sm bg-card text-foreground w-20"
                     value={shot.duration}
                     onChange={(e) => {
                       setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, duration: Number(e.target.value) } : s)));
                     }}
                   />
-                  <span className="text-xs text-gray-400">s</span>
-                  <label className="text-xs font-medium text-gray-600 ml-2">Seed</label>
+                  <span className="text-xs text-muted-foreground">s</span>
+                  <label className="text-xs font-medium text-muted-foreground ml-2">Seed</label>
                   <input
                     type="number"
-                    className="px-2 py-1 border rounded text-sm bg-white text-black w-32"
+                    className="px-2 py-1 border border-border rounded text-sm bg-card text-foreground w-32"
                     value={seed}
                     onChange={(e) => setSeed(Number(e.target.value))}
                   />
                   <button
                     type="button"
                     onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
-                    className="px-3 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors"
+                    className="px-3 py-1 text-xs bg-muted text-foreground border border-border rounded hover:bg-muted/80 transition-colors"
                   >
                     Randomize
                   </button>
@@ -379,21 +379,21 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                   <button
                     onClick={() => handleGenerate('low')}
                     disabled={isGenerating}
-                    className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-accent text-accent-foreground rounded text-sm hover:bg-accent/80 transition-colors disabled:opacity-50"
                   >
                     {isGenerating ? 'Generating...' : 'Gen Low Res'}
                   </button>
                   <button
                     onClick={() => handleGenerate('high')}
                     disabled={isGenerating}
-                    className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-success text-white rounded text-sm hover:bg-success/80 transition-colors disabled:opacity-50"
                   >
                     {isGenerating ? 'Generating...' : 'Gen High Res'}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-muted text-foreground rounded text-sm hover:bg-muted/80 transition-colors disabled:opacity-50"
                   >
                     {isSaving ? 'Saving...' : 'Save'}
                   </button>
@@ -401,7 +401,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               </div>
 
               {saved && (
-                <div className="p-2 border border-green-300 bg-green-50 rounded text-green-700 text-xs">
+                <div className="p-2 border border-success/40 bg-success/10 rounded text-success text-xs">
                   Shot saved successfully.
                 </div>
               )}
@@ -409,7 +409,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           )}
 
           {shots.length === 0 && (
-            <div className="p-4 border rounded bg-gray-50 text-gray-500 text-sm text-center">
+            <div className="p-4 border border-border rounded bg-muted text-muted-foreground text-sm text-center">
               No shots found. Generate shots in the Shot List tab first.
             </div>
           )}
@@ -419,7 +419,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       {subTab === 'assemble' && (
         <div className="space-y-4">
           {/* Video preview */}
-          <div className="w-full aspect-video bg-black rounded shadow-md border overflow-hidden">
+          <div className="w-full aspect-video bg-black rounded shadow-md border border-border overflow-hidden">
             {shots[assembleIdx]?.videoPath ? (
               <video
                 key={assembleIdx}
@@ -428,7 +428,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 className="assemble-preview-video w-full h-full object-contain"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 italic">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground italic">
                 No video generated for Shot {shots[assembleIdx]?.shot ?? '?'}
               </div>
             )}
@@ -462,7 +462,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 };
                 playNext(0);
               }}
-              className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+              className="px-6 py-2 bg-accent text-accent-foreground rounded text-sm hover:bg-accent/80 transition-colors"
             >
               {isPlaying ? 'Stop' : 'Play Sequence'}
             </button>
@@ -478,7 +478,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                   setAssembleIdx(i);
                 }}
                 className={`relative flex-shrink-0 w-20 h-14 rounded border-2 overflow-hidden ${
-                  assembleIdx === i ? 'border-blue-600' : 'border-gray-300 hover:border-gray-400'
+                  assembleIdx === i ? 'border-accent' : 'border-border hover:border-muted-foreground'
                 }`}
               >
                 {s.videoPath ? (
@@ -489,7 +489,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     preload="metadata"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-400">
+                  <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
                     No video
                   </div>
                 )}
@@ -504,7 +504,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           <div className="flex justify-center">
             <button
               disabled
-              className="px-6 py-2 bg-gray-400 text-white rounded text-sm cursor-not-allowed opacity-60"
+              className="px-6 py-2 bg-muted text-muted-foreground rounded text-sm cursor-not-allowed opacity-60"
               title="Export functionality coming soon"
             >
               Export Video

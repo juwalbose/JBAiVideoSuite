@@ -25,7 +25,7 @@ const Docs = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-400">Loading docs…</p>
+        <p className="text-muted-foreground">Loading docs…</p>
       </div>
     );
   }
@@ -33,7 +33,7 @@ const Docs = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-red-500">Could not load docs: {error}</p>
+        <p className="text-destructive">Could not load docs: {error}</p>
       </div>
     );
   }
@@ -41,7 +41,7 @@ const Docs = () => {
   return (
     <div className="max-w-4xl mx-auto px-8 py-6 overflow-y-auto h-full">
       <div
-        className="prose prose-gray max-w-none"
+        className="prose max-w-none"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

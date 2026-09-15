@@ -26,9 +26,9 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
           if (field.type === 'string') {
             return (
               <div key={role} className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase text-gray-500">{role}</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">{role}</label>
                 <textarea 
-                  className="w-full p-2 border rounded bg-white"
+                  className="w-full p-2 border border-border rounded bg-card text-foreground"
                   rows={9}
                   value={getVal(role)}
                   onChange={(e) => onChange(role, e.target.value)}
@@ -43,7 +43,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
       {/* 3. Image Roles */}
       {Object.entries(inputs).some(([_, field]) => field.type === 'image') && (
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold uppercase text-gray-500 mb-1">Images</label>
+          <label className="text-xs font-semibold uppercase text-muted-foreground mb-1">Images</label>
           <div className="flex flex-wrap gap-4 items-end">
             {Object.entries(inputs).filter(([_, field]) => field.type === 'image').map(([role]) => {
               const node = Object.values(nodes).find(n =>
@@ -53,7 +53,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
 
               return (
                 <div key={role} className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-gray-400">{role} ({nodeId})</label>
+                  <label className="text-[10px] font-bold text-muted-foreground">{role} ({nodeId})</label>
                   <ImagePicker onImageSelected={(file) => onChange(role, file)} />
                 </div>
               );
@@ -65,7 +65,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
       {/* 6. Audio Roles */}
       {Object.entries(inputs).some(([_, field]) => field.type === 'audio') && (
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold uppercase text-gray-500 mb-1">Audio</label>
+          <label className="text-xs font-semibold uppercase text-muted-foreground mb-1">Audio</label>
           <div className="flex flex-wrap gap-4 items-end">
             {Object.entries(inputs).filter(([_, field]) => field.type === 'audio').map(([role]) => {
               const node = Object.values(nodes).find(n =>
@@ -75,7 +75,7 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
 
               return (
                 <div key={role} className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-gray-400">{role} ({nodeId})</label>
+                  <label className="text-[10px] font-bold text-muted-foreground">{role} ({nodeId})</label>
                   <AudioPicker onAudioSelected={(file) => onChange(role, file)} />
                 </div>
               );

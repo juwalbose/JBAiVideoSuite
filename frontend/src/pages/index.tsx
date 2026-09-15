@@ -93,49 +93,49 @@ const Studio = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-white text-black">
+    <div className="flex flex-col h-screen w-full bg-background text-foreground">
       {/* Top Navigation Tabs */}
-      <header className="h-16 border-b flex items-center justify-between px-8 bg-gray-50">
-        <div className="font-bold text-xl">JBAiVideoSuite</div>
+      <header className="h-16 border-b border-border flex items-center justify-between px-8 bg-card">
+        <div className="font-bold text-xl text-foreground">JBAiVideoSuite</div>
         <nav className="flex gap-8 items-center">
           <button 
             onClick={() => setActiveTab('app')}
-            className={`hover:text-blue-600 transition-colors ${activeTab === 'app' ? 'border-b-2 border-blue-600' : ''}`}
+            className={`transition-colors ${activeTab === 'app' ? 'border-b-2 border-accent text-accent' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Direct The Video
           </button>
           <button 
             onClick={() => setActiveTab('playground')}
-            className={`hover:text-blue-600 transition-colors ${activeTab === 'playground' ? 'border-b-2 border-blue-600' : ''}`}
+            className={`transition-colors ${activeTab === 'playground' ? 'border-b-2 border-accent text-accent' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Comfy Generation
           </button>
           <button 
             onClick={() => setActiveTab('docs')}
-            className={`hover:text-blue-600 transition-colors ${activeTab === 'docs' ? 'border-b-2 border-blue-600' : ''}`}
+            className={`transition-colors ${activeTab === 'docs' ? 'border-b-2 border-accent text-accent' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Docs
           </button>
         </nav>
         <div className="flex gap-4 items-center">
           <div className="flex items-center gap-1">
-            <span className={`text-sm font-mono ${llmStatus.startsWith('🟢') ? 'text-green-600' : llmStatus.includes('No Models') ? 'text-blue-600' : 'text-red-600'}`}>
+            <span className={`text-sm font-mono ${llmStatus.startsWith('🟢') ? 'text-success' : llmStatus.includes('No Models') ? 'text-accent' : 'text-destructive'}`}>
               LLM: {llmStatus}
             </span>
-            <button onClick={checkStatuses} className="text-gray-400 hover:text-blue-600 transition-colors" title="Re-check LLM status">
+            <button onClick={checkStatuses} className="text-muted-foreground hover:text-accent transition-colors" title="Re-check LLM status">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
               </svg>
             </button>
             {llmStatus.includes('No Models') && (
-              <button onClick={loadLlm} disabled={llmAction !== null} className="text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50" title="Load model">
+              <button onClick={loadLlm} disabled={llmAction !== null} className="text-muted-foreground hover:text-success transition-colors disabled:opacity-50" title="Load model">
                 <svg className={`w-3.5 h-3.5 ${llmAction === 'loading' ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14" /><path d="M5 12h14" />
                 </svg>
               </button>
             )}
             {llmStatus.startsWith('🟢') && (
-              <button onClick={unloadLlm} disabled={llmAction !== null} className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50" title="Unload model">
+              <button onClick={unloadLlm} disabled={llmAction !== null} className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50" title="Unload model">
                 <svg className={`w-3.5 h-3.5 ${llmAction === 'unloading' ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14" />
                 </svg>
@@ -143,10 +143,10 @@ const Studio = () => {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <span className={`text-sm font-mono ${comfyStatus.includes('Online') ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`text-sm font-mono ${comfyStatus.includes('Online') ? 'text-success' : 'text-destructive'}`}>
               ComfyUI: {comfyStatus}
             </span>
-            <button onClick={checkStatuses} className="text-gray-400 hover:text-blue-600 transition-colors" title="Re-check ComfyUI status">
+            <button onClick={checkStatuses} className="text-muted-foreground hover:text-accent transition-colors" title="Re-check ComfyUI status">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
               </svg>
@@ -154,7 +154,7 @@ const Studio = () => {
           </div>
           <button 
             onClick={() => setActiveTab('settings')}
-            className={`hover:text-blue-600 transition-colors ${activeTab === 'settings' ? 'border-b-2 border-blue-600' : ''}`}
+            className={`transition-colors ${activeTab === 'settings' ? 'border-b-2 border-accent text-accent' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Settings
           </button>
@@ -170,8 +170,8 @@ const Studio = () => {
               {!currentProject ? (
                 <div className="flex flex-col items-center justify-center h-full w-full p-8 gap-8">
                   <div className="text-center">
-                    <h2 className="text-3xl font-bold text-gray-500 mb-4">No Project Selected</h2>
-                    <p className="text-gray-400 max-w-md mx-auto">Choose a project from your library or create a new one to begin.</p>
+                    <h2 className="text-3xl font-bold text-muted-foreground mb-4">No Project Selected</h2>
+                    <p className="text-muted-foreground max-w-md mx-auto">Choose a project from your library or create a new one to begin.</p>
                   </div>
                   <div className="w-full max-w-2xl">
                     <ProjectLibrary />
@@ -185,7 +185,7 @@ const Studio = () => {
                         <div className="mb-4 flex items-center justify-between">
                           <button 
                             onClick={() => setCurrentProject(null)}
-                            className="text-blue-600 hover:underline flex items-center gap-2 transition-colors"
+                            className="text-accent hover:underline flex items-center gap-2 transition-colors"
                           >
                             ← Back to Library
                           </button>
@@ -195,7 +195,7 @@ const Studio = () => {
                                 deleteProject(currentProject.id);
                               }
                             }}
-                            className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                            className="text-xs px-2 py-1 rounded bg-destructive text-white hover:bg-red-700 transition-colors"
                           >
                             Delete Project
                           </button>
@@ -206,23 +206,23 @@ const Studio = () => {
                         {currentProject?.type && (
                           <span className={`text-xs px-2 py-1 rounded-full ${
                             currentProject.type === 'episodic'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-blue-100 text-blue-700'
+                              ? 'bg-purple-900/40 text-purple-300'
+                              : 'bg-accent-soft text-accent'
                           }`}>
                             {currentProject.type === 'episodic' ? 'Episodic' : 'Single Video'}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex gap-1 border-b mb-6">
+                      <div className="flex gap-1 border-b border-border mb-6">
                         {['story', 'script', 'assets', 'shotlist', 'final'].map((stage) => (
                           <button
                             key={stage}
                             onClick={() => setStageTab(stage)}
                             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                               stageTab === stage
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                ? 'border-accent text-accent'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                           >
                             {stage === 'story' ? '1. Story' : stage === 'script' ? '2. Script' : stage === 'assets' ? '3. Assets' : stage === 'shotlist' ? '4. Shot List' : '5. Final Video'}
@@ -235,8 +235,8 @@ const Studio = () => {
                           {currentProject?.story ? (
                             <StoryStage selectedEpisode={selectedEpisode} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
                           ) : (
-                            <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                              <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
+                            <div className="p-8 border-2 border-dashed border-border rounded-xl text-center">
+                              <p className="text-muted-foreground italic">No story yet. Create a project to begin.</p>
                             </div>
                           )}
                         </div>
@@ -245,11 +245,11 @@ const Studio = () => {
                         <div className="space-y-4">
                           {currentProject?.type === 'episodic' && (
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Episode:</label>
+                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
                               <select
                                 value={selectedEpisode}
                                 onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border rounded bg-white text-black"
+                                className="p-2 border border-border rounded bg-card text-foreground"
                               >
                                 {Array.from({ length: episodeCount }, (_, i) => (
                                   <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
@@ -264,11 +264,11 @@ const Studio = () => {
                         <div className="space-y-4">
                           {currentProject?.type === 'episodic' && (
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Episode:</label>
+                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
                               <select
                                 value={selectedEpisode}
                                 onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border rounded bg-white text-black"
+                                className="p-2 border border-border rounded bg-card text-foreground"
                               >
                                 {Array.from({ length: episodeCount }, (_, i) => (
                                   <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
@@ -283,11 +283,11 @@ const Studio = () => {
                         <div className="space-y-4">
                           {currentProject?.type === 'episodic' && (
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Episode:</label>
+                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
                               <select
                                 value={selectedEpisode}
                                 onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border rounded bg-white text-black"
+                                className="p-2 border border-border rounded bg-card text-foreground"
                               >
                                 {Array.from({ length: episodeCount }, (_, i) => (
                                   <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
@@ -302,11 +302,11 @@ const Studio = () => {
                         <div className="space-y-4">
                           {currentProject?.type === 'episodic' && (
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Episode:</label>
+                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
                               <select
                                 value={selectedEpisode}
                                 onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border rounded bg-white text-black"
+                                className="p-2 border border-border rounded bg-card text-foreground"
                               >
                                 {Array.from({ length: episodeCount }, (_, i) => (
                                   <option key={i + 1} value={i + 1}>Episode {i + 1}</option>

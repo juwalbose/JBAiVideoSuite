@@ -69,12 +69,12 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
       {currentProject && (
         <>
           <section className="space-y-2 border-b pb-6">
-            <h3 className="text-lg font-semibold mb-2 text-blue-900">Project Details</h3>
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Project Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-muted-foreground">Name</label>
                 <input
-                  className="w-full p-2 border rounded bg-white text-black"
+                  className="w-full p-2 border border-border rounded bg-card text-foreground"
                   value={currentProject.name}
                   onChange={(e) => updateProject(e.target.value)}
                 />
@@ -84,9 +84,9 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
 
           <section className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-blue-900">1. Raw Idea</h3>
+              <h3 className="text-lg font-semibold mb-2 text-foreground">1. Raw Idea</h3>
               <textarea
-                className="w-full p-4 border rounded bg-white text-black resize-y"
+                className="w-full p-4 border border-border rounded bg-card text-foreground resize-y"
                 rows={6}
                 placeholder="Enter your raw story idea here..."
                 value={rawInput}
@@ -95,34 +95,34 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
             </div>
 
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-blue-900">Duration</h3>
+              <h3 className="text-lg font-semibold text-foreground">Duration</h3>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setDuration(Math.max(15, duration - 15))}
-                  className="px-2 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-sm font-bold"
+                  className="px-2 py-1 border border-border rounded bg-muted hover:bg-muted/80 text-sm font-bold"
                 >
                   −
                 </button>
-                <span className="px-3 py-1 border rounded bg-white text-sm font-mono">
+                <span className="px-3 py-1 border border-border rounded bg-card text-sm font-mono">
                   {Math.floor(duration / 60)}m {duration % 60}s
                 </span>
                 <button
                   onClick={() => setDuration(duration + 15)}
-                  className="px-2 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-sm font-bold"
+                  className="px-2 py-1 border border-border rounded bg-muted hover:bg-muted/80 text-sm font-bold"
                 >
                   +
                 </button>
               </div>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {currentProject.type === 'episodic' ? 'per episode' : 'total video'}
               </span>
             </div>
 
             {currentProject?.story && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <h3 className="text-lg font-semibold mb-2 text-blue-900">2. Narrative Arc</h3>
+                <h3 className="text-lg font-semibold mb-2 text-foreground">2. Narrative Arc</h3>
                 <textarea
-                  className="w-full p-4 border rounded bg-blue-50 text-gray-800 whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
+                  className="w-full p-4 border border-border rounded bg-accent-soft text-foreground whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
                   rows={10}
                   value={narrativeArc}
                   onChange={(e) => setNarrativeArc(e.target.value)}
@@ -134,13 +134,13 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
 
           {currentProject.type === 'episodic' && (
             <section className="space-y-2">
-              <h3 className="text-lg font-semibold text-blue-900">Episodes</h3>
+              <h3 className="text-lg font-semibold text-foreground">Episodes</h3>
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">Number of Episodes:</label>
+                <label className="text-sm font-medium text-muted-foreground">Number of Episodes:</label>
                 <input
                   type="number"
                   min={1}
-                  className="w-24 p-2 border rounded bg-white text-black"
+                  className="w-24 p-2 border border-border rounded bg-card text-foreground"
                   value={episodeCount}
                   onChange={(e) => {
                     const val = Math.max(1, parseInt(e.target.value) || 1);
@@ -153,30 +153,30 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
           )}
 
           {error && (
-            <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-700 text-sm">
+            <div className="p-4 border border-destructive/40 bg-destructive/10 rounded-lg text-destructive text-sm">
               {error}
             </div>
           )}
 
-          <div className="flex justify-center gap-4 mt-8 pt-4 border-t">
+          <div className="flex justify-center gap-4 mt-8 pt-4 border-t border-border">
             <button
               onClick={handleGenerateStory}
               disabled={isLoading || !rawInput}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-6 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 transition-colors"
             >
               {isLoading ? 'Generating...' : narrativeArc ? 'Regenerate Arc' : 'Generate Narrative Arc'}
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2 bg-gray-800 text-white rounded hover:bg-black disabled:opacity-50 transition-colors"
+              className="px-6 py-2 bg-muted text-foreground rounded hover:bg-muted/80 disabled:opacity-50 transition-colors"
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={onNavigateToScript}
               disabled={!narrativeArc}
-              className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className="px-6 py-2 bg-success text-white rounded hover:bg-success/80 disabled:opacity-50 transition-colors"
             >
               Next
             </button>

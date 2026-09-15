@@ -280,16 +280,16 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const numField = (label: string, value: number, onChange: (v: number) => void) => (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-gray-600">{label}</label>
-      <input type="number" className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <input type="number" className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground"
         value={value} onChange={(e) => onChange(Number(e.target.value))} />
     </div>
   );
 
   const textField = (label: string, value: string, onChange: (v: string) => void, rows = 3) => (
     <div>
-      <label className="text-xs font-medium text-gray-600 block mb-1">{label}</label>
-      <textarea className="w-full px-2 py-1 border rounded text-sm bg-white text-black resize-y"
+      <label className="text-xs font-medium text-muted-foreground block mb-1">{label}</label>
+      <textarea className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground resize-y"
         rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
@@ -298,15 +298,15 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     <div className="space-y-4">
       {currentProject?.type === 'episodic' && (
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700">Episode:</label>
-          <span className="text-sm text-gray-500">Episode {selectedEpisode}</span>
+          <label className="text-sm font-medium text-foreground">Episode:</label>
+          <span className="text-sm text-muted-foreground">Episode {selectedEpisode}</span>
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-blue-900">Shot List ({shots.length} shots)</h3>
+        <h3 className="text-lg font-semibold text-foreground">Shot List ({shots.length} shots)</h3>
         <div className="flex items-center gap-2">
-          <button onClick={addShot} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+          <button onClick={addShot} className="px-3 py-1 bg-accent text-accent-foreground rounded hover:bg-accent/80 text-sm">
             + Add Shot
           </button>
           <button onClick={handleGenerateAll} disabled={genAll?.active || shots.length === 0}
@@ -314,29 +314,29 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             {genAll?.active ? `Generating ${genAll.current}/${genAll.total}...` : '⚡ Generate All Prompts'}
           </button>
           {genAll?.active && (
-            <button onClick={() => { abortRef.current = true; }} className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm">
+            <button onClick={() => { abortRef.current = true; }} className="px-3 py-1 bg-destructive text-white rounded hover:bg-red-700 text-sm">
               Stop
             </button>
           )}
         </div>
       </div>
       {genAll && !genAll.active && (genAll.done > 0 || genAll.failed > 0) && (
-        <p className="text-xs text-gray-500">{genAll.done} done, {genAll.failed} failed</p>
+        <p className="text-xs text-muted-foreground">{genAll.done} done, {genAll.failed} failed</p>
       )}
 
       {shots.length > 0 && shot && (
-        <div className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
+        <div className="p-4 border border-border rounded-lg bg-card shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSelectedIdx(Math.max(0, selectedIdx - 1))}
                 disabled={selectedIdx === 0}
-                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Prev
               </button>
               <select
-                className="px-3 py-1 border rounded text-sm bg-white text-black"
+                className="px-3 py-1 border border-border rounded text-sm bg-card text-foreground"
                 value={selectedIdx}
                 onChange={(e) => setSelectedIdx(Number(e.target.value))}
               >
@@ -347,12 +347,12 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               <button
                 onClick={() => setSelectedIdx(Math.min(shots.length - 1, selectedIdx + 1))}
                 disabled={selectedIdx === shots.length - 1}
-                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next →
               </button>
             </div>
-            <button onClick={() => deleteShot(selectedIdx)} className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
+            <button onClick={() => deleteShot(selectedIdx)} className="px-3 py-1 bg-destructive text-white rounded text-xs hover:bg-red-700">
               Delete Shot
             </button>
           </div>
@@ -360,8 +360,8 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             {numField('Shot #', shot.shot, (v) => updateShot(selectedIdx, 'shot', v))}
             {numField('Scene', shot.scene, (v) => updateShot(selectedIdx, 'scene', v))}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">Beats</label>
-              <input type="text" className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+              <label className="text-xs font-medium text-muted-foreground">Beats</label>
+              <input type="text" className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground"
                 value={shot.beats.join(', ')}
                 onChange={(e) => {
                   const nums = e.target.value.split(',').map((x) => Number(x.trim())).filter((n) => !isNaN(n));
@@ -382,13 +382,13 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           </div>
           {textField('Dialogue', shot.dialogue, (v) => updateShot(selectedIdx, 'dialogue', v))}
           {textField('Note', shot.note, (v) => updateShot(selectedIdx, 'note', v), 1)}
-          <div className="border-t pt-3">
-            <h4 className="text-xs font-medium text-gray-500 mb-2">Linked Assets</h4>
+          <div className="border-t border-border pt-3">
+            <h4 className="text-xs font-medium text-muted-foreground mb-2">Linked Assets</h4>
             <div className="grid grid-cols-5 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Location</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Location</label>
                 <select
-                  className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+                  className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground"
                   value={shot.locationAssetId && shot.locationStateId ? `${shot.locationAssetId}|${shot.locationStateId}` : ''}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -413,11 +413,11 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Characters</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Characters</label>
                 {shot.characterAssetIds.map((aid, i) => (
                   <select
                     key={i}
-                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black mb-1"
+                    className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground mb-1"
                     value={shot.characterStateIds[i] ? `${aid}|${shot.characterStateIds[i]}` : ''}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -459,14 +459,14 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       updateShot(selectedIdx, 'characterAudioIds', [...shot.characterAudioIds, '']);
                       updateShot(selectedIdx, 'characterAudioTypes', [...shot.characterAudioTypes, 'voice']);
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs text-accent hover:text-accent/80"
                   >
                     + Add Character
                   </button>
                 )}
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Audio Type</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Audio Type</label>
                 <div className="flex flex-col gap-1">
                   <button
                     onClick={() => {
@@ -474,7 +474,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       updateShot(selectedIdx, 'characterAudioIds', []);
                       updateShot(selectedIdx, 'characterAudioTypes', []);
                     }}
-                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId === null && shot.characterAudioIds.length === 0 ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId === null && shot.characterAudioIds.length === 0 ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                   >
                     None
                   </button>
@@ -484,7 +484,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       updateShot(selectedIdx, 'characterAudioTypes', []);
                       if (!shot.sceneDialogAudioId) updateShot(selectedIdx, 'sceneDialogAudioId', '');
                     }}
-                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId !== null && shot.sceneDialogAudioId !== undefined ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                    className={`px-2 py-1 rounded text-xs font-medium ${shot.sceneDialogAudioId !== null && shot.sceneDialogAudioId !== undefined ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                   >
                     Scene Dialog
                   </button>
@@ -496,17 +496,17 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                         updateShot(selectedIdx, 'characterAudioTypes', ['voice']);
                       }
                     }}
-                    className={`px-2 py-1 rounded text-xs font-medium ${!shot.sceneDialogAudioId && shot.characterAudioIds.length > 0 ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                    className={`px-2 py-1 rounded text-xs font-medium ${!shot.sceneDialogAudioId && shot.characterAudioIds.length > 0 ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                   >
                     Voice Samples
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Audio</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Audio</label>
                 {shot.sceneDialogAudioId !== null && shot.sceneDialogAudioId !== undefined ? (
                   <select
-                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black"
+                    className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground"
                     value={shot.sceneDialogAudioId}
                     onChange={(e) => updateShot(selectedIdx, 'sceneDialogAudioId', e.target.value || null)}
                   >
@@ -519,7 +519,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                   shot.characterAudioIds.map((aid, i) => (
                     <select
                       key={i}
-                      className="w-full px-1 py-1 border rounded text-xs bg-white text-black mb-1"
+                      className="w-full px-1 py-1 border border-border rounded text-xs bg-card text-foreground mb-1"
                       value={aid}
                       onChange={(e) => {
                         const newIds = [...shot.characterAudioIds];
@@ -538,11 +538,11 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 )}
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Props</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Props</label>
                 {shot.propAssetIds.map((aid, i) => (
                   <select
                     key={i}
-                    className="w-full px-2 py-1 border rounded text-sm bg-white text-black mb-1"
+                    className="w-full px-2 py-1 border border-border rounded text-sm bg-card text-foreground mb-1"
                     value={shot.propStateIds[i] ? `${aid}|${shot.propStateIds[i]}` : ''}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -578,7 +578,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       updateShot(selectedIdx, 'propAssetIds', [...shot.propAssetIds, '']);
                       updateShot(selectedIdx, 'propStateIds', [...shot.propStateIds, '']);
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs text-accent hover:text-accent/80"
                   >
                     + Add Prop
                   </button>
@@ -586,19 +586,19 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               </div>
             </div>
           </div>
-          <div className="border-t pt-3">
-            <h4 className="text-xs font-medium text-gray-500 mb-2">Music</h4>
+          <div className="border-t border-border pt-3">
+            <h4 className="text-xs font-medium text-muted-foreground mb-2">Music</h4>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => updateShot(selectedIdx, 'musicOn', !shot.musicOn)}
-                className={`px-3 py-1 rounded text-xs font-medium ${shot.musicOn ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                className={`px-3 py-1 rounded text-xs font-medium ${shot.musicOn ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
               >
                 {shot.musicOn ? 'On' : 'Off'}
               </button>
               {shot.musicOn && (
                 <input
                   type="text"
-                  className="flex-1 px-2 py-1 border rounded text-sm bg-white text-black"
+                  className="flex-1 px-2 py-1 border border-border rounded text-sm bg-card text-foreground"
                   placeholder="Describe background music…"
                   value={shot.musicDesc}
                   onChange={(e) => updateShot(selectedIdx, 'musicDesc', e.target.value)}
@@ -622,7 +622,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               <button
                 onClick={() => navigator.clipboard.writeText(shot.prompt)}
                 disabled={!shot.prompt}
-                className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 whitespace-nowrap disabled:opacity-50"
+                className="px-6 py-2 bg-muted text-foreground rounded hover:bg-muted/80 whitespace-nowrap disabled:opacity-50"
               >
                 Copy Prompt
               </button>
@@ -632,30 +632,30 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       )}
 
       {shots.length === 0 && !isLoading && (
-        <div className="p-4 border rounded bg-gray-50 text-gray-500 text-sm text-center">
+        <div className="p-4 border border-border rounded bg-muted text-muted-foreground text-sm text-center">
           No shots yet. Generate from the Script or paste JSON below.
         </div>
       )}
 
       {error && (
-        <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-700 text-sm">{error}</div>
+        <div className="p-4 border border-destructive/40 bg-destructive/10 rounded-lg text-destructive text-sm">{error}</div>
       )}
 
       {saved && (
-        <div className="p-3 border border-green-300 bg-green-50 rounded-lg text-green-700 text-sm">
+        <div className="p-3 border border-success/40 bg-success/10 rounded-lg text-success text-sm">
           Shots saved successfully.
         </div>
       )}
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <h4 className="text-sm font-medium text-gray-700">Raw JSON</h4>
-          <button onClick={loadFromRaw} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200">
+          <h4 className="text-sm font-medium text-foreground">Raw JSON</h4>
+          <button onClick={loadFromRaw} className="px-2 py-1 bg-accent-soft text-accent rounded text-xs hover:bg-accent/20">
             Load Shots
           </button>
         </div>
         <textarea
-          className="w-full p-3 border rounded bg-gray-50 text-black text-xs font-mono resize-y"
+          className="w-full p-3 border border-border rounded bg-card text-foreground text-xs font-mono resize-y"
           rows={6}
           placeholder='Paste the full JSON response here, then click "Load Shots"...'
           value={rawShots}
@@ -663,18 +663,18 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         />
       </div>
 
-      <div className="flex justify-center gap-4 mt-4 pt-4 border-t">
+      <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-border">
         <button
           onClick={handleGenerateShots}
           disabled={isLoading || !currentProject?.script?.content}
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 transition-colors"
         >
           {isLoading ? 'Generating...' : shots.length > 0 ? 'Regenerate Shots' : 'Generate Shots'}
         </button>
         <button
           onClick={handleSave}
           disabled={isSaving || shots.length === 0}
-          className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-success text-white rounded hover:bg-success/80 disabled:opacity-50 transition-colors"
         >
           {isSaving ? 'Saving...' : 'Save Shots'}
         </button>

@@ -219,7 +219,7 @@ const WorkflowInputManager = ({
   };
 
   if (!activeWorkflowData) {
-    return <p className="text-gray-500 italic">Select a workflow to begin.</p>;
+    return <p className="text-muted-foreground italic">Select a workflow to begin.</p>;
   }
 
   const hasSeed = 'seed' in activeWorkflowData.inputs;
@@ -274,18 +274,18 @@ const WorkflowInputManager = ({
         <div className="w-56 flex flex-col gap-3">
           {hasSeed && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase text-gray-500">Seed</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Seed</label>
               <div className="flex gap-2">
                 <input
                   type="number"
-                  className="p-2 border rounded bg-white text-sm w-full"
+                  className="p-2 border border-border rounded bg-card text-foreground text-sm w-full"
                   value={seedValue}
                   onChange={(e) => setInputValues(prev => ({ ...prev, 'seed': { type: 'int', value: e.target.value === '' ? 0 : parseInt(e.target.value) } }))}
                 />
                 <button
                   type="button"
                   onClick={() => setInputValues(prev => ({ ...prev, 'seed': { type: 'int', value: Math.floor(Math.random() * 1000000) } }))}
-                  className="px-2 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors whitespace-nowrap"
+                  className="px-2 py-1 text-xs bg-muted text-muted-foreground border border-border rounded hover:bg-muted/80 transition-colors whitespace-nowrap"
                 >
                   Random
                 </button>
@@ -294,11 +294,11 @@ const WorkflowInputManager = ({
           )}
           {floatInputs.map(([role]) => (
             <div key={role} className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase text-gray-500">{role}</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">{role}</label>
               <input
                 type="number"
                 step="0.1"
-                className="p-2 border rounded bg-white text-sm w-full"
+                className="p-2 border border-border rounded bg-card text-foreground text-sm w-full"
                 value={inputValues[role]?.value ?? 0}
                 onChange={(e) => setInputValues(prev => ({ ...prev, [role]: { type: 'float', value: parseFloat(e.target.value) || 0 } }))}
               />
@@ -306,9 +306,9 @@ const WorkflowInputManager = ({
           ))}
           {(hasWidth || hasHeight) && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase text-gray-500">Resolution</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Resolution</label>
               <select
-                className="p-2 border rounded bg-white text-sm"
+                className="p-2 border border-border rounded bg-card text-foreground text-sm"
                 value={RESOLUTIONS.find(r => r.w === widthValue && r.h === heightValue)?.name || 'Custom'}
                 onChange={(e) => {
                   const idx = RESOLUTIONS.findIndex(r => r.name === e.target.value);
@@ -322,10 +322,10 @@ const WorkflowInputManager = ({
               <div className="flex gap-2">
                 {hasWidth && (
                   <div className="flex flex-col gap-0.5 flex-1">
-                    <label className="text-[10px] text-gray-400">W</label>
+                    <label className="text-[10px] text-muted-foreground">W</label>
                     <input
                       type="number"
-                      className="p-1 border rounded bg-white text-sm w-full"
+                      className="p-1 border border-border rounded bg-card text-foreground text-sm w-full"
                       value={widthValue}
                       onChange={(e) => setInputValues(prev => ({ ...prev, 'width': { type: 'int', value: parseInt(e.target.value) || 0 } }))}
                     />
@@ -333,10 +333,10 @@ const WorkflowInputManager = ({
                 )}
                 {hasHeight && (
                   <div className="flex flex-col gap-0.5 flex-1">
-                    <label className="text-[10px] text-gray-400">H</label>
+                    <label className="text-[10px] text-muted-foreground">H</label>
                     <input
                       type="number"
-                      className="p-1 border rounded bg-white text-sm w-full"
+                      className="p-1 border border-border rounded bg-card text-foreground text-sm w-full"
                       value={heightValue}
                       onChange={(e) => setInputValues(prev => ({ ...prev, 'height': { type: 'int', value: parseInt(e.target.value) || 0 } }))}
                     />
@@ -348,7 +348,7 @@ const WorkflowInputManager = ({
           <button
             onClick={handleGenerate}
             disabled={!activeWorkflowData.is_valid || queueCount > 0}
-            className={`px-4 py-2 rounded font-bold text-white transition-all ${queueCount > 0 ? 'bg-blue-500' : 'bg-blue-600 hover:scale-105 shadow-lg'}`}
+            className={`px-4 py-2 rounded font-bold text-white transition-all ${queueCount > 0 ? 'bg-accent/60' : 'bg-accent hover:scale-105 shadow-lg'}`}
           >
             {queueCount > 0 ? 'Queue Another' : 'Generate'}
           </button>

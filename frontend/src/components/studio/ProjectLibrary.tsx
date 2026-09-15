@@ -124,8 +124,8 @@ const ProjectLibrary = () => {
     <div className="p-8">
       <header className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Your Projects</h1>
-          <p className="text-gray-600">Select a project to start your production journey.</p>
+          <h1 className="text-4xl font-bold mb-2 text-foreground">Your Projects</h1>
+          <p className="text-muted-foreground">Select a project to start your production journey.</p>
         </div>
         {projects.length > 0 && (
           <button 
@@ -134,7 +134,7 @@ const ProjectLibrary = () => {
                 deleteAllProjects();
               }
             }}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors shadow"
+            className="px-4 py-2 bg-destructive text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow"
           >
             Delete All
           </button>
@@ -142,9 +142,9 @@ const ProjectLibrary = () => {
       </header>
 
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-xl bg-gray-50 p-8">
-          <Folder size={48} className="text-gray-300 mb-4" />
-          <p className="text-gray-500">No projects yet. Click the button below to create your first one!</p>
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-xl bg-muted p-8">
+          <Folder size={48} className="text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">No projects yet. Click the button below to create your first one!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -153,10 +153,10 @@ const ProjectLibrary = () => {
               key={`${project.id}-${index}`}
               onClick={() => setCurrentProject(project)}
               className={`p-6 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${
-                currentProject?.id === project.id ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-200 bg-white'
+                currentProject?.id === project.id ? 'border-accent bg-accent-soft scale-[1.02]' : 'border-border bg-card'
               }`}
             >
-              <div className="w-full h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-32 bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                 {coverImages[project.id] ? (
                   <img
                     src={coverImages[project.id]!}
@@ -166,21 +166,21 @@ const ProjectLibrary = () => {
                       (e.target as HTMLImageElement).style.display = 'none';
                       (e.target as HTMLImageElement).parentElement!.classList.add('flex', 'items-center', 'justify-center');
                       const span = document.createElement('span');
-                      span.className = 'text-gray-300 text-xs uppercase tracking-wider';
+                      span.className = 'text-muted-foreground text-xs uppercase tracking-wider';
                       span.textContent = 'No Preview';
                       (e.target as HTMLImageElement).parentElement!.appendChild(span);
                     }}
                   />
                 ) : (
-                  <span className="text-gray-300 text-xs uppercase tracking-wider">No Preview</span>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wider">No Preview</span>
                 )}
               </div>
-              <h3 className="text-xl font-bold mb-1">{project.name || 'Untitled Project'}</h3>
+              <h3 className="text-xl font-bold mb-1 text-foreground">{project.name || 'Untitled Project'}</h3>
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   project.type === 'episodic'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-blue-100 text-blue-700'
+                    ? 'bg-purple-900/40 text-purple-300'
+                    : 'bg-accent-soft text-accent'
                 }`}>
                   {project.type === 'episodic' ? 'Episodic' : 'Single Video'}
                 </span>
@@ -189,7 +189,7 @@ const ProjectLibrary = () => {
                     e.stopPropagation();
                     openExportModal(project.id, project.name || 'Untitled Project');
                   }}
-                  className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                  className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors"
                   title="Export this project"
                 >
                   <Download size={14} />
@@ -203,13 +203,13 @@ const ProjectLibrary = () => {
 
       <div className="mt-12 flex justify-center gap-4">
         <button
-          className="px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-colors shadow-lg"
+          className="px-8 py-3 bg-accent text-accent-foreground rounded-full font-bold hover:bg-accent/80 transition-colors shadow-lg"
           onClick={() => setModalOpen(true)}
         >
           + New Project
         </button>
         <button
-          className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold hover:bg-gray-700 transition-colors shadow-lg"
+          className="px-6 py-3 bg-muted text-foreground rounded-full font-bold hover:bg-muted/80 transition-colors shadow-lg"
           onClick={handleImport}
           disabled={importing}
         >
@@ -231,18 +231,18 @@ const ProjectLibrary = () => {
 
       {exportModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setExportModalOpen(false)}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-bold mb-4">Export Project</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Exporting <span className="font-semibold text-gray-700">{exportProjectName}</span>
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-foreground">Export Project</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Exporting <span className="font-semibold text-foreground">{exportProjectName}</span>
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filename</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Filename</label>
               <input
                 type="text"
                 value={exportFilename}
                 onChange={(e) => setExportFilename(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <label className="flex items-center gap-2 mb-6 cursor-pointer">
@@ -250,21 +250,21 @@ const ProjectLibrary = () => {
                 type="checkbox"
                 checked={includeSettings}
                 onChange={(e) => setIncludeSettings(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-border text-accent focus:ring-accent"
               />
-              <span className="text-sm text-gray-700">Include settings &amp; mappings</span>
+              <span className="text-sm text-foreground">Include settings &amp; mappings</span>
             </label>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setExportModalOpen(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExport}
                 disabled={exporting}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-accent text-accent-foreground text-sm rounded-lg font-semibold hover:bg-accent/80 transition-colors disabled:opacity-50"
               >
                 {exporting ? 'Exporting...' : 'Export'}
               </button>
@@ -273,9 +273,9 @@ const ProjectLibrary = () => {
         </div>
       )}
 
-      <footer className="mt-16 pb-4 text-center text-xs text-gray-400">
+      <footer className="mt-16 pb-4 text-center text-xs text-muted-foreground">
         Created by Juwal Bose for{' '}
-        <a href="https://youtube.com/@visualfictions" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+        <a href="https://youtube.com/@visualfictions" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
           Visual Fictions
         </a>
       </footer>

@@ -362,11 +362,11 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   return (
     <div className="flex gap-4 h-full">
       {/* Left: asset list */}
-      <div className="w-64 border rounded-lg overflow-y-auto h-full flex flex-col">
-        <div className="flex border-b">
+      <div className="w-64 border border-border rounded-lg overflow-y-auto h-full flex flex-col bg-card">
+        <div className="flex border-b border-border">
           {(['characters', 'locations', 'props', 'audio'] as const).map(t => (
             <button key={t} onClick={() => { setActiveTab(t); setSelected(null); setEditing(null); setSelectedAudio(null); }}
-              className={`flex-1 py-2 text-xs font-medium ${activeTab === t ? 'bg-blue-100 text-blue-700' : 'text-gray-500'}`}>
+              className={`flex-1 py-2 text-xs font-medium ${activeTab === t ? 'bg-accent-soft text-accent' : 'text-muted-foreground'}`}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
@@ -374,36 +374,36 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         <div className="p-2 space-y-1 flex-1 overflow-y-auto">
           {activeTab === 'audio' ? (
             <>
-              {audioList.length === 0 && <p className="text-xs text-gray-400 p-2">No audio assets yet</p>}
+              {audioList.length === 0 && <p className="text-xs text-muted-foreground p-2">No audio assets yet</p>}
               {audioList.map((a) => (
                 <button key={a.id} onClick={() => setSelectedAudio(a)}
-                  className={`w-full text-left p-2 rounded text-xs hover:bg-gray-100 ${selectedAudio?.id === a.id ? 'bg-blue-50 border border-blue-200' : ''}`}>
+                  className={`w-full text-left p-2 rounded text-xs hover:bg-muted ${selectedAudio?.id === a.id ? 'bg-accent-soft border border-accent/40' : ''}`}>
                   <span className="font-medium">{a.name}</span>
-                  <p className="text-gray-500 truncate">{a.audioType.replace('_', ' ')}</p>
+                  <p className="text-muted-foreground truncate">{a.audioType.replace('_', ' ')}</p>
                 </button>
               ))}
             </>
           ) : (
             <>
-              {items.length === 0 && <p className="text-xs text-gray-400 p-2">No assets yet</p>}
+              {items.length === 0 && <p className="text-xs text-muted-foreground p-2">No assets yet</p>}
               {items.map((item, i) => (
                 <button key={i} onClick={() => handleSelect(item)}
-                  className={`w-full text-left p-2 rounded text-xs hover:bg-gray-100 ${selected?.index === item.index && selected?.stateIndex === item.stateIndex ? 'bg-blue-50 border border-blue-200' : ''}`}>
+                  className={`w-full text-left p-2 rounded text-xs hover:bg-muted ${selected?.index === item.index && selected?.stateIndex === item.stateIndex ? 'bg-accent-soft border border-accent/40' : ''}`}>
                   <span className="font-medium">{item.label}</span>
-                  <p className="text-gray-500 truncate">{item.desc}</p>
+                  <p className="text-muted-foreground truncate">{item.desc}</p>
                 </button>
               ))}
             </>
           )}
         </div>
-        <div className="p-2 border-t space-y-1">
+        <div className="p-2 border-t border-border space-y-1">
           {activeTab === 'audio' ? (
-            <button onClick={() => setShowAudioModal(true)} className="w-full py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+            <button onClick={() => setShowAudioModal(true)} className="w-full py-2 bg-accent text-accent-foreground text-xs rounded hover:bg-accent/80">
               + Import Audio
             </button>
           ) : (
             <>
-              <button onClick={() => setShowAddModal(true)} className="w-full py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+              <button onClick={() => setShowAddModal(true)} className="w-full py-2 bg-accent text-accent-foreground text-xs rounded hover:bg-accent/80">
                 + Add Asset / State
               </button>
               <button onClick={handleGenerateAll} disabled={genAll?.active}
@@ -411,12 +411,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 {genAll?.active ? `Generating ${genAll.current}/${genAll.total}...` : '⚡ Generate All Prompts'}
               </button>
               {genAll?.active && (
-                <button onClick={() => { abortRef.current = true; }} className="w-full py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                <button onClick={() => { abortRef.current = true; }} className="w-full py-1 bg-destructive text-white text-xs rounded hover:bg-red-700">
                   Stop
                 </button>
               )}
               {genAll && !genAll.active && (genAll.done > 0 || genAll.failed > 0) && (
-                <p className="text-xs text-gray-500 text-center">{genAll.done} done, {genAll.failed} failed</p>
+                <p className="text-xs text-muted-foreground text-center">{genAll.done} done, {genAll.failed} failed</p>
               )}
             </>
           )}
@@ -424,18 +424,18 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       </div>
 
       {/* Right: detail preview */}
-      <div className="flex-1 border rounded-lg p-4 overflow-y-auto h-full">
+      <div className="flex-1 border border-border rounded-lg p-4 overflow-y-auto h-full bg-card">
         {activeTab === 'audio' ? (
           selectedAudio ? (
             <div className="space-y-4">
               <div className="flex gap-3 items-end">
                 <div className="flex-1">
-                  <label className="text-xs font-medium text-gray-500">Name</label>
-                  <input className="w-full p-2 border rounded text-sm font-semibold" value={selectedAudio.name} onChange={e => setSelectedAudio({ ...selectedAudio, name: e.target.value })} />
+                  <label className="text-xs font-medium text-muted-foreground">Name</label>
+                  <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm font-semibold" value={selectedAudio.name} onChange={e => setSelectedAudio({ ...selectedAudio, name: e.target.value })} />
                 </div>
                 <div className="w-40">
-                  <label className="text-xs font-medium text-gray-500">Type</label>
-                  <select className="w-full p-2 border rounded text-sm" value={selectedAudio.audioType} onChange={e => setSelectedAudio({ ...selectedAudio, audioType: e.target.value })}>
+                  <label className="text-xs font-medium text-muted-foreground">Type</label>
+                  <select className="w-full p-2 border border-border rounded bg-card text-foreground text-sm" value={selectedAudio.audioType} onChange={e => setSelectedAudio({ ...selectedAudio, audioType: e.target.value })}>
                     <option value="VOICE_SAMPLE">Voice Sample</option>
                     <option value="CHARACTER_DIALOG">Character Dialog</option>
                     <option value="SCENE_DIALOG">Scene Dialog</option>
@@ -443,63 +443,63 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500">Audio File</label>
-                <div className="mt-1 p-2 bg-gray-50 rounded text-sm text-gray-600">{selectedAudio.audioPath}</div>
+                <label className="text-xs font-medium text-muted-foreground">Audio File</label>
+                <div className="mt-1 p-2 bg-muted rounded text-sm text-muted-foreground">{selectedAudio.audioPath}</div>
                 <audio controls src={`${baseUrl}${selectedAudio.audioPath}`} className="w-full mt-2" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-500">Transcript</label>
-                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={4} value={selectedAudio.transcript} onChange={e => setSelectedAudio({ ...selectedAudio, transcript: e.target.value })} placeholder="Transcription of the audio..." />
+                <label className="text-xs font-medium text-muted-foreground">Transcript</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={4} value={selectedAudio.transcript} onChange={e => setSelectedAudio({ ...selectedAudio, transcript: e.target.value })} placeholder="Transcription of the audio..." />
               </div>
               <div className="flex gap-2">
-                <button onClick={handleSaveAudio} className="flex-1 py-2 bg-gray-800 text-white text-xs rounded hover:bg-black">Save Audio</button>
-                <button onClick={() => handleDeleteAudio(selectedAudio.id)} className="flex-1 py-2 bg-red-600 text-white text-xs rounded hover:bg-red-700">Delete</button>
+                <button onClick={handleSaveAudio} className="flex-1 py-2 bg-muted text-foreground text-xs rounded hover:bg-muted/80">Save Audio</button>
+                <button onClick={() => handleDeleteAudio(selectedAudio.id)} className="flex-1 py-2 bg-destructive text-white text-xs rounded hover:bg-red-700">Delete</button>
               </div>
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
           ) : (
-            <p className="text-gray-400 italic">Select an audio asset to view details</p>
+            <p className="text-muted-foreground italic">Select an audio asset to view details</p>
           )
         ) : editing ? (
           <div className="space-y-4">
             {/* Header: Name | State | Type */}
             <div className="flex gap-3 items-end">
               <div className="flex-1">
-                <label className="text-xs font-medium text-gray-500">Name</label>
-                <input className="w-full p-2 border rounded text-sm font-semibold" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+                <label className="text-xs font-medium text-muted-foreground">Name</label>
+                <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm font-semibold" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
               </div>
               {editing.states?.[0] && (
                 <div className="flex-1">
-                  <label className="text-xs font-medium text-gray-500">State</label>
-                  <input className="w-full p-2 border rounded text-sm" value={editing.states[0].name} placeholder="State" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], name: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                  <label className="text-xs font-medium text-muted-foreground">State</label>
+                  <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm" value={editing.states[0].name} placeholder="State" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], name: e.target.value }; setEditing({ ...editing, states: st }); }} />
                 </div>
               )}
               <div className="w-28">
-                <label className="text-xs font-medium text-gray-500">Type</label>
-                <p className="p-2 text-sm text-gray-600 capitalize">{selected?.type || ''}</p>
+                <label className="text-xs font-medium text-muted-foreground">Type</label>
+                <p className="p-2 text-sm text-muted-foreground capitalize">{selected?.type || ''}</p>
               </div>
             </div>
             {/* Descriptions */}
             <div>
-              <label className="text-xs font-medium text-gray-500">Asset Description</label>
-              <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={2} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
+              <label className="text-xs font-medium text-muted-foreground">Asset Description</label>
+              <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
             </div>
             {editing.states?.[0] && (
               <div>
-                <label className="text-xs font-medium text-gray-500">State Description</label>
-                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={2} value={editing.states[0].description} placeholder="State description" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], description: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                <label className="text-xs font-medium text-muted-foreground">State Description</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.states[0].description} placeholder="State description" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], description: e.target.value }; setEditing({ ...editing, states: st }); }} />
               </div>
             )}
             {/* Image previews */}
             {editing.states?.[0] && (
               <div className="flex gap-3">
-                <div className="flex-1 border rounded bg-gray-50 p-2">
+                <div className="flex-1 border border-border rounded bg-muted p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-gray-500">Image <span className="text-gray-400">(assign from gallery)</span></p>
+                    <p className="text-xs text-muted-foreground">Image <span className="text-muted-foreground/60">(assign from gallery)</span></p>
                     <button
                       onClick={handleGenerateImage}
                       disabled={genImage}
-                      className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                      className="px-2 py-0.5 bg-accent text-accent-foreground text-xs rounded hover:bg-accent/80 disabled:opacity-50"
                     >
                       {genImage ? 'Generating...' : 'Generate Image'}
                     </button>
@@ -507,13 +507,13 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                   {editing.states[0].imagePath ? (
                     <img src={`${baseUrl}${editing.states[0].imagePath}`} alt="Image" className="w-full h-32 object-cover rounded" />
                   ) : (
-                    <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded text-xs text-gray-400">No image</div>
+                    <div className="w-full h-32 flex items-center justify-center bg-muted/50 rounded text-xs text-muted-foreground">No image</div>
                   )}
                 </div>
                 {selected?.type !== 'locations' && (
-                  <div className="flex-1 border rounded bg-gray-50 p-2">
+                  <div className="flex-1 border border-border rounded bg-muted p-2">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs text-gray-500">Character Sheet <span className="text-gray-400">(assign from gallery)</span></p>
+                      <p className="text-xs text-muted-foreground">Character Sheet <span className="text-muted-foreground/60">(assign from gallery)</span></p>
                       <button
                         onClick={handleGenerateSheet}
                         disabled={genSheet || !editing.states[0].imagePath}
@@ -526,7 +526,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     {editing.states[0].characterSheet ? (
                       <img src={`${baseUrl}${editing.states[0].characterSheet}`} alt="Sheet" className="w-full h-32 object-cover rounded" />
                     ) : (
-                      <div className="w-full h-32 flex items-center justify-center bg-gray-100 rounded text-xs text-gray-400">No sheet</div>
+                      <div className="w-full h-32 flex items-center justify-center bg-muted/50 rounded text-xs text-muted-foreground">No sheet</div>
                     )}
                   </div>
                 )}
@@ -535,42 +535,42 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             {/* Prompt */}
             {editing.states?.[0] && (
               <div>
-                <label className="text-xs font-medium text-gray-500">Prompt</label>
-                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={6} value={editing.states[0].prompt || ''} placeholder="Prompt" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], prompt: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                <label className="text-xs font-medium text-muted-foreground">Prompt</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={6} value={editing.states[0].prompt || ''} placeholder="Prompt" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], prompt: e.target.value }; setEditing({ ...editing, states: st }); }} />
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handleGeneratePrompt()} disabled={generating} className="flex-1 py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50">
                     {generating ? 'Generating...' : 'Generate Prompt'}
                   </button>
-                  <button onClick={() => navigator.clipboard.writeText(editing.states![0].prompt || '')} className="flex-1 py-2 bg-gray-600 text-white text-xs rounded hover:bg-gray-700">
+                  <button onClick={() => navigator.clipboard.writeText(editing.states![0].prompt || '')} className="flex-1 py-2 bg-muted text-foreground text-xs rounded hover:bg-muted/80">
                     Copy Prompt
                   </button>
-                  <button onClick={handleSave} disabled={saving} className="flex-1 py-2 bg-gray-800 text-white text-xs rounded hover:bg-black disabled:opacity-50">
+                  <button onClick={handleSave} disabled={saving} className="flex-1 py-2 bg-muted text-foreground text-xs rounded hover:bg-muted/80 disabled:opacity-50">
                     {saving ? 'Saving...' : 'Save Asset'}
                   </button>
-                  <button onClick={handleDelete} className="flex-1 py-2 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                  <button onClick={handleDelete} className="flex-1 py-2 bg-destructive text-white text-xs rounded hover:bg-red-700">
                     Delete
                   </button>
                 </div>
               </div>
             )}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
         ) : (
-          <p className="text-gray-400 italic">Select an asset to view details</p>
+          <p className="text-muted-foreground italic">Select an asset to view details</p>
         )}
       </div>
 
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-slate-800">Add Asset / State</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+              <h3 className="text-lg font-bold text-foreground">Add Asset / State</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground text-2xl leading-none">&times;</button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-slate-700">Asset</label>
+                <label className="text-sm font-medium text-muted-foreground">Asset</label>
                 <select value={addExisting || addType} onChange={e => {
                   const v = e.target.value;
                   if (v === 'NEW_CHARACTER' || v === 'NEW_LOCATION' || v === 'NEW_PROP') {
@@ -578,7 +578,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                   } else if (v) {
                     setAddExisting(v); setAddType('');
                   }
-                }} className="w-full p-2 border rounded mt-1 text-sm">
+                }} className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm">
                   <option value="">Select asset</option>
                   <optgroup label="Characters">
                     <option value="NEW_CHARACTER">+ New Character</option>
@@ -597,26 +597,26 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               {!addExisting && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Asset Name</label>
-                    <input className="w-full p-2 border rounded mt-1 text-sm" value={addAssetName} onChange={e => setAddAssetName(e.target.value)} placeholder="Asset name" />
+                    <label className="text-sm font-medium text-muted-foreground">Asset Name</label>
+                    <input className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" value={addAssetName} onChange={e => setAddAssetName(e.target.value)} placeholder="Asset name" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Asset Description</label>
-                    <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={2} value={addAssetDesc} onChange={e => setAddAssetDesc(e.target.value)} placeholder="Description" />
+                    <label className="text-sm font-medium text-muted-foreground">Asset Description</label>
+                    <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={addAssetDesc} onChange={e => setAddAssetDesc(e.target.value)} placeholder="Description" />
                   </div>
                 </>
               )}
               <div>
-                <label className="text-sm font-medium text-slate-700">State Name</label>
-                <input className="w-full p-2 border rounded mt-1 text-sm" value={addStateName} onChange={e => setAddStateName(e.target.value)} placeholder="State name" />
+                <label className="text-sm font-medium text-muted-foreground">State Name</label>
+                <input className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" value={addStateName} onChange={e => setAddStateName(e.target.value)} placeholder="State name" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">State Description</label>
-                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={2} value={addStateDesc} onChange={e => setAddStateDesc(e.target.value)} placeholder="State description" />
+                <label className="text-sm font-medium text-muted-foreground">State Description</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={addStateDesc} onChange={e => setAddStateDesc(e.target.value)} placeholder="State description" />
               </div>
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className="text-destructive text-sm">{error}</p>}
               <button onClick={handleAdd} disabled={adding || (!addExisting && !addType) || !addStateName || !addStateDesc || (!addExisting && !addAssetName)}
-                className="w-full py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50">
+                className="w-full py-2 bg-accent text-accent-foreground text-sm rounded hover:bg-accent/80 disabled:opacity-50">
                 {adding ? 'Adding...' : 'Add'}
               </button>
             </div>
@@ -627,39 +627,39 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       {/* Audio Import Modal */}
       {showAudioModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowAudioModal(false)}>
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-slate-800">Import Audio</h3>
-              <button onClick={() => setShowAudioModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+              <h3 className="text-lg font-bold text-foreground">Import Audio</h3>
+              <button onClick={() => setShowAudioModal(false)} className="text-muted-foreground hover:text-foreground text-2xl leading-none">&times;</button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-slate-700">Audio File</label>
+                <label className="text-sm font-medium text-muted-foreground">Audio File</label>
                 <input type="file" accept="audio/*" id="audio-file-input" className="hidden" onChange={e => setAudioFile(e.target.files?.[0] || null)} />
                 <button type="button" onClick={() => document.getElementById('audio-file-input')?.click()}
-                  className="w-full mt-1 p-3 border-2 border-dashed border-blue-300 rounded text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-400">
+                  className="w-full mt-1 p-3 border-2 border-dashed border-accent/40 rounded text-sm text-accent hover:bg-accent-soft hover:border-accent/60">
                   {audioFile ? `📁 ${audioFile.name}` : '📂 Choose Audio File...'}
                 </button>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Name</label>
-                <input className="w-full p-2 border rounded mt-1 text-sm" value={audioName} onChange={e => setAudioName(e.target.value)} placeholder="Audio name" />
+                <label className="text-sm font-medium text-muted-foreground">Name</label>
+                <input className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" value={audioName} onChange={e => setAudioName(e.target.value)} placeholder="Audio name" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Type</label>
-                <select className="w-full p-2 border rounded mt-1 text-sm" value={audioType} onChange={e => setAudioType(e.target.value)}>
+                <label className="text-sm font-medium text-muted-foreground">Type</label>
+                <select className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" value={audioType} onChange={e => setAudioType(e.target.value)}>
                   <option value="VOICE_SAMPLE">Voice Sample</option>
                   <option value="CHARACTER_DIALOG">Character Dialog</option>
                   <option value="SCENE_DIALOG">Scene Dialog</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Transcript</label>
-                <textarea className="w-full p-2 border rounded mt-1 text-sm" rows={3} value={audioTranscript} onChange={e => setAudioTranscript(e.target.value)} placeholder="Transcription of the audio..." />
+                <label className="text-sm font-medium text-muted-foreground">Transcript</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={3} value={audioTranscript} onChange={e => setAudioTranscript(e.target.value)} placeholder="Transcription of the audio..." />
               </div>
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className="text-destructive text-sm">{error}</p>}
               <button onClick={handleImportAudio} disabled={audioImporting || !audioFile || !audioName}
-                className="w-full py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50">
+                className="w-full py-2 bg-accent text-accent-foreground text-sm rounded hover:bg-accent/80 disabled:opacity-50">
                 {audioImporting ? 'Importing...' : 'Import Audio'}
               </button>
             </div>

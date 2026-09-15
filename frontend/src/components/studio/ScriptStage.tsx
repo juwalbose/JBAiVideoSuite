@@ -238,15 +238,15 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     <div className="space-y-4">
       {currentProject?.type === 'episodic' && (
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700">Episode:</label>
-          <span className="text-sm text-gray-500">Episode {selectedEpisode}</span>
+          <label className="text-sm font-medium text-muted-foreground">Episode:</label>
+          <span className="text-sm text-muted-foreground">Episode {selectedEpisode}</span>
         </div>
       )}
 
       <div>
-        <h3 className="text-lg font-semibold mb-2 text-blue-900">Script</h3>
+        <h3 className="text-lg font-semibold mb-2 text-foreground">Script</h3>
         <textarea
-          className="w-full p-4 border rounded bg-white text-black resize-y"
+          className="w-full p-4 border border-border rounded bg-card text-foreground resize-y"
           rows={15}
           placeholder="Script will appear here after generating from the Story tab..."
           value={script}
@@ -255,16 +255,16 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       </div>
 
       {error && (
-        <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-700 text-sm">
+        <div className="p-4 border border-destructive/40 bg-destructive/10 rounded-lg text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="flex justify-center gap-4 mt-4 pt-4 border-t">
+      <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-border">
         <button
           onClick={handleGenerateScript}
           disabled={isLoading || !currentProject?.story?.narrativeArc}
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 transition-colors"
         >
           {isLoading ? 'Generating...' : script ? 'Regenerate Script' : 'Generate Script'}
         </button>
@@ -286,9 +286,9 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
 
       {refinedScript && (
         <div className="space-y-2 mt-4">
-          <h3 className="text-lg font-semibold text-teal-900">Refined Dialog</h3>
+          <h3 className="text-lg font-semibold text-teal-400">Refined Dialog</h3>
           <textarea
-            className="w-full p-4 border border-teal-300 rounded bg-teal-50 text-gray-800 resize-y"
+            className="w-full p-4 border border-teal-800 rounded bg-teal-950/40 text-foreground resize-y"
             rows={15}
             value={refinedScript}
             onChange={(e) => setRefinedScript(e.target.value)}
@@ -305,9 +305,9 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       )}
 
       <div className="space-y-2 mt-4">
-        <h3 className="text-lg font-semibold text-blue-900">Extracted Assets</h3>
+        <h3 className="text-lg font-semibold text-foreground">Extracted Assets</h3>
         <textarea
-          className="w-full p-4 border rounded bg-purple-50 text-gray-800 whitespace-pre-wrap resize-y"
+          className="w-full p-4 border border-border rounded bg-purple-950/30 text-foreground whitespace-pre-wrap resize-y"
           rows={10}
           value={formattedCast || cast}
           onChange={(e) => {
@@ -331,18 +331,18 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
         />
       </div>
 
-      <div className="flex justify-center gap-4 mt-4 pt-4 border-t">
+      <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-border">
         <button
           onClick={handleSave}
           disabled={isSaving || !script}
-          className="px-6 py-2 bg-gray-800 text-white rounded hover:bg-black disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-muted text-foreground rounded hover:bg-muted/80 disabled:opacity-50 transition-colors"
         >
           {isSaving ? 'Saving...' : 'Save'}
         </button>
         {hasSavedAssets && onNavigateToAssets && (
           <button
             onClick={onNavigateToAssets}
-            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+            className="px-6 py-2 bg-success text-white rounded hover:bg-success/80 transition-colors"
           >
             Next
           </button>

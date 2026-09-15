@@ -167,25 +167,25 @@ const AppSettingsPanel = () => {
     }
   };
 
-  if (loading) return <p className="text-gray-500">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">App Settings</h2>
-        <p className="text-gray-600">Map system prompts to app actions. Leave as "None" to use default behavior.</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">App Settings</h2>
+        <p className="text-muted-foreground">Map system prompts to app actions. Leave as "None" to use default behavior.</p>
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-3">LLM System Prompt Mapping</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-3">LLM System Prompt Mapping</h3>
         <div className="space-y-4">
           {APP_ACTIONS.map((action) => (
-            <div key={action} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
-              <span className="font-medium text-gray-800">{action}</span>
+            <div key={action} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card">
+              <span className="font-medium text-foreground">{action}</span>
               <select
                 value={mappings[action] || ''}
                 onChange={(e) => setMappings(prev => ({ ...prev, [action]: e.target.value || null }))}
-                className="p-2 border rounded bg-white text-sm max-w-xs"
+                className="p-2 border border-border rounded bg-card text-foreground text-sm max-w-xs"
               >
                 <option value="">None</option>
                 {prompts.map((p) => (
@@ -198,17 +198,17 @@ const AppSettingsPanel = () => {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-3">ComfyUI Generation Mapping</h3>
-        <p className="text-sm text-gray-500 mb-3">Map generation actions to ComfyUI workflow JSON files in <code className="bg-gray-100 px-1 rounded">assets/workflows/</code>.</p>
+        <h3 className="text-lg font-semibold text-foreground mb-3">ComfyUI Generation Mapping</h3>
+        <p className="text-sm text-muted-foreground mb-3">Map generation actions to ComfyUI workflow JSON files in <code className="bg-muted px-1 rounded">assets/workflows/</code>.</p>
         <div className="space-y-4">
           {COMFY_ACTIONS.map((action) => (
-            <div key={action} className="p-4 border rounded-lg bg-gray-50">
+            <div key={action} className="p-4 border border-border rounded-lg bg-card">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-gray-800">{action}</span>
+                <span className="font-medium text-foreground">{action}</span>
                 <select
                   value={comfyMappings[action] || ''}
                   onChange={(e) => setComfyMappings(prev => ({ ...prev, [action]: e.target.value || null }))}
-                  className="p-2 border rounded bg-white text-sm max-w-xs"
+                  className="p-2 border border-border rounded bg-card text-foreground text-sm max-w-xs"
                 >
                   <option value="">None</option>
                   {workflowFiles.map((f) => (
@@ -217,22 +217,22 @@ const AppSettingsPanel = () => {
                 </select>
               </div>
               {action === 'Asset Generation' && (
-                <div className="mt-3 pt-3 border-t space-y-2">
-                  <p className="text-xs font-medium text-gray-500">Resolution Settings</p>
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Resolution Settings</p>
                   {(['character', 'location', 'prop'] as const).map((type) => (
                     <div key={type} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 w-24 capitalize">{type}</span>
+                      <span className="text-sm text-muted-foreground w-24 capitalize">{type}</span>
                       <input
                         type="number"
-                        className="w-20 p-1 border rounded text-sm"
+                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
                         value={resSettings[type].w}
                         onChange={(e) => setResSettings(prev => ({ ...prev, [type]: { ...prev[type], w: Number(e.target.value) } }))}
                         placeholder="Width"
                       />
-                      <span className="text-gray-400">×</span>
+                      <span className="text-muted-foreground">×</span>
                       <input
                         type="number"
-                        className="w-20 p-1 border rounded text-sm"
+                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
                         value={resSettings[type].h}
                         onChange={(e) => setResSettings(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
                         placeholder="Height"
@@ -242,22 +242,22 @@ const AppSettingsPanel = () => {
                 </div>
               )}
               {action === 'MinimaxH3 Ref2VA Generation' && (
-                <div className="mt-3 pt-3 border-t space-y-2">
-                  <p className="text-xs font-medium text-gray-500">Resolution Settings</p>
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Resolution Settings</p>
                   {(['low', 'high'] as const).map((type) => (
                     <div key={type} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 w-24 capitalize">{type} Res</span>
+                      <span className="text-sm text-muted-foreground w-24 capitalize">{type} Res</span>
                       <input
                         type="number"
-                        className="w-20 p-1 border rounded text-sm"
+                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
                         value={videoRes[type].w}
                         onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], w: Number(e.target.value) } }))}
                         placeholder="Width"
                       />
-                      <span className="text-gray-400">×</span>
+                      <span className="text-muted-foreground">×</span>
                       <input
                         type="number"
-                        className="w-20 p-1 border rounded text-sm"
+                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
                         value={videoRes[type].h}
                         onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
                         placeholder="Height"
@@ -275,30 +275,30 @@ const AppSettingsPanel = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-accent text-accent-foreground rounded hover:opacity-90 disabled:opacity-50 transition-colors"
         >
           {saving ? 'Saving...' : 'Save Mappings'}
         </button>
-        {saved && <span className="text-green-600 text-sm">Saved!</span>}
+        {saved && <span className="text-success text-sm">Saved!</span>}
       </div>
 
-      <div className="border-t pt-4 space-y-4">
+      <div className="border-t border-border pt-4 space-y-4">
         <div>
           <button
             onClick={() => setShowJsonFormat(!showJsonFormat)}
-            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+            className="text-sm text-accent hover:underline flex items-center gap-1"
           >
             {showJsonFormat ? '▼' : '▶'} Expected Asset JSON Format
           </button>
           {showJsonFormat && (
             <div className="mt-3">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 This is the JSON structure the "Extract Cast" action should return,
                 and what the Extracted Assets box expects. All asset types
-                (Characters, Locations, Props) have <code className="bg-gray-100 px-1 rounded">states</code>
+                (Characters, Locations, Props) have <code className="bg-muted px-1 rounded">states</code>
                 (different appearances/conditions — e.g. a suitcase can be "Closed" or "Open").
               </p>
-              <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
+              <pre className="bg-card text-foreground border border-border p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
                 {ASSET_JSON_FORMAT}
               </pre>
             </div>
@@ -308,18 +308,18 @@ const AppSettingsPanel = () => {
         <div>
           <button
             onClick={() => setShowShotFormat(!showShotFormat)}
-            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+            className="text-sm text-accent hover:underline flex items-center gap-1"
           >
             {showShotFormat ? '▼' : '▶'} Expected Shot JSON Format
           </button>
           {showShotFormat && (
             <div className="mt-3">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 This is the JSON structure the "Generate Shots" action should return.
-                Each shot has a <code className="bg-gray-100 px-1 rounded">frames</code> value
-                matching the 17n+5 grid, and a <code className="bg-gray-100 px-1 rounded">duration</code> in seconds.
+                Each shot has a <code className="bg-muted px-1 rounded">frames</code> value
+                matching the 17n+5 grid, and a <code className="bg-muted px-1 rounded">duration</code> in seconds.
               </p>
-              <pre className="bg-gray-900 text-green-300 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
+              <pre className="bg-card text-foreground border border-border p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto">
                 {SHOT_JSON_FORMAT}
               </pre>
             </div>

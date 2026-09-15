@@ -87,7 +87,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="px-4 py-2 rounded-md border border-gray-300 bg-white cursor-pointer text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          className="px-4 py-2 rounded-md border border-border bg-card cursor-pointer text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-sm"
         >
           Choose Image
         </button>
@@ -95,7 +95,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
       {/* Error display */}
       {error && (
-        <p className="text-red-600 text-xs mt-2">
+        <p className="text-destructive text-xs mt-2">
           {error}
         </p>
       )}
@@ -103,7 +103,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       {/* Image Preview & Actions */}
       {previewUrl && (
         <div className="mt-3">
-          <div className="relative rounded-lg overflow-hidden border border-gray-100 bg-gray-50 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="relative rounded-lg overflow-hidden border border-border bg-muted shadow-sm hover:shadow-md transition-shadow duration-200">
             <img
               src={previewUrl}
               alt="Preview"
@@ -112,13 +112,13 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           </div>
 
           <div className="flex justify-between items-center mt-2">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {selectedFile?.name} ({((selectedFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
             </span>
             <button
               type="button"
               onClick={handleRemove}
-              className="text-red-600 text-xs font-medium hover:underline transition-colors"
+              className="text-destructive text-xs font-medium hover:underline transition-colors"
             >
               Remove
             </button>

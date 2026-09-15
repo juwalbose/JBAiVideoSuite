@@ -1,41 +1,79 @@
 @import "tailwindcss";
 
+/* ── Dark Cinematic Theme ──────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0b0f;
+  --foreground: #e4e4e7;
+  --card: #14141a;
+  --card-foreground: #e4e4e7;
+  --muted: #1e1e26;
+  --muted-foreground: #8b8b96;
+  --border: #2a2a34;
+  --accent: #6366f1;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --destructive: #ef4444;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Docs markdown styling */
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* ── Focus ring ────────────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Docs markdown styling ─────────────────────────────────────── */
 .prose {
   line-height: 1.7;
-  color: #171717;
+  color: var(--foreground);
 }
 .prose h1 {
   font-size: 1.875rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
 }
 .prose h2 {
@@ -72,14 +110,14 @@ body {
   margin-bottom: 0.25rem;
 }
 .prose code {
-  background: #f3f4f6;
+  background: var(--muted);
   padding: 0.15rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
   font-family: 'Cascadia Code', 'Consolas', monospace;
 }
 .prose pre {
-  background: #f3f4f6;
+  background: var(--muted);
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -98,22 +136,22 @@ body {
   font-size: 0.9rem;
 }
 .prose th {
-  background: #f9fafb;
+  background: var(--muted);
   font-weight: 600;
   text-align: left;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
 }
 .prose td {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
 }
 .prose blockquote {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--accent);
   padding-left: 1rem;
   margin-top: 1rem;
   margin-bottom: 1rem;
-  color: #6b7280;
+  color: var(--muted-foreground);
   font-style: italic;
 }
 .prose img {
@@ -123,12 +161,12 @@ body {
   margin-bottom: 1rem;
 }
 .prose a {
-  color: #2563eb;
+  color: var(--accent);
   text-decoration: underline;
 }
 .prose hr {
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
