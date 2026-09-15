@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ImagePicker } from '../ImagePicker';
+import { AudioPicker } from '../AudioPicker';
 
 interface InputField {
-  type: 'string' | 'int' | 'image';
+  type: 'string' | 'int' | 'float' | 'image' | 'audio';
   value: string | number;
 }
 
@@ -20,11 +21,13 @@ const RESOLUTIONS = [
   { name: 'Square (1024x1024)', w: 1024, h: 1024 },
   { name: 'Landscape (1024x768)', w: 1024, h: 768 },
   { name: 'Landscape (1366x768)', w: 1366, h: 768 },
+  { name: 'Landscape (960x544)', w: 960, h: 544 },
   { name: 'Landscape (1920x1080)', w: 1920, h: 1080 },
   { name: 'Landscape (2560x1440)', w: 2560, h: 1440 },
   { name: 'Landscape (3840x2160)', w: 3840, h: 2160 },
   { name: 'Portrait (768x1024)', w: 768, h: 1024 },
   { name: 'Portrait (1080x1366)', w: 1080, h: 1366 },
+  { name: 'Portrait (544x960)', w: 544, h: 960 },
   { name: 'Portrait (1080x1920)', w: 1080, h: 1920 },
   { name: 'Portrait (1440x2560)', w: 1440, h: 2560 },
   { name: 'Portrait (2160x3840)', w: 2160, h: 3840 },
@@ -129,25 +132,63 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
         </div>
       )}
 
-      {/* 4. Image Roles */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold uppercase text-gray-500 mb-1">Images</label>
-        <div className="flex flex-wrap gap-4 items-end">
-          {Object.entries(inputs).filter(([_, field]) => field.type === 'image').map(([role]) => {
-            const node = Object.values(nodes).find(n => 
-              n._meta?.title?.toLowerCase().includes(role.toLowerCase())
-            );
-            const nodeId = node ? (node.id || role) : role;
-
-            return (
-              <div key={role} className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-400">{role} ({nodeId})</label>
-                <ImagePicker onImageSelected={(file) => onChange(role, file)} />
-              </div>
-            );
-          })}
+      {/* 4. Float Inputs (e.g. duration) */}
+      {Object.entries(inputs).filter(([_, field]) => field.type === 'float').map(([role]) => (
+        <div key={role} className="flex items-center gap-4">
+          <label className="w-32 shrink-0 text-xs font-semibold uppercase text-gray-500">{role}</label>
+          <input
+            type="number"
+            step="0.1"
+            className="p-2 border rounded bg-white w-32"
+            value={getVal(role)}
+            onChange={(e) => onChange(role, e.target.value === '' ? 0 : parseFloat(e.target.value))}
+          />
         </div>
-      </div>
+      ))}
+
+      {/* 5. Image Roles */}
+      {Object.entries(inputs).some(([_, field]) => field.type === 'image') && (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold uppercase text-gray-500 mb-1">Images</label>
+          <div className="flex flex-wrap gap-4 items-end">
+            {Object.entries(inputs).filter(([_, field]) => field.type === 'image').map(([role]) => {
+              const node = Object.values(nodes).find(n =>
+                n._meta?.title?.toLowerCase().includes(role.toLowerCase())
+              );
+              const nodeId = node ? (node.id || role) : role;
+
+              return (
+                <div key={role} className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-400">{role} ({nodeId})</label>
+                  <ImagePicker onImageSelected={(file) => onChange(role, file)} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Audio Roles */}
+      {Object.entries(inputs).some(([_, field]) => field.type === 'audio') && (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold uppercase text-gray-500 mb-1">Audio</label>
+          <div className="flex flex-wrap gap-4 items-end">
+            {Object.entries(inputs).filter(([_, field]) => field.type === 'audio').map(([role]) => {
+              const node = Object.values(nodes).find(n =>
+                n._meta?.title?.toLowerCase().includes(role.toLowerCase())
+              );
+              const nodeId = node ? (node.id || role) : role;
+
+              return (
+                <div key={role} className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-gray-400">{role} ({nodeId})</label>
+                  <AudioPicker onAudioSelected={(file) => onChange(role, file)} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

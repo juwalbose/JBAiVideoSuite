@@ -10,7 +10,9 @@ class PlaygroundParser:
             "width": "int",
             "height": "int",
             "seed": "int",
-            "image": "image"
+            "duration": "float",
+            "image": "image",
+            "audio": "audio"
         }
 
     def parse(self, workflow_path):
@@ -38,10 +40,12 @@ class PlaygroundParser:
             "nodes": data,
             "output_type": None,
             "is_valid": False,
-            "image_node_map": {}
+            "image_node_map": {},
+            "audio_node_map": {}
         }
 
         image_nodes = []
+        audio_nodes = []
 
         for node_id, node_data in data.items():
             title = node_data.get('_meta', {}).get('title', '')
@@ -59,9 +63,14 @@ class PlaygroundParser:
                         if isinstance(default_val, list):
                             default_val = default_val[0]
 
-                        # If it's an image role, store it to handle numbering later
                         if role == "image":
                             image_nodes.append({
+                                "id": node_id,
+                                "title": title,
+                                "value": default_val
+                            })
+                        elif role == "audio":
+                            audio_nodes.append({
                                 "id": node_id,
                                 "title": title,
                                 "value": default_val
@@ -90,6 +99,17 @@ class PlaygroundParser:
             }
             # Store the mapping of role name to actual Node ID
             playground_obj["image_node_map"][role] = node["id"]
+
+        # Handle audio nodes with correct numbering sequence
+        audio_nodes.sort(key=lambda x: int(re.search(r'\d+', x['title']).group()) if re.search(r'\d+', x['title']) else 0)
+
+        for i, node in enumerate(audio_nodes):
+            role = f"audio{i+1}"
+            playground_obj["inputs"][role] = {
+                "type": "audio",
+                "value": node["value"]
+            }
+            playground_obj["audio_node_map"][role] = node["id"]
 
         # A workflow is valid only if it has exactly one output node
         output_nodes = playground_obj.get("output_nodes", [])

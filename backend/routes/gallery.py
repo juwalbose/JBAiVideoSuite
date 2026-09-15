@@ -16,14 +16,16 @@ async def get_gallery():
     if not os.path.exists(GENERATED_IMAGES_DIR):
         os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
     
-    valid_extensions = ('.png', '.jpg', '.jpeg', '.webp')
-    images = [
-        f"/assets/generated/{f}" 
-        for f in os.listdir(GENERATED_IMAGES_DIR) 
-        if f.lower().endswith(valid_extensions)
-    ]
-    images.sort()
-    return {"images": images}
+    image_extensions = ('.png', '.jpg', '.jpeg', '.webp')
+    video_extensions = ('.mp4', '.webm')
+    all_extensions = image_extensions + video_extensions
+    items = []
+    for f in os.listdir(GENERATED_IMAGES_DIR):
+        if f.lower().endswith(all_extensions):
+            ftype = "video" if f.lower().endswith(video_extensions) else "image"
+            items.append({"path": f"/assets/generated/{f}", "type": ftype})
+    items.sort(key=lambda x: x["path"])
+    return {"images": [item["path"] for item in items], "types": {item["path"]: item["type"] for item in items}}
 
 @router.delete("/{filename}")
 async def delete_image(filename: str):

@@ -1,0 +1,416 @@
+{
+  "121": {
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "5567:5221",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "122": {
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "5567:5222",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "124": {
+    "inputs": {
+      "scheduler": "beta57",
+      "steps": [
+        "5652",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "5567:5598",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "125": {
+    "inputs": {
+      "noise": [
+        "129",
+        0
+      ],
+      "guider": [
+        "126",
+        0
+      ],
+      "sampler": [
+        "5581",
+        0
+      ],
+      "sigmas": [
+        "124",
+        0
+      ],
+      "latent_image": [
+        "136",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "126": {
+    "inputs": {
+      "model": [
+        "5567:5598",
+        0
+      ],
+      "conditioning": [
+        "136",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "129": {
+    "inputs": {
+      "noise_seed": [
+        "5650",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "131": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "132": {
+    "inputs": {
+      "value": 5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "(Input:duration) Duration"
+    }
+  },
+  "136": {
+    "inputs": {
+      "prompt": [
+        "138",
+        0
+      ],
+      "width": [
+        "5645",
+        0
+      ],
+      "height": [
+        "5646",
+        0
+      ],
+      "length": [
+        "131",
+        1
+      ],
+      "ref_image_size": "match",
+      "clip": [
+        "5567:5600",
+        0
+      ],
+      "vae": [
+        "5567:5222",
+        0
+      ],
+      "audio_vae": [
+        "5567:5221",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "137",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "5649",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "5653",
+        0
+      ],
+      "ref_audios.ref_audio_0": [
+        "5678",
+        0
+      ],
+      "ref_audios.ref_audio_1": [
+        "5679",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Reference to Video"
+    }
+  },
+  "137": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image1"
+    }
+  },
+  "138": {
+    "inputs": {
+      "value": "**subject_definitions**\n<Subject 1> is the warrior from the first reference image (Mahabali), featuring dark shoulder-length wavy hair, a thick prominent mustache, muscular bare golden-bronze chest, gold collar necklace with red gem, gold armlets, and a red-and-gold dhoti.\n<Subject 2> is the warrior from the second reference image (Indra), featuring clean-shaven sharp facial features, polished gold cuirass armor with blue gemstone embellishments, gold armlets, and a royal blue-and-gold dhoti.\n<Subject 3> is the ascetic warrior from the third reference image (Parasurama), featuring long dark greenish-black hair tied in a high ascetic bun, full dark beard, blue-toned temple paint, bare muscular chest with a long brown prayer bead mala and sacred cord, and an off-white cotton dhoti cinched with a brown sash.\n\n**summary**\n[reference generation] In a sun-drenched, dust-swept ancient arena, <Subject 1> commands the center foreground delivering his fierce challenge, flanked on his right by the smug armored <Subject 2> and on his left by the grim, stoic warrior-sage <Subject 3>.\n\n**retention_analysis**\n<Subject 1> (appears in [Shot 1]): fully_preserved - Facial features, mustache, long hair, bare muscular build, gold ornaments, and red-and-gold dhoti are fully preserved.\n<Subject 2> (appears in [Shot 1]): fully_preserved - Clean-shaven face, gold cuirass with blue gems, and royal blue-and-gold dhoti are fully preserved.\n<Subject 3> (appears in [Shot 1]): fully_preserved - Hair bun, full beard, facial markings, bead necklace, bare torso, and off-white dhoti with brown sash are fully preserved.\n\n**detailed_description**\n[Shot 1]\nMedium-full shot, low-angle dynamic slow push-in. In the center foreground of the sunlit, dusty stone arena, <Subject 1> stands grounded and chest out, thrusting an open arm toward the cheering crowd stands. To his right, <Subject 2> crosses his armored arms with a sharp smirk (sound of metal armor shifting and gold jewelry jingling). To his left, <Subject 3> stands tall and rigid, his intense dark eyes scanning the arena in grim silence with hands resting naturally at his sides (sound of coarse linen fluttering in the breeze).\n<Subject 1> (S1): \"Is there no one else?!\"\n(sound of deep, booming baritone challenge echoing off high stone walls). <Subject 2> gives an amused chuckle, while <Subject 3> remains stoic and watchful as desert dust swirls around their feet.\n\n**overall_soundscape**\nRoaring colosseum crowd echoes, whistling arid wind, swirling sand on stone, metal armor shifting, rhythmic clinking of heavy beads and gold ornaments.\n\n**non_diegetic_music**\nMassive, heroic war orchestration featuring driving timpani drums, low brass horn blasts, and intense rising string textures."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "(Input:prompt) Prompt"
+    }
+  },
+  "150": {
+    "inputs": {
+      "frame_rate": [
+        "5595",
+        0
+      ],
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/nvenc_h264-mp4",
+      "pix_fmt": "yuv420p",
+      "bitrate": 10,
+      "megabit": true,
+      "save_metadata": false,
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "122",
+        0
+      ],
+      "audio": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "(output:video) Video"
+    }
+  },
+  "5581": {
+    "inputs": {
+      "sampler_name": "er_sde"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "5595": {
+    "inputs": {
+      "value": 24
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float"
+    }
+  },
+  "5645": {
+    "inputs": {
+      "value": 544
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:width) Width"
+    }
+  },
+  "5646": {
+    "inputs": {
+      "value": 960
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:height) Height"
+    }
+  },
+  "5649": {
+    "inputs": {
+      "image": "Indra_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Ref 2"
+    }
+  },
+  "5650": {
+    "inputs": {
+      "value": 42
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:seed) Seed"
+    }
+  },
+  "5652": {
+    "inputs": {
+      "value": 4
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Steps"
+    }
+  },
+  "5653": {
+    "inputs": {
+      "image": "Parasurama_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image3"
+    }
+  },
+  "5678": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio1"
+    }
+  },
+  "5679": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio2"
+    }
+  },
+  "5567:5222": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "5567:5221": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "5567:5600": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3-w4a8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "5567:5601": {
+    "inputs": {
+      "lora_name": "minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_resized_avg_rank_64_bf16.safetensors",
+      "strength_model": 1
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "5567:5604": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "5567:5601",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
+    }
+  },
+  "5567:5588": {
+    "inputs": {
+      "enable_fp16_accumulation": true,
+      "model": [
+        "5567:5604",
+        0
+      ]
+    },
+    "class_type": "ModelPatchTorchSettings",
+    "_meta": {
+      "title": "Model Patch Torch Settings"
+    }
+  },
+  "5567:5597": {
+    "inputs": {
+      "head_chunks": 4,
+      "model": [
+        "5567:5588",
+        0
+      ]
+    },
+    "class_type": "MiniMaxLowVRAMAttention",
+    "_meta": {
+      "title": "MiniMax H3 Low VRAM Attention"
+    }
+  },
+  "5567:5598": {
+    "inputs": {
+      "chunks": 2,
+      "seq_threshold": 4096,
+      "model": [
+        "5567:5597",
+        0
+      ]
+    },
+    "class_type": "MiniMaxChunkFeedForward",
+    "_meta": {
+      "title": "MiniMax H3 Chunk FeedForward"
+    }
+  }
+}

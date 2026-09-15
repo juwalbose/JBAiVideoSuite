@@ -17,6 +17,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   const { backend } = useSettingsStore();
   const { currentProject } = useProjectStore();
   const [images, setImages] = useState<string[]>([]);
+  const [types, setTypes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -38,6 +39,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
       if (!response.ok) throw new Error(`Failed to fetch gallery (Status: ${response.status})`);
       const data = await response.json();
       setImages(data.images || []);
+      setTypes(data.types || {});
     } catch (err) {
       console.error("Gallery Fetch Error:", err);
       setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -124,7 +126,17 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
           <div className="grid grid-cols-3 gap-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 items-start">
             {images.map((img, index) => (
               <div key={index} className="relative group overflow-hidden bg-slate-50 w-full aspect-square cursor-pointer" onClick={() => setSelectedImage(img)}>
-                <img src={`${baseUrl}${img}`} alt={img} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" />
+                {types[img] === 'video' ? (
+                  <video src={`${baseUrl}${img}`} muted preload="metadata" className="w-full h-full object-cover" />
+                ) : (
+                  <img src={`${baseUrl}${img}`} alt={img} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300" />
+                )}
+                {types[img] === 'video' && (
+                  <div className="absolute top-1 right-1 flex items-center gap-1 bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded">
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    VIDEO
+                  </div>
+                )}
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[9px] text-white opacity-0 group-hover:opacity-100 transition-opacity">{img}</div>
               </div>
             ))}
@@ -134,7 +146,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         )}
         <div className="mt-2 pt-2 border-t text-[10px] text-slate-400 flex justify-between">
           <span>Base URL: {baseUrl}</span>
-          <span>Images Found: {images.length}</span>
+          <span>Items Found: {images.length}</span>
         </div>
       </div>
 
@@ -143,19 +155,25 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setSelectedImage(null)}>
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-slate-800">Image Details</h3>
+              <h3 className="text-lg font-bold text-slate-800">{types[selectedImage] === 'video' ? 'Video Details' : 'Image Details'}</h3>
               <button onClick={() => { setSelectedImage(null); setMapType(''); setMapAsset(''); setMapState(''); setMapField(''); }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
-            <img src={`${baseUrl}${selectedImage}`} alt={selectedImage} className="w-full max-h-[400px] object-contain rounded-lg mb-4 bg-slate-100" />
+            {types[selectedImage] === 'video' ? (
+              <video src={`${baseUrl}${selectedImage}`} controls className="w-full max-h-[400px] rounded-lg mb-4 bg-black" />
+            ) : (
+              <img src={`${baseUrl}${selectedImage}`} alt={selectedImage} className="w-full max-h-[400px] object-contain rounded-lg mb-4 bg-slate-100" />
+            )}
             <p className="text-xs text-slate-500 mb-4">{selectedImage}</p>
 
             <div className="flex gap-3 mb-4">
               <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50">
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
-              <button onClick={() => setMapType(mapType ? '' : 'characters')} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                {mapType ? 'Cancel Map' : 'Map to Asset'}
-              </button>
+              {types[selectedImage] !== 'video' && (
+                <button onClick={() => setMapType(mapType ? '' : 'characters')} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                  {mapType ? 'Cancel Map' : 'Map to Asset'}
+                </button>
+              )}
             </div>
 
             {mapType && (

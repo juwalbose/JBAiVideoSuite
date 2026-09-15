@@ -4,16 +4,21 @@ interface GenerationResultProps {
   isGenerating: boolean;
   queueCount: number;
   resultImage: string | null;
+  resultType?: 'image' | 'video';
   onGenerate: () => void;
   isValid: boolean;
 }
 
-const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, queueCount, resultImage, onGenerate, isValid }) => {
+const GenerationResult: React.FC<GenerationResultProps> = ({ isGenerating, queueCount, resultImage, resultType = 'image', onGenerate, isValid }) => {
   return (
     <>
       <div className="flex justify-center">
         {resultImage ? (
-          <img src={resultImage} alt="Generated result" className="max-w-full h-auto rounded shadow-md border" />
+          resultType === 'video' ? (
+            <video src={resultImage} controls className="max-w-full h-auto rounded shadow-md border bg-black" />
+          ) : (
+            <img src={resultImage} alt="Generated result" className="max-w-full h-auto rounded shadow-md border" />
+          )
         ) : (
           <div className="w-64 h-64 bg-gray-200 flex items-center justify-center rounded text-gray-400 italic">
             Result will appear here

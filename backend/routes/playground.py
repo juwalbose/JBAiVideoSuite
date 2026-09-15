@@ -40,14 +40,15 @@ def _inject_inputs(workflow_data: dict, inputs: Dict[str, Any]) -> dict:
     """Inject inputs into workflow nodes. Returns modified workflow."""
     for role, value in inputs.items():
         if (
-            role.startswith("image")
+            (role.startswith("image") or role.startswith("audio"))
             and isinstance(value, list)
             and len(value) >= 2
         ):
             node_id = str(value[0])
             filename = str(value[1])
             if node_id in workflow_data:
-                workflow_data[node_id].setdefault("inputs", {})["image"] = filename
+                input_key = "image" if role.startswith("image") else "audio"
+                workflow_data[node_id].setdefault("inputs", {})[input_key] = filename
             continue
 
         target_node_id = None
@@ -134,36 +135,43 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
         history_data = history_res.json()
 
         outputs = history_data.get(prompt_id, {}).get("outputs", {})
-        image_info = None
+        output_info = None
+        output_type = None
         for node_output in outputs.values():
             if "images" in node_output and len(node_output["images"]) > 0:
-                image_info = node_output["images"][0]
+                output_info = node_output["images"][0]
+                output_type = "image"
+                break
+            if "gifs" in node_output and len(node_output["gifs"]) > 0:
+                output_info = node_output["gifs"][0]
+                output_type = "video"
                 break
 
-        if not image_info:
+        if not output_info:
             print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> PENDING")
             return {"status": "pending", "task_id": task_id}
 
         params = {
-            "filename": image_info["filename"],
-            "subfolder": image_info.get("subfolder", ""),
-            "type": image_info.get("type", "output"),
+            "filename": output_info["filename"],
+            "subfolder": output_info.get("subfolder", ""),
+            "type": output_info.get("type", "output"),
         }
-        img_res = await client.get(f"{comfy_http}/view", params=params)
+        file_res = await client.get(f"{comfy_http}/view", params=params)
 
         gen_dir = os.path.join(base_dir, "..", "assets", "generated")
         os.makedirs(gen_dir, exist_ok=True)
-        save_path = os.path.join(gen_dir, image_info["filename"])
+        save_path = os.path.join(gen_dir, output_info["filename"])
         with open(save_path, "wb") as f:
-            f.write(img_res.content)
+            f.write(file_res.content)
 
-        print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> COMPLETE ({image_info['filename']})")
+        media_type = "video/mp4" if output_type == "video" else "image/png"
+        print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> COMPLETE ({output_info['filename']}) [{output_type}]")
 
         return Response(
-            content=img_res.content,
-            media_type="image/png",
+            content=file_res.content,
+            media_type=media_type,
             headers={
-                "Content-Disposition": f'inline; filename="{image_info["filename"]}"',
+                "Content-Disposition": f'inline; filename="{output_info["filename"]}"',
                 "X-Task-Status": "complete",
             },
         )

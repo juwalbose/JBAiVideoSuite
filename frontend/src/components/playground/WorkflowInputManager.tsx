@@ -4,7 +4,7 @@ import GenerationResult from './GenerationResult';
 import { useSettingsStore } from '../../store/settingsStore';
 
 interface InputField {
-  type: 'string' | 'int' | 'image';
+  type: 'string' | 'int' | 'float' | 'image' | 'audio';
   value: string | number;
 }
 
@@ -16,6 +16,7 @@ interface PlaygroundObject {
   is_valid: boolean;
   invalid_reason?: string;
   image_node_map: Record<string, string>;
+  audio_node_map?: Record<string, string>;
 }
 
 interface WorkflowInputManagerProps {
@@ -38,6 +39,7 @@ const WorkflowInputManager = ({
   onQueueChange,
 }: WorkflowInputManagerProps) => {
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
+  const [resultType, setResultType] = useState<'image' | 'video'>('image');
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPollingRef = useRef(false);
   const { comfyui } = useSettingsStore();
@@ -62,6 +64,7 @@ const WorkflowInputManager = ({
         };
       });
       setInputValues(newInputs);
+      setResultType(activeWorkflowData.output_type === 'video' ? 'video' : 'image');
     }
   }, [activeWorkflowData]);
 
@@ -90,7 +93,7 @@ const WorkflowInputManager = ({
           if (res.status === 404) continue;
 
           const contentType = res.headers.get('content-type') || '';
-          if (contentType.startsWith('image/')) {
+          if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             onResultImageRef.current(url);
@@ -127,21 +130,22 @@ const WorkflowInputManager = ({
   const handleGenerate = async () => {
     if (!activeWorkflowData || !activeWorkflowData.is_valid) return;
 
-    const imageRoles = Object.entries(inputValues).filter(([_, value]) =>
-      value?.type === 'image'
+    const fileRoles = Object.entries(inputValues).filter(([_, value]) =>
+      value?.type === 'image' || value?.type === 'audio'
     );
 
-    const sortedImageRoles = [...imageRoles].sort((a, b) => {
+    const sortedFileRoles = [...fileRoles].sort((a, b) => {
       const titleA = activeWorkflowData.nodes[a[0]]?._meta?.title || "";
       const titleB = activeWorkflowData.nodes[b[0]]?._meta?.title || "";
       return (parseInt(titleA.toLowerCase().replace(/\D/g, '')) || 0) -
              (parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0);
     });
 
-    if (imageRoles.length > 0) {
-      for (const [role, _] of sortedImageRoles) {
+    if (fileRoles.length > 0) {
+      for (const [role, _] of sortedFileRoles) {
         if (!inputValues[role]) {
-          alert(`Please select an image for the "${role}" input.`);
+          const label = inputValues[role]?.type === 'audio' ? 'audio' : 'image';
+          alert(`Please select a ${label} for the "${role}" input.`);
           return;
         }
       }
@@ -150,8 +154,11 @@ const WorkflowInputManager = ({
     const finalInputs: Record<string, any> = {};
 
     for (const [role, data] of Object.entries(inputValues)) {
-      if (data?.type === 'image') {
-        const nodeId = activeWorkflowData.image_node_map[role] || role;
+      if (data?.type === 'image' || data?.type === 'audio') {
+        const nodeMap = data.type === 'image'
+          ? activeWorkflowData.image_node_map
+          : activeWorkflowData.audio_node_map;
+        const nodeId = nodeMap?.[role] || role;
 
         if (data.value instanceof File) {
           try {
@@ -166,7 +173,7 @@ const WorkflowInputManager = ({
             if (!res.ok) throw new Error(`Upload failed for Node ${nodeId}`);
 
             const resultData = await res.json();
-            setInputValues(prev => ({ ...prev, [role]: { type: 'image', value: resultData.name } }));
+            setInputValues(prev => ({ ...prev, [role]: { type: data.type, value: resultData.name } }));
             finalInputs[role] = [nodeId, resultData.name];
           } catch (err) {
             const fallbackValue = data.value instanceof File ? data.value.name : data.value;
@@ -226,6 +233,7 @@ const WorkflowInputManager = ({
         isGenerating={queueCount > 0}
         queueCount={queueCount}
         resultImage={resultImage}
+        resultType={resultType}
         onGenerate={handleGenerate}
         isValid={activeWorkflowData.is_valid}
       />
