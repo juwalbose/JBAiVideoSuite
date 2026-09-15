@@ -8,6 +8,7 @@ import FinalVideoStage from '../components/studio/FinalVideoStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
+import Docs from '../components/Docs';
 import ChatPanel from '../components/ChatPanel';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -108,6 +109,12 @@ const Studio = () => {
             className={`hover:text-blue-600 transition-colors ${activeTab === 'playground' ? 'border-b-2 border-blue-600' : ''}`}
           >
             Comfy Generation
+          </button>
+          <button 
+            onClick={() => setActiveTab('docs')}
+            className={`hover:text-blue-600 transition-colors ${activeTab === 'docs' ? 'border-b-2 border-blue-600' : ''}`}
+          >
+            Docs
           </button>
         </nav>
         <div className="flex gap-4 items-center">
@@ -320,6 +327,12 @@ const Studio = () => {
           {activeTab === 'playground' && (
             <div className="flex flex-1 items-center justify-center p-8">
               <ComfyUIPlayground />
+            </div>
+          )}
+
+          {activeTab === 'docs' && (
+            <div className="flex-1 overflow-y-auto">
+              <Docs />
             </div>
           )}
 

@@ -7,6 +7,12 @@ backend/node_modules/
 backend/check_db.py
 backend/check_shots.py
 
+# Database
+backend/prisma/database.db
+
+# System prompts (each user generates their own)
+assets/systemprompts/*.txt
+
 # Generated assets
 assets/generated/
 assets/audio/
@@ -17,3 +23,6 @@ assets/audio/
 # OS
 .DS_Store
 Thumbs.db
+
+# npm cache
+frontend/.npm-cache/
