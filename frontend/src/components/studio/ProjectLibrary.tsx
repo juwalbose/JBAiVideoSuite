@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { Folder } from 'lucide-react';
+import { Folder, Download } from 'lucide-react';
 import NewProjectModal from './NewProjectModal';
 
 const ProjectLibrary = () => {
@@ -9,18 +9,30 @@ const ProjectLibrary = () => {
   const { projects, currentProject, setCurrentProject, fetchProjects, deleteAllProjects } = useProjectStore();
   const baseUrl = useSettingsStore.getState().backend.apiUrl;
   const [coverImages, setCoverImages] = useState<Record<string, string | null>>({});
-  const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Export modal state
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportProjectId, setExportProjectId] = useState<string | null>(null);
+  const [exportProjectName, setExportProjectName] = useState('');
+  const [exportFilename, setExportFilename] = useState('');
+  const [includeSettings, setIncludeSettings] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const openExportModal = (projectId: string, projectName: string) => {
+    setExportProjectId(projectId);
+    setExportProjectName(projectName);
+    setExportFilename(`${projectName.replace(/\s+/g, '_')}_export.json`);
+    setIncludeSettings(true);
+    setExportModalOpen(true);
+  };
+
   const handleExport = async () => {
-    if (!currentProject) {
-      alert('Select a project first, then export it.');
-      return;
-    }
+    if (!exportProjectId) return;
     setExporting(true);
     try {
-      const res = await fetch(`${baseUrl}/export/project/${currentProject.id}`);
+      const res = await fetch(`${baseUrl}/export/project/${exportProjectId}?include_settings=${includeSettings}`);
       const data = await res.json();
       if (data.status === 'error') {
         alert(data.details);
@@ -30,9 +42,10 @@ const ProjectLibrary = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentProject.name.replace(/\s+/g, '_')}_export.json`;
+      a.download = exportFilename || 'export.json';
       a.click();
       URL.revokeObjectURL(url);
+      setExportModalOpen(false);
     } catch (e) {
       console.error('Export failed:', e);
       alert('Export failed. Check backend connection.');
@@ -163,13 +176,26 @@ const ProjectLibrary = () => {
                 )}
               </div>
               <h3 className="text-xl font-bold mb-1">{project.name || 'Untitled Project'}</h3>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                project.type === 'episodic'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-blue-100 text-blue-700'
-              }`}>
-                {project.type === 'episodic' ? 'Episodic' : 'Single Video'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  project.type === 'episodic'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {project.type === 'episodic' ? 'Episodic' : 'Single Video'}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openExportModal(project.id, project.name || 'Untitled Project');
+                  }}
+                  className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                  title="Export this project"
+                >
+                  <Download size={14} />
+                  Export
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -181,13 +207,6 @@ const ProjectLibrary = () => {
           onClick={() => setModalOpen(true)}
         >
           + New Project
-        </button>
-        <button
-          className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold hover:bg-gray-700 transition-colors shadow-lg"
-          onClick={handleExport}
-          disabled={exporting}
-        >
-          {exporting ? 'Exporting...' : 'Export Project'}
         </button>
         <button
           className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold hover:bg-gray-700 transition-colors shadow-lg"
@@ -209,6 +228,50 @@ const ProjectLibrary = () => {
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)} 
       />
+
+      {exportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setExportModalOpen(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Export Project</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Exporting <span className="font-semibold text-gray-700">{exportProjectName}</span>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Filename</label>
+              <input
+                type="text"
+                value={exportFilename}
+                onChange={(e) => setExportFilename(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <label className="flex items-center gap-2 mb-6 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeSettings}
+                onChange={(e) => setIncludeSettings(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Include settings &amp; mappings</span>
+            </label>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setExportModalOpen(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {exporting ? 'Exporting...' : 'Export'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="mt-16 pb-4 text-center text-xs text-gray-400">
         Created by Juwal Bose for{' '}

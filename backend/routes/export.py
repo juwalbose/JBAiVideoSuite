@@ -19,8 +19,8 @@ def _dict_or_none(obj):
 
 
 @router.get("/project/{id}")
-async def export_project(id: str, db: Any = Depends(get_db)):
-    """Export a project with all its data plus global settings/mappings."""
+async def export_project(id: str, include_settings: bool = True, db: Any = Depends(get_db)):
+    """Export a project. Optionally include global settings/mappings/prompts/workflows."""
     project = await db.project.find_first(
         where={'id': id},
         include={
@@ -46,53 +46,49 @@ async def export_project(id: str, db: Any = Depends(get_db)):
     final_video = d.pop('finalVideo', None)
     d.pop('beats', None)
 
-    # Global settings
-    llm = await db.llmsettings.find_first()
-    backend = await db.backendsettings.find_first()
-    comfyui = await db.comfyuisettings.find_first()
-
-    # Mappings
-    app_mappings = await db.appactionmapping.find_many()
-    comfy_mappings = await db.comfyworkflowmapping.find_many()
-
-    # System prompts (file contents)
-    prompts = {}
-    if os.path.isdir(PROMPTS_DIR):
-        for f in os.listdir(PROMPTS_DIR):
-            if f.endswith('.txt'):
-                with open(os.path.join(PROMPTS_DIR, f), 'r', encoding='utf-8') as fh:
-                    prompts[f] = fh.read()
-
-    # Workflows (file contents)
-    workflows = {}
-    if os.path.isdir(WORKFLOWS_DIR):
-        for f in os.listdir(WORKFLOWS_DIR):
-            if f.endswith('.json'):
-                with open(os.path.join(WORKFLOWS_DIR, f), 'r', encoding='utf-8') as fh:
-                    workflows[f] = fh.read()
-
-    return {
-        "status": "success",
-        "data": {
-            "version": 1,
-            "project": d,
-            "stories": stories,
-            "scripts": scripts,
-            "shotLists": shot_list,
-            "assets": assets,
-            "audioAssets": audio_assets,
-            "finalVideo": final_video,
-            "settings": {
-                "llm": _dict_or_none(llm),
-                "backend": _dict_or_none(backend),
-                "comfyui": _dict_or_none(comfyui),
-            },
-            "appActionMappings": [m.dict() for m in app_mappings],
-            "comfyWorkflowMappings": [m.dict() for m in comfy_mappings],
-            "systemPrompts": prompts,
-            "workflows": workflows,
-        }
+    result = {
+        "version": 1,
+        "project": d,
+        "stories": stories,
+        "scripts": scripts,
+        "shotLists": shot_list,
+        "assets": assets,
+        "audioAssets": audio_assets,
+        "finalVideo": final_video,
     }
+
+    if include_settings:
+        llm = await db.llmsettings.find_first()
+        backend = await db.backendsettings.find_first()
+        comfyui = await db.comfyuisettings.find_first()
+        app_mappings = await db.appactionmapping.find_many()
+        comfy_mappings = await db.comfyworkflowmapping.find_many()
+
+        prompts = {}
+        if os.path.isdir(PROMPTS_DIR):
+            for f in os.listdir(PROMPTS_DIR):
+                if f.endswith('.txt'):
+                    with open(os.path.join(PROMPTS_DIR, f), 'r', encoding='utf-8') as fh:
+                        prompts[f] = fh.read()
+
+        workflows = {}
+        if os.path.isdir(WORKFLOWS_DIR):
+            for f in os.listdir(WORKFLOWS_DIR):
+                if f.endswith('.json'):
+                    with open(os.path.join(WORKFLOWS_DIR, f), 'r', encoding='utf-8') as fh:
+                        workflows[f] = fh.read()
+
+        result["settings"] = {
+            "llm": _dict_or_none(llm),
+            "backend": _dict_or_none(backend),
+            "comfyui": _dict_or_none(comfyui),
+        }
+        result["appActionMappings"] = [m.dict() for m in app_mappings]
+        result["comfyWorkflowMappings"] = [m.dict() for m in comfy_mappings]
+        result["systemPrompts"] = prompts
+        result["workflows"] = workflows
+
+    return {"status": "success", "data": result}
 
 
 @router.post("/import")
