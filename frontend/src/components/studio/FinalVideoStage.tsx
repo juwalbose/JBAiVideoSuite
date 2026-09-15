@@ -323,12 +323,16 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               {/* Asset previews */}
               <div className="flex flex-wrap gap-4">
                 {locationState && renderImagePreview('Location', locationState, false)}
-                {characterStates.map((state, i) =>
-                  renderImagePreview(`Character ${i + 1}`, state, true)
-                )}
-                {propStates.map((state, i) =>
-                  renderImagePreview(`Prop ${i + 1}`, state, false)
-                )}
+                {characterStates.map((state, i) => (
+                  <React.Fragment key={`char-${i}`}>
+                    {renderImagePreview(`Character ${i + 1}`, state, true)}
+                  </React.Fragment>
+                ))}
+                {propStates.map((state, i) => (
+                  <React.Fragment key={`prop-${i}`}>
+                    {renderImagePreview(`Prop ${i + 1}`, state, false)}
+                  </React.Fragment>
+                ))}
               </div>
 
               {/* Audio */}
