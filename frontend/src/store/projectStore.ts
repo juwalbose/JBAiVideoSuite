@@ -140,7 +140,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   updateStory: async (narrativeArc: string, rawInput?: string, episode?: number) => {
     const project = get().currentProject;
-    if (!project || !project.story) return;
+    if (!project) return;
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
       const epParam = episode ? `?episode=${episode}` : '';
@@ -154,14 +154,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       set((state) => {
         const cp = state.currentProject;
-        if (!cp || !cp.story) return state;
+        if (!cp) return state;
         return {
           currentProject: {
             ...cp,
             story: {
-              ...cp.story,
+              ...(cp.story || {}),
+              id: cp.story?.id || 'pending',
               narrativeArc: data.data?.narrativeArc || data.narrative_arc || data.narrativeArc,
-              rawInput: rawInput !== undefined ? rawInput : cp.story.rawInput
+              rawInput: rawInput !== undefined ? rawInput : cp.story?.rawInput
             }
           }
         };

@@ -23,8 +23,17 @@ async def get_system_prompt(db, action: str) -> Optional[str]:
 @router.get("/")
 async def list_projects(db: Any = Depends(get_db)):
     try:
-        projects = await db.project.find_many()
-        return [p.dict() for p in projects]
+        projects = await db.project.find_many(include={'stories': True, 'scripts': True})
+        result = []
+        for p in projects:
+            d = p.dict()
+            # Flatten episode-1 story/script into the shape the frontend expects
+            stories = d.pop('stories', [])
+            scripts = d.pop('scripts', [])
+            d['story'] = stories[0] if stories else None
+            d['script'] = scripts[0] if scripts else None
+            result.append(d)
+        return result
     except Exception as e:
         print(f"DEBUG: Error fetching projects: {e}")
         return []
@@ -71,8 +80,13 @@ async def create_project(project: ProjectCreate, db: Any = Depends(get_db)):
     })
     
     # Fetch the updated project
-    updated_project = await db.project.find_first(where={'id': new_project.id})
-    return updated_project.dict()
+    updated_project = await db.project.find_first(where={'id': new_project.id}, include={'stories': True, 'scripts': True})
+    d = updated_project.dict()
+    stories = d.pop('stories', [])
+    scripts = d.pop('scripts', [])
+    d['story'] = stories[0] if stories else None
+    d['script'] = scripts[0] if scripts else None
+    return d
 
 @router.delete("/{id}")
 async def delete_project(id: str, db: Any = Depends(get_db)):
@@ -110,9 +124,15 @@ async def update_project(id: str, payload: dict, db: Any = Depends(get_db)):
         return {"status": "error", "details": "No fields to update"}
     updated_project = await db.project.update(
         where={'id': id},
-        data=data
+        data=data,
+        include={'stories': True, 'scripts': True}
     )
-    return updated_project.dict()
+    d = updated_project.dict()
+    stories = d.pop('stories', [])
+    scripts = d.pop('scripts', [])
+    d['story'] = stories[0] if stories else None
+    d['script'] = scripts[0] if scripts else None
+    return d
 
 @router.post("/{id}/generate-story")
 async def generate_story(id: str, story_input: StoryInput, episode: int = 1, db: Any = Depends(get_db)):
