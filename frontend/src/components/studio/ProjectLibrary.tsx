@@ -78,7 +78,10 @@ const ProjectLibrary = () => {
       />
 
       <footer className="mt-16 pb-4 text-center text-xs text-gray-400">
-        Created by Juwal Bose for Visual Fictions
+        Created by Juwal Bose for{' '}
+        <a href="https://youtube.com/@visualfictions" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+          Visual Fictions
+        </a>
       </footer>
     </div>
   );

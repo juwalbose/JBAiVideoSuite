@@ -55,6 +55,8 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [assembleIdx, setAssembleIdx] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
 
   useEffect(() => {
@@ -292,11 +294,11 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           )}
 
           {/* Video preview pane */}
-          <div className="flex-1">
+          <div className="w-full aspect-[960/544] bg-black rounded shadow-md border overflow-hidden">
             {videoUrl ? (
-              <video src={videoUrl} controls className="max-w-full h-auto rounded shadow-md border bg-black" />
+              <video src={videoUrl} controls className="w-full h-full object-contain" />
             ) : (
-              <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded text-gray-400 italic">
+              <div className="w-full h-full flex items-center justify-center text-gray-400 italic">
                 Video preview will appear here
               </div>
             )}
@@ -305,8 +307,6 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           {/* Shot detail pane */}
           {shot && (
             <div className="p-4 border rounded-lg bg-white shadow-sm space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700">Shot {shot.shot} Details</h4>
-
               {/* Prompt */}
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Prompt</label>
@@ -417,8 +417,99 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       )}
 
       {subTab === 'assemble' && (
-        <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-          <p className="text-gray-400 italic">Assemble clips — coming soon</p>
+        <div className="space-y-4">
+          {/* Video preview */}
+          <div className="w-full aspect-video bg-black rounded shadow-md border overflow-hidden">
+            {shots[assembleIdx]?.videoPath ? (
+              <video
+                key={assembleIdx}
+                src={`${baseUrl}${shots[assembleIdx].videoPath}`}
+                controls
+                className="assemble-preview-video w-full h-full object-contain"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 italic">
+                No video generated for Shot {shots[assembleIdx]?.shot ?? '?'}
+              </div>
+            )}
+          </div>
+
+          {/* Play sequence button */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                if (isPlaying) {
+                  setIsPlaying(false);
+                  return;
+                }
+                setIsPlaying(true);
+                const playNext = (idx: number) => {
+                  if (idx >= shots.length) {
+                    setIsPlaying(false);
+                    return;
+                  }
+                  setAssembleIdx(idx);
+                  const shot = shots[idx];
+                  if (shot?.videoPath) {
+                    const video = document.querySelector<HTMLVideoElement>('.assemble-preview-video');
+                    if (video) {
+                      video.onended = () => playNext(idx + 1);
+                      video.play();
+                    }
+                  } else {
+                    setTimeout(() => playNext(idx + 1), 1500);
+                  }
+                };
+                playNext(0);
+              }}
+              className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+            >
+              {isPlaying ? 'Stop' : 'Play Sequence'}
+            </button>
+          </div>
+
+          {/* Shot strip */}
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {shots.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setIsPlaying(false);
+                  setAssembleIdx(i);
+                }}
+                className={`relative flex-shrink-0 w-20 h-14 rounded border-2 overflow-hidden ${
+                  assembleIdx === i ? 'border-blue-600' : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                {s.videoPath ? (
+                  <video
+                    src={`${baseUrl}${s.videoPath}`}
+                    className="w-full h-full object-cover"
+                    muted
+                    preload="metadata"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-400">
+                    No video
+                  </div>
+                )}
+                <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-0.5">
+                  {s.shot}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Export button */}
+          <div className="flex justify-center">
+            <button
+              disabled
+              className="px-6 py-2 bg-gray-400 text-white rounded text-sm cursor-not-allowed opacity-60"
+              title="Export functionality coming soon"
+            >
+              Export Video
+            </button>
+          </div>
         </div>
       )}
     </div>
