@@ -63,7 +63,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install fastapi uvicorn prisma httpx pydantic python-multipart
+pip install -r requirements.txt
 
 # Generate the Prisma client
 prisma generate
