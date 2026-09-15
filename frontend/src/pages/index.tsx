@@ -4,6 +4,7 @@ import StoryStage from '../components/studio/StoryStage';
 import ScriptStage from '../components/studio/ScriptStage';
 import AssetsStage from '../components/studio/AssetsStage';
 import ShotListStage from '../components/studio/ShotListStage';
+import FinalVideoStage from '../components/studio/FinalVideoStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
 import ComfyUIPlayground from '../components/playground/ComfyUIPlayground';
@@ -226,13 +227,7 @@ const Studio = () => {
                               </select>
                             </div>
                           )}
-                          <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                            <p className="text-gray-400 italic">
-                              {currentProject?.type === 'episodic'
-                                ? `Final video for Episode ${selectedEpisode} will appear here.`
-                                : 'Final video will appear here.'}
-                            </p>
-                          </div>
+                          <FinalVideoStage selectedEpisode={selectedEpisode} />
                         </div>
                       )}
                     </div>

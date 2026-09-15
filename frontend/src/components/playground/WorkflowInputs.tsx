@@ -70,24 +70,26 @@ const WorkflowInputs: React.FC<WorkflowInputsProps> = ({ inputs, values, nodes, 
       </div>
 
       {/* 2. Seed Input */}
-      <div className="flex items-center gap-4">
-        <label className="w-32 shrink-0 text-xs font-semibold uppercase text-gray-500">Seed</label>
-        <div className="flex flex-1 items-center gap-2">
-          <input 
-            type="number" 
-            className="p-2 border rounded bg-white w-full"
-            value={getVal('seed')}
-            onChange={(e) => onChange('seed', e.target.value === '' ? 0 : parseInt(e.target.value))}
-          />
-          <button
-            type="button"
-            onClick={() => onChange('seed', Math.floor(Math.random() * 1000000))}
-            className="px-3 py-2 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors shadow-sm"
-          >
-            Randomize
-          </button>
+      {'seed' in inputs && (
+        <div className="flex items-center gap-4">
+          <label className="w-32 shrink-0 text-xs font-semibold uppercase text-gray-500">Seed</label>
+          <div className="flex flex-1 items-center gap-2">
+            <input
+              type="number"
+              className="p-2 border rounded bg-white w-full"
+              value={getVal('seed')}
+              onChange={(e) => onChange('seed', e.target.value === '' ? 0 : parseInt(e.target.value))}
+            />
+            <button
+              type="button"
+              onClick={() => onChange('seed', Math.floor(Math.random() * 1000000))}
+              className="px-3 py-2 text-xs bg-gray-100 border rounded hover:bg-gray-200 transition-colors shadow-sm"
+            >
+              Randomize
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Resolution & Dimensions */}
       {(hasWidth || hasHeight) && (

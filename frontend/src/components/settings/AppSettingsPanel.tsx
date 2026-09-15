@@ -90,6 +90,10 @@ const AppSettingsPanel = () => {
     location: { w: 1920, h: 1080 },
     prop: { w: 1024, h: 1024 },
   });
+  const [videoRes, setVideoRes] = useState<{ low: { w: number; h: number }; high: { w: number; h: number } }>({
+    low: { w: 960, h: 544 },
+    high: { w: 1920, h: 1080 },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -104,8 +108,9 @@ const AppSettingsPanel = () => {
       fetch(`${baseUrl}/appsettings/workflows`).then(r => r.json()),
       fetch(`${baseUrl}/appsettings/workflows/files`).then(r => r.json()),
       fetch(`${baseUrl}/appsettings/resolutions`).then(r => r.json()),
+      fetch(`${baseUrl}/appsettings/video-resolutions`).then(r => r.json()),
     ])
-      .then(([m, p, cm, wf, res]) => {
+      .then(([m, p, cm, wf, res, vres]) => {
         setPrompts(p);
         const validIds = new Set(p.map((x: { id: string }) => x.id));
         const cleaned: Record<string, string | null> = {};
@@ -116,6 +121,7 @@ const AppSettingsPanel = () => {
         setComfyMappings(cm as Record<string, string | null>);
         setWorkflowFiles(wf as string[]);
         if (res && res.character) setResSettings(res as ResSettings);
+        if (vres && vres.low) setVideoRes(vres);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -145,6 +151,11 @@ const AppSettingsPanel = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(resSettings),
+        }),
+        fetch(`${baseUrl}/appsettings/video-resolutions/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(videoRes),
         }),
       ]);
       setSaved(true);
@@ -224,6 +235,31 @@ const AppSettingsPanel = () => {
                         className="w-20 p-1 border rounded text-sm"
                         value={resSettings[type].h}
                         onChange={(e) => setResSettings(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
+                        placeholder="Height"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {action === 'MinimaxH3 Ref2VA Generation' && (
+                <div className="mt-3 pt-3 border-t space-y-2">
+                  <p className="text-xs font-medium text-gray-500">Resolution Settings</p>
+                  {(['low', 'high'] as const).map((type) => (
+                    <div key={type} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600 w-24 capitalize">{type} Res</span>
+                      <input
+                        type="number"
+                        className="w-20 p-1 border rounded text-sm"
+                        value={videoRes[type].w}
+                        onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], w: Number(e.target.value) } }))}
+                        placeholder="Width"
+                      />
+                      <span className="text-gray-400">×</span>
+                      <input
+                        type="number"
+                        className="w-20 p-1 border rounded text-sm"
+                        value={videoRes[type].h}
+                        onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
                         placeholder="Height"
                       />
                     </div>

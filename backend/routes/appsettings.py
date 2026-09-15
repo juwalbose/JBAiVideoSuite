@@ -124,3 +124,37 @@ async def save_resolutions(payload: dict, db: Any = Depends(get_db)):
             'resolutionJson': data
         })
     return {"status": "success"}
+
+DEFAULT_VIDEO_RESOLUTIONS = {
+    "low": {"w": 960, "h": 544},
+    "high": {"w": 1920, "h": 1080},
+}
+
+@router.get("/video-resolutions")
+async def get_video_resolutions(db: Any = Depends(get_db)):
+    m = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA Generation'})
+    if m and m.resolutionJson:
+        import json as _json
+        try:
+            return _json.loads(m.resolutionJson)
+        except Exception:
+            pass
+    return DEFAULT_VIDEO_RESOLUTIONS
+
+@router.post("/video-resolutions/save")
+async def save_video_resolutions(payload: dict, db: Any = Depends(get_db)):
+    import json as _json
+    data = _json.dumps(payload)
+    existing = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA Generation'})
+    if existing:
+        await db.comfyworkflowmapping.update(
+            data={'resolutionJson': data},
+            where={'id': existing.id}
+        )
+    else:
+        await db.comfyworkflowmapping.create({
+            'action': 'MinimaxH3 Ref2VA Generation',
+            'workflowFile': None,
+            'resolutionJson': data
+        })
+    return {"status": "success"}

@@ -207,6 +207,12 @@ const WorkflowInputManager = ({
       const data = await response.json();
       console.log(`[Gen] Queued: task_id=${data.task_id}`);
       onQueueChangeRef.current(queueCount + 1);
+      // Poll immediately for fast workflows, then continue normal interval
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      runPollCycle();
     } catch (error) {
       console.error("[Gen] Failed to queue generation:", error);
     }

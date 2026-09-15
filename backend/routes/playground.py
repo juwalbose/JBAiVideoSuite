@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 import os
 import json
 import uuid
+import asyncio
 import httpx
 from database import get_db
 from .playground_parser import PlaygroundParser
@@ -111,6 +112,9 @@ async def generate(request: GenerateRequest, db: Any = Depends(get_db)):
         prompt_id = queue_res.json()["prompt_id"]
         active_tasks[task_id] = prompt_id
         print(f"[Queue] task_id={task_id} prompt_id={prompt_id} (active: {len(active_tasks)})")
+
+    # Small delay to let ComfyUI register the prompt in history before we return
+    await asyncio.sleep(0.5)
 
     return {"task_id": task_id, "prompt_id": prompt_id}
 

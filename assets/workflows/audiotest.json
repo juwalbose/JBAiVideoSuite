@@ -1,0 +1,64 @@
+{
+  "1": {
+    "inputs": {
+      "audio": "NextTimeUnc.mp3"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio1"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "ComfyUI_temp_bkbmd_00001_.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image1"
+    }
+  },
+  "4": {
+    "inputs": {
+      "boolean": true,
+      "on_true": [
+        "3",
+        0
+      ],
+      "on_false": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "5": {
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "(output:image) image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "mode": "always",
+      "volume": 0.5,
+      "file": "notify.mp3",
+      "any": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "PlaySound|pysssss",
+    "_meta": {
+      "title": "PlaySound 🐍"
+    }
+  }
+}

@@ -31,7 +31,7 @@ class PlaygroundParser:
         if not os.path.exists(full_path):
             return {"is_valid": False, "error": f"File not found: {full_path}"}
 
-        with open(full_path, 'r') as f:
+        with open(full_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         playground_obj = {
