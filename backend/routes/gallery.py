@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import Any
 import os
+import base64
 
 from database import get_db
 
@@ -26,6 +27,23 @@ async def get_gallery():
             items.append({"path": f"/assets/generated/{f}", "type": ftype})
     items.sort(key=lambda x: x["path"])
     return {"images": [item["path"] for item in items], "types": {item["path"]: item["type"] for item in items}}
+
+@router.post("/upload")
+async def upload_image(payload: dict):
+    """Receives a base64-encoded image and writes it to the assets/generated folder."""
+    filename = payload.get("filename", "upload.png")
+    data_url = payload.get("data", "")
+    if not data_url:
+        return {"status": "error", "details": "Missing image data"}
+    # Strip data URL prefix (e.g. "data:image/png;base64,")
+    if "," in data_url:
+        data_url = data_url.split(",", 1)[1]
+    if not os.path.exists(GENERATED_IMAGES_DIR):
+        os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
+    dest = os.path.join(GENERATED_IMAGES_DIR, filename)
+    with open(dest, "wb") as out:
+        out.write(base64.b64decode(data_url))
+    return {"status": "success", "path": f"/assets/generated/{filename}"}
 
 @router.delete("/{filename}")
 async def delete_image(filename: str):

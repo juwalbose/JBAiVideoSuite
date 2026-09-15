@@ -23,29 +23,65 @@ const Studio = () => {
 
   const { loadSettings } = useSettingsStore();
 
+  const [llmAction, setLlmAction] = useState<'loading' | 'unloading' | null>(null);
+
+  const loadLlm = async () => {
+    const { backend } = useSettingsStore.getState();
+    if (!backend?.apiUrl) return;
+    setLlmAction('loading');
+    try {
+      await fetch(`${backend.apiUrl}/llm/load`, { method: 'POST' });
+    } catch (e) {
+      console.error('LLM load failed:', e);
+    } finally {
+      setLlmAction(null);
+      checkStatuses();
+    }
+  };
+
+  const unloadLlm = async () => {
+    const { backend } = useSettingsStore.getState();
+    if (!backend?.apiUrl) return;
+    setLlmAction('unloading');
+    try {
+      await fetch(`${backend.apiUrl}/llm/unload`, { method: 'POST' });
+    } catch (e) {
+      console.error('LLM unload failed:', e);
+    } finally {
+      setLlmAction(null);
+      checkStatuses();
+    }
+  };
+
+  const checkStatuses = () => {
+    const { backend, comfyui } = useSettingsStore.getState();
+    if (!backend?.apiUrl) return;
+    const timeout = 3000;
+    setLlmStatus('Connecting...');
+    setComfyStatus('Connecting...');
+    const llmPromise = fetch(`${backend.apiUrl}/handshake`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'healthy') setLlmStatus(`🟢 ${data.active_model}`);
+        else if (data.status === 'no_models') setLlmStatus('🔵 No Models Loaded');
+        else setLlmStatus(`🔴 ${data.status.toUpperCase()}`);
+      })
+      .catch(() => setLlmStatus('🔴 Unreachable'));
+    const comfyPromise = fetch(`${backend.apiUrl}/comfyui/check?host=${comfyui.ip}&port=${comfyui.port}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.available) setComfyStatus('🟢 Online');
+        else setComfyStatus('🔴 Offline');
+      })
+      .catch(() => setComfyStatus('🔴 Unreachable'));
+    Promise.race([llmPromise, new Promise(r => setTimeout(r, timeout))]);
+    Promise.race([comfyPromise, new Promise(r => setTimeout(r, timeout))]);
+  };
+
   useEffect(() => {
     loadSettings().then(() => {
       fetchProjects();
-      const { backend, comfyui } = useSettingsStore.getState();
-      if (!backend?.apiUrl) return;
-      const timeout = 3000;
-      const llmPromise = fetch(`${backend.apiUrl}/handshake`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'healthy') setLlmStatus(`🟢 ${data.active_model}`);
-          else if (data.status === 'no_models') setLlmStatus('🔵 No Models Loaded');
-          else setLlmStatus(`🔴 ${data.status.toUpperCase()}`);
-        })
-        .catch(() => setLlmStatus('🔴 Unreachable'));
-      const comfyPromise = fetch(`${backend.apiUrl}/comfyui/check?host=${comfyui.ip}&port=${comfyui.port}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.available) setComfyStatus('🟢 Online');
-          else setComfyStatus('🔴 Offline');
-        })
-        .catch(() => setComfyStatus('🔴 Unreachable'));
-      Promise.race([llmPromise, new Promise(r => setTimeout(r, timeout))]);
-      Promise.race([comfyPromise, new Promise(r => setTimeout(r, timeout))]);
+      checkStatuses();
     });
   }, [loadSettings]);
 
@@ -75,12 +111,40 @@ const Studio = () => {
           </button>
         </nav>
         <div className="flex gap-4 items-center">
-          <span className={`text-sm font-mono ${llmStatus.startsWith('🟢') ? 'text-green-600' : llmStatus.includes('No Models') ? 'text-blue-600' : 'text-red-600'}`}>
-            LLM: {llmStatus}
-          </span>
-          <span className={`text-sm font-mono ${comfyStatus.includes('Online') ? 'text-green-600' : 'text-red-600'}`}>
-            ComfyUI: {comfyStatus}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className={`text-sm font-mono ${llmStatus.startsWith('🟢') ? 'text-green-600' : llmStatus.includes('No Models') ? 'text-blue-600' : 'text-red-600'}`}>
+              LLM: {llmStatus}
+            </span>
+            <button onClick={checkStatuses} className="text-gray-400 hover:text-blue-600 transition-colors" title="Re-check LLM status">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+            </button>
+            {llmStatus.includes('No Models') && (
+              <button onClick={loadLlm} disabled={llmAction !== null} className="text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50" title="Load model">
+                <svg className={`w-3.5 h-3.5 ${llmAction === 'loading' ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" /><path d="M5 12h14" />
+                </svg>
+              </button>
+            )}
+            {llmStatus.startsWith('🟢') && (
+              <button onClick={unloadLlm} disabled={llmAction !== null} className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50" title="Unload model">
+                <svg className={`w-3.5 h-3.5 ${llmAction === 'unloading' ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className={`text-sm font-mono ${comfyStatus.includes('Online') ? 'text-green-600' : 'text-red-600'}`}>
+              ComfyUI: {comfyStatus}
+            </span>
+            <button onClick={checkStatuses} className="text-gray-400 hover:text-blue-600 transition-colors" title="Re-check ComfyUI status">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+            </button>
+          </div>
           <button 
             onClick={() => setActiveTab('settings')}
             className={`hover:text-blue-600 transition-colors ${activeTab === 'settings' ? 'border-b-2 border-blue-600' : ''}`}

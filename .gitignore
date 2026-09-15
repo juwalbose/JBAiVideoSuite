@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .venv/
 backend/.venv/
+backend/node_modules/
+backend/check_db.py
+backend/check_shots.py
 
 # Generated assets
 assets/generated/

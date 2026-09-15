@@ -28,6 +28,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   const [mapField, setMapField] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const baseUrl = backend?.apiUrl || 'http://127.0.0.1:8000';
 
@@ -66,6 +67,31 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
   useEffect(() => {
     if (selectedImage) fetchAssets();
   }, [selectedImage]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/gallery/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, data: reader.result as string }),
+        });
+        const data = await res.json();
+        if (data.status === 'error') throw new Error(data.details);
+        fetchImages();
+      } catch (err) {
+        console.error('Upload failed:', err);
+      } finally {
+        setUploading(false);
+        e.target.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleDelete = async () => {
     if (!selectedImage) return;
@@ -112,9 +138,15 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
     <div className={`flex flex-col w-full h-full border rounded-xl bg-white shadow-sm p-4 ${className}`}>
       <div className="flex justify-between items-center mb-4 border-b pb-2">
         <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Gallery</h2>
-        <button onClick={fetchImages} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shadow-sm">
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <label className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors shadow-sm cursor-pointer">
+            {uploading ? 'Adding...' : 'Add'}
+            <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
+          </label>
+          <button onClick={fetchImages} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col flex-1 min-h-0">

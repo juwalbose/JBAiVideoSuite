@@ -59,6 +59,54 @@ async def check_lmstudio_health(db = Depends(get_db)):
                 details=str(e)
             )
 
+@router.post("/llm/load")
+async def load_llm(payload: dict = {}, db = Depends(get_db)):
+    """Loads the configured model (from LLMSettings.modelName) via LM Studio's /api/v1/models/load."""
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        return {"status": "error", "details": "No LLM settings found"}
+
+    model_id = payload.get("model") or llm.modelName
+    if not model_id:
+        return {"status": "error", "details": "No model specified"}
+
+    ip, port = llm.ip, llm.port
+    base = f"http://{ip}:{port}/api/v1"
+    timeout = httpx.Timeout(30.0, connect=3.0)
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            resp = await client.post(f"{base}/models/load", json={"model": model_id})
+            data = resp.json()
+            return {"status": "success", "model": model_id, "details": data.get("status", "Model loaded")}
+        except Exception as e:
+            return {"status": "error", "details": str(e)}
+
+@router.post("/llm/unload")
+async def unload_llm(db = Depends(get_db)):
+    """Unloads the currently active model via LM Studio's /api/v1/models/unload."""
+    llm = await db.llmsettings.find_first()
+    if not llm:
+        return {"status": "error", "details": "No LLM settings found"}
+
+    ip, port = llm.ip, llm.port
+    timeout = httpx.Timeout(10.0, connect=3.0)
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            # Use OpenAI-compat endpoint to get loaded models
+            resp = await client.get(f"http://{ip}:{port}/v1/models")
+            resp.raise_for_status()
+            model_list = resp.json().get("data", [])
+            if not model_list:
+                return {"status": "error", "details": "No models loaded"}
+            instance_id = model_list[0].get("id", "")
+            unload_resp = await client.post(f"http://{ip}:{port}/api/v1/models/unload", json={"instance_id": instance_id})
+            unload_data = unload_resp.json()
+            return {"status": "success", "model": instance_id, "details": "Model unloaded"}
+        except Exception as e:
+            return {"status": "error", "details": str(e)}
+
 @router.get("/llm-test")
 async def test_llm(db = Depends(get_db)):
     llm = await db.llmsettings.find_first()

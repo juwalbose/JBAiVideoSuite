@@ -36,8 +36,8 @@ model Project {
   type          String   @default("single")
   duration      Int      @default(120)
   episodeCount  Int      @default(1)
-  story         Story?
-  script        Script?
+  stories       Story[]
+  scripts       Script[]
   beats         Beat[]
   assets        Asset[]
   finalVideo    FinalVideo?
