@@ -2,10 +2,11 @@
 __pycache__/
 *.pyc
 .venv/
+backend/.venv/
 
-# Generated assets (ignore contents, keep folder)
-assets/generated/*
-!assets/generated/.gitkeep
+# Generated assets
+assets/generated/
+assets/audio/
 
 # Env files
 .env*
