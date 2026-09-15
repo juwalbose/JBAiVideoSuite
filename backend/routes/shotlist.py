@@ -53,6 +53,7 @@ async def save_shotlist(id: str, payload: dict, db: Any = Depends(get_db)):
             'characterAudioTypes': json.dumps(s.get('characterAudioTypes', [])) if s.get('characterAudioTypes') else None,
             'musicOn': s.get('musicOn', False),
             'musicDesc': s.get('musicDesc', ''),
+            'videoPath': s.get('videoPath') or None,
         })
     return {"status": "success", "count": len(shots)}
 

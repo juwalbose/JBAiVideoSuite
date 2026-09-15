@@ -76,6 +76,10 @@ const ProjectLibrary = () => {
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)} 
       />
+
+      <footer className="mt-16 pb-4 text-center text-xs text-gray-400">
+        Created by Juwal Bose for Visual Fictions
+      </footer>
     </div>
   );
 };

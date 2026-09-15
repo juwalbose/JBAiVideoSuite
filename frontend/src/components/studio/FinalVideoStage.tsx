@@ -16,6 +16,7 @@ interface ShotData {
   sceneDialogAudioId: string | null;
   characterAudioIds: string[];
   characterAudioTypes: string[];
+  videoPath: string | null;
 }
 
 interface AssetState {
@@ -51,6 +52,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [audioAssets, setAudioAssets] = useState<AudioItem[]>([]);
   const [seed, setSeed] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -98,9 +100,18 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     sceneDialogAudioId: s.sceneDialogAudioId || null,
     characterAudioIds: parseArr(s.characterAudioIds),
     characterAudioTypes: parseArr(s.characterAudioTypes),
+    videoPath: s.videoPath || null,
   });
 
   const shot = shots[selectedIdx];
+
+  useEffect(() => {
+    if (shot?.videoPath) {
+      setVideoUrl(`${baseUrl}${shot.videoPath}`);
+    } else {
+      setVideoUrl(null);
+    }
+  }, [selectedIdx, currentProject?.id]);
 
   const findAsset = (list: AssetItem[], assetId: string | null, stateId: string | null): { asset: AssetItem; state: AssetState } | null => {
     if (!assetId) return null;
@@ -126,8 +137,55 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     });
   }
 
-  const handleGenerate = (resolution: 'low' | 'high') => {
-    console.log(`[FinalVideo] Generate ${resolution} resolution for shot ${shot?.shot}`, { seed, prompt: shot?.prompt });
+  const pollStatus = (taskId: string, resolution: 'low' | 'high') => {
+    const check = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/videogen/status/${taskId}`);
+        if (res.headers.get('X-Task-Status') === 'complete') {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url);
+          if (resolution === 'high') {
+            setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, videoPath: url } : s)));
+          }
+          setIsGenerating(false);
+        } else {
+          const data = await res.json();
+          if (data.status === 'pending') {
+            setTimeout(check, 3000);
+          } else {
+            console.error('Video gen error:', data.details);
+            setIsGenerating(false);
+          }
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+        setTimeout(check, 3000);
+      }
+    };
+    setTimeout(check, 1000);
+  };
+
+  const handleGenerate = async (resolution: 'low' | 'high') => {
+    if (!currentProject || !shot) return;
+    setIsGenerating(true);
+    try {
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/videogen/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shot: shot.shot, resolution, seed, prompt: shot.prompt }),
+      });
+      const data = await res.json();
+      if (data.status === 'error') {
+        console.error('Generate failed:', data.details);
+        setIsGenerating(false);
+        return;
+      }
+      pollStatus(data.task_id, resolution);
+    } catch (err) {
+      console.error('Generate error:', err);
+      setIsGenerating(false);
+    }
   };
 
   const handleSave = async () => {
@@ -320,15 +378,17 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 <div className="ml-auto flex gap-2">
                   <button
                     onClick={() => handleGenerate('low')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    disabled={isGenerating}
+                    className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    Gen Low Res
+                    {isGenerating ? 'Generating...' : 'Gen Low Res'}
                   </button>
                   <button
                     onClick={() => handleGenerate('high')}
-                    className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                    disabled={isGenerating}
+                    className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    Gen High Res
+                    {isGenerating ? 'Generating...' : 'Gen High Res'}
                   </button>
                   <button
                     onClick={handleSave}
