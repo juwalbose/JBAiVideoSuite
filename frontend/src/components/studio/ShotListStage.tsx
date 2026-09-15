@@ -54,7 +54,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   useEffect(() => {
     if (!currentProject) return;
     const baseUrl = useSettingsStore.getState().backend.apiUrl;
-    fetch(`${baseUrl}/projects/${currentProject.id}/shotlist`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -63,7 +63,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         }
       })
       .catch(console.error);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, selectedEpisode]);
 
   const mapShot = (s: any): ShotData => ({
     shot: Number(s.shot) || 0,
@@ -140,7 +140,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     setSaved(false);
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-shots`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-shots?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -167,7 +167,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     setSaved(false);
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shots }),
@@ -193,15 +193,15 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   useEffect(() => {
     if (!currentProject) return;
     const baseUrl = useSettingsStore.getState().backend.apiUrl;
-    fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => { if (data.status === 'success') setProjectAssets(data.assets); })
       .catch(console.error);
-    fetch(`${baseUrl}/projects/${currentProject.id}/audio`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/audio?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => { if (data.status === 'success') setAudioAssets(data.audio); })
       .catch(console.error);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, selectedEpisode]);
 
   const generatePrompt = async (index: number) => {
     if (!currentProject) return;
@@ -210,7 +210,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
       const shot = shots[index];
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shot),
@@ -237,7 +237,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       if (abortRef.current) break;
       setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
       try {
-        const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt`, {
+        const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt?episode=${selectedEpisode}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(shots[i]),

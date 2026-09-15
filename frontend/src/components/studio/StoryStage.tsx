@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
-const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
+const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript }: { selectedEpisode: number; onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
   const { currentProject, updateProject, updateStory } = useProjectStore();
   const [rawInput, setRawInput] = useState('');
   const [narrativeArc, setNarrativeArc] = useState('');
@@ -28,7 +28,7 @@ const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCou
     setError('');
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-story`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-story?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawInput }),
@@ -55,7 +55,7 @@ const StoryStage = ({ onEpisodeCountChange, onNavigateToScript }: { onEpisodeCou
     setError('');
     try {
       await updateProject(currentProject.name, duration, currentProject.type === 'episodic' ? episodeCount : undefined);
-      await updateStory(narrativeArc, rawInput);
+      await updateStory(narrativeArc, rawInput, selectedEpisode);
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');

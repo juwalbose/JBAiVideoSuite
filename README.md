@@ -1,10 +1,12 @@
-# BionicProducer
+# JBAiVideoSuite
 
 An AI-powered video production pipeline that takes you from a raw story idea to a final video through five stages:
 
 **Story → Script → Assets → Shot List → Final Video**
 
-Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), and integrates with LM Studio (LLM) and ComfyUI (image generation).
+Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), and integrates with LM Studio (LLM) and ComfyUI (image/video generation).
+
+- Vibe coded using Qwen 3.8 27B EXL3 3BPW locally on a 4070Ti (16GB VRAM)
 
 ---
 
@@ -15,9 +17,12 @@ Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), an
 - **Script Stage** — Generate a full script from the story, refine dialog, extract cast
 - **Assets Stage** — Manage Characters, Locations, and Props with states; generate image prompts; map generated images
 - **Shot List Stage** — Generate a shot list from the script
-- **Playground** — Run ComfyUI workflows with a visual gallery and input manager
+- **Final Video** — Two sub-tabs:
+  - **Generate Clips** — Per-shot video generation via ComfyUI (MinimaxH3 Ref2VA workflow). Editable prompt, asset previews (location/characters/props), audio players, seed + duration controls, low/high-res generation, save to shot
+  - **Assemble Clips** — Full-width video preview (16:9), shot strip with thumbnails, play sequence (auto-advances through shots), export placeholder
+- **Playground** — Run ComfyUI workflows with a visual gallery and input manager (image + audio inputs)
 - **Chat Panel** — LLM chat with system prompt support
-- **Settings** — Configure LLM, ComfyUI, backend, workflows, system prompts, and app action mappings
+- **Settings** — Configure LLM, ComfyUI, backend, workflows, system prompts, app action mappings, and video resolution presets
 
 ---
 
@@ -28,7 +33,7 @@ Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), an
 | Python | 3.12+ | Backend runtime |
 | Node.js | 20+ | Frontend runtime |
 | LM Studio | latest | Local LLM server (OpenAI-compatible API) |
-| ComfyUI | latest | Image generation (optional) |
+| ComfyUI | latest | Image + video generation |
 
 ---
 
@@ -128,7 +133,8 @@ Open **http://localhost:3000** in your browser.
 JBAiVideoSuite/
 ├── StartApp.bat              # Windows one-click launcher
 ├── assets/
-│   ├── generated/            # Generated images (ComfyUI output)
+│   ├── generated/            # Generated images + videos (ComfyUI output)
+│   ├── audio/                # Generated audio files
 │   ├── systemprompts/        # LLM system prompt .txt files
 │   └── workflows/            # ComfyUI workflow JSON files
 ├── backend/
@@ -144,21 +150,26 @@ JBAiVideoSuite/
 │       ├── assets.py         # Asset/state CRUD, prompt generation
 │       ├── handshake.py      # LLM health check
 │       ├── comfyui.py        # ComfyUI health check + image upload
-│       ├── playground.py     # Workflow list/parse/generate
+│       ├── playground.py     # Workflow list/parse/generate (image + audio)
+│       ├── playground_parser.py  # Workflow JSON parser (role extraction)
 │       ├── gallery.py        # Generated image gallery
 │       ├── systemprompts.py  # System prompt CRUD
 │       ├── chat.py           # LLM chat
-│       └── appsettings.py    # App action → system prompt mapping
+│       ├── appsettings.py    # App action mapping + video resolution presets
+│       ├── shotlist.py       # Shot list CRUD (includes videoPath)
+│       └── videogen.py       # Per-shot video generation (MinimaxH3 Ref2VA)
 └── frontend/
     ├── src/
     │   ├── pages/
     │   │   ├── index.tsx     # Studio (5-stage pipeline)
     │   │   └── Settings.tsx  # Settings page
     │   ├── components/
-    │   │   ├── studio/       # Story, Script, Assets, ShotList stages
+    │   │   ├── studio/       # Story, Script, Assets, ShotList, FinalVideo stages
+    │   │   │   └── FinalVideoStage.tsx  # Generate Clips + Assemble Clips
     │   │   ├── playground/   # ComfyUI workflow runner
     │   │   ├── settings/     # Settings panels
     │   │   ├── Gallery.tsx   # Image gallery with map-to-asset
+    │   │   ├── AudioPicker.tsx  # Audio file picker
     │   │   └── ChatPanel.tsx # LLM chat
     │   └── store/
     │       ├── projectStore.ts   # Project state (Zustand)
@@ -176,7 +187,7 @@ JBAiVideoSuite/
 | **Script** | Generate a full script → refine dialog → extract cast (characters, locations, props) |
 | **Assets** | Review/edit extracted assets → generate image prompts → map generated images to asset states |
 | **Shot List** | Generate a shot list from the script |
-| **Final Video** | (In development) |
+| **Final Video** | **Generate Clips** — per-shot video gen via ComfyUI (editable prompt, asset/audio previews, seed, duration, low/high res). **Assemble Clips** — preview, shot strip, play sequence, export |
 
 ---
 
@@ -190,6 +201,23 @@ All settings are stored in the SQLite database and editable via the **Settings**
 - **Workflows** — Manage ComfyUI workflow files
 - **System Prompts** — Upload/edit `.txt` system prompt files
 - **App Settings** — Map app actions (e.g., "Generate Script") to specific system prompts
+- **Video Resolutions** — Low/High res presets (width × height) for MinimaxH3 Ref2VA video generation
+
+---
+
+## Video Generation
+
+Per-shot video generation uses the **MinimaxH3 Ref2VA** ComfyUI workflow. The backend:
+
+1. Loads the mapped workflow JSON
+2. Injects prompt, seed, width, height, duration from the shot
+3. Collects reference images (location, character sheets, props) and audio (scene dialog, character audio) from linked assets
+4. Uploads files to ComfyUI and queues the prompt
+5. Polls ComfyUI history for completion
+6. Saves the generated video to `assets/generated/`
+7. For **high-res** generation, persists `videoPath` to the shot in the database
+
+Resolution presets are configured in **Settings → MinimaxH3 Ref2VA Generation** (default: low 960×544, high 1920×1080).
 
 ---
 

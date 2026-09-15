@@ -18,7 +18,7 @@ type AudioItem = {
   transcript: string;
 };
 
-const AssetsStage = () => {
+const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const { currentProject } = useProjectStore();
   const { backend } = useSettingsStore();
   const baseUrl = backend?.apiUrl || 'http://127.0.0.1:8000';
@@ -52,22 +52,22 @@ const AssetsStage = () => {
 
   const refreshAssets = async () => {
     if (!currentProject) return;
-    const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets`);
+    const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`);
     const data = await res.json();
     if (data.status === 'success') setAssets(data.assets);
   };
 
   useEffect(() => {
     if (!currentProject) return;
-    fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
       .then(r => r.json())
       .then(data => { if (data.status === 'success') setAssets(data.assets); })
       .catch(err => setError('Failed to load assets'));
-    fetch(`${baseUrl}/projects/${currentProject.id}/audio`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/audio?episode=${selectedEpisode}`)
       .then(r => r.json())
       .then(data => { if (data.status === 'success') setAudioList(data.audio); })
       .catch(console.error);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, selectedEpisode]);
 
   useEffect(() => {
     const list = assets[activeTab] || [];
@@ -131,7 +131,7 @@ const AssetsStage = () => {
       if (editing.states && asset.states?.length) {
         body.states = asset.states.map((st, i) => i === selected.stateIndex ? editing.states![0] : st);
       }
-      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets/${getAssetId()}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets/${getAssetId()}?episode=${selectedEpisode}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.status === 'error') throw new Error(data.details || 'Save failed');
       await refreshAssets();
@@ -143,7 +143,7 @@ const AssetsStage = () => {
     setGenerating(true); setError('');
     try {
       const state = editing.states?.[0];
-      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets/${getAssetId()}/generate-prompt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetDescription: editing.description, stateName: state?.name, stateDescription: state?.description }) });
+      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets/${getAssetId()}/generate-prompt?episode=${selectedEpisode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetDescription: editing.description, stateName: state?.name, stateDescription: state?.description }) });
       const data = await res.json();
       if (data.status === 'error') { setError(data.details); return; }
       const st = [...editing.states!];
@@ -172,7 +172,7 @@ const AssetsStage = () => {
       const item = allStates[i];
       setGenAll({ active: true, current: i + 1, total: allStates.length, done, failed });
       try {
-        const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}/generate-prompt`, {
+        const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}/generate-prompt?episode=${selectedEpisode}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ assetDescription: item.assetDesc, stateName: item.stateName, stateDescription: item.stateDesc }),
         });
@@ -182,7 +182,7 @@ const AssetsStage = () => {
         const list = assets[item.type as keyof typeof assets];
         const asset = list[item.assetIndex];
         const states = (asset.states || []).map((st, si) => si === item.stateIndex ? { ...st, prompt: data.prompt } : st);
-        await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}`, {
+        await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}?episode=${selectedEpisode}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: asset.name, description: asset.description, states }),
         });
@@ -304,7 +304,7 @@ const AssetsStage = () => {
       const body: Record<string, any> = { type, stateName: addStateName, stateDescription: addStateDesc };
       if (addExisting) body.existingAssetId = addExisting;
       else { body.assetName = addAssetName; body.assetDescription = addAssetDesc; }
-      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/assets?episode=${selectedEpisode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.status === 'error') throw new Error(data.details);
       setShowAddModal(false);
@@ -322,7 +322,7 @@ const AssetsStage = () => {
       formData.append('name', audioName);
       formData.append('audio_type', audioType);
       formData.append('transcript', audioTranscript);
-      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`, { method: 'POST', body: formData });
+      const res = await fetch(`${baseUrl}/projects/${currentProject.id}/audio?episode=${selectedEpisode}`, { method: 'POST', body: formData });
       const data = await res.json();
       if (data.status === 'error') throw new Error(data.details);
       setShowAudioModal(false);

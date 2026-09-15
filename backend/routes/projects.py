@@ -23,7 +23,7 @@ async def get_system_prompt(db, action: str) -> Optional[str]:
 @router.get("/")
 async def list_projects(db: Any = Depends(get_db)):
     try:
-        projects = await db.project.find_many(include={'story': {}, 'script': {}})
+        projects = await db.project.find_many()
         return [p.dict() for p in projects]
     except Exception as e:
         print(f"DEBUG: Error fetching projects: {e}")
@@ -62,15 +62,16 @@ async def create_project(project: ProjectCreate, db: Any = Depends(get_db)):
         'type': project.type
     })
     
-    # Automatically create an initial story for this project
+    # Automatically create an initial story for this project (episode 1)
     await db.story.create({
         'projectId': new_project.id,
+        'episode': 1,
         'rawInput': '',
         'narrativeArc': ''
     })
     
-    # Fetch the updated project with its story and script included
-    updated_project = await db.project.find_first(where={'id': new_project.id}, include={'story': {}, 'script': {}})
+    # Fetch the updated project
+    updated_project = await db.project.find_first(where={'id': new_project.id})
     return updated_project.dict()
 
 @router.delete("/{id}")
@@ -80,14 +81,17 @@ async def delete_project(id: str, db: Any = Depends(get_db)):
     if not project:
         return {"status": "error", "details": "Project not found"}
 
-    # Find and delete shots, assets, beats, story, finalvideo for this project
+    # Find and delete shots, assets, beats, story, shotlist, audio, finalvideo for this project
     beats = await db.beat.find_many(where={'projectId': id})
     beat_ids = [b.id for b in beats]
     if beat_ids:
         await db.shot.delete_many(where={'beatId': {'in': beat_ids}})
+    await db.shotlist.delete_many(where={'projectId': id})
+    await db.audioasset.delete_many(where={'projectId': id})
     await db.asset.delete_many(where={'projectId': id})
     await db.beat.delete_many(where={'projectId': id})
     await db.story.delete_many(where={'projectId': id})
+    await db.script.delete_many(where={'projectId': id})
     await db.finalvideo.delete_many(where={'projectId': id})
     await db.project.delete(where={'id': id})
 
@@ -111,11 +115,14 @@ async def update_project(id: str, payload: dict, db: Any = Depends(get_db)):
     return updated_project.dict()
 
 @router.post("/{id}/generate-story")
-async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get_db)):
-    # 1. Fetch the project and its story
-    project = await db.project.find_first(where={'id': id}, include={'story': {}})
-    if not project or not project.story:
-        return {"status": "error", "details": "Project or Story not found"}
+async def generate_story(id: str, story_input: StoryInput, episode: int = 1, db: Any = Depends(get_db)):
+    # 1. Fetch the project and its story for this episode
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    story = await db.story.find_first(where={'projectId': id, 'episode': episode})
+    if not story:
+        return {"status": "error", "details": f"Story not found for episode {episode}"}
 
     # 2. Check for mapped system prompt
     system_prompt = await get_system_prompt(db, "Develop Raw Story")
@@ -147,11 +154,14 @@ async def generate_story(id: str, story_input: StoryInput, db: Any = Depends(get
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/generate-script")
-async def generate_script(id: str, db: Any = Depends(get_db)):
-    # 1. Fetch the project and its story
-    project = await db.project.find_first(where={'id': id}, include={'story': {}})
-    if not project or not project.story:
-        return {"status": "error", "details": "Project or Story not found"}
+async def generate_script(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    # 1. Fetch the project and its story for this episode
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    story = await db.story.find_first(where={'projectId': id, 'episode': episode})
+    if not story:
+        return {"status": "error", "details": f"Story not found for episode {episode}"}
 
     # 2. Check for mapped system prompt
     system_prompt = await get_system_prompt(db, "Generate Script")
@@ -167,7 +177,7 @@ async def generate_script(id: str, db: Any = Depends(get_db)):
         "model": modelName,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{project.story.narrativeArc}"}
+            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{story.narrativeArc}"}
         ],
         "temperature": temperature,
     }
@@ -183,10 +193,13 @@ async def generate_script(id: str, db: Any = Depends(get_db)):
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/generate-shots")
-async def generate_shots(id: str, db: Any = Depends(get_db)):
-    project = await db.project.find_first(where={'id': id}, include={'script': {}})
-    if not project or not project.script:
-        return {"status": "error", "details": "Project or Script not found"}
+async def generate_shots(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    script = await db.script.find_first(where={'projectId': id, 'episode': episode})
+    if not script:
+        return {"status": "error", "details": f"Script not found for episode {episode}"}
     system_prompt = await get_system_prompt(db, "Generate Shots")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Generate Shots'. Go to Settings > App Settings and map a prompt first."}
@@ -197,7 +210,7 @@ async def generate_shots(id: str, db: Any = Depends(get_db)):
         "model": modelName,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Split this script into shots for MiniMax H3 video model:\n\n{project.script.content}"}
+            {"role": "user", "content": f"Split this script into shots for MiniMax H3 video model:\n\n{script.content}"}
         ],
         "temperature": temperature,
         "max_tokens": 16384,
@@ -215,7 +228,7 @@ async def generate_shots(id: str, db: Any = Depends(get_db)):
         return {"status": "error", "details": str(e)}
 
 @router.patch("/{id}/script")
-async def update_script(id: str, payload: dict, db: Any = Depends(get_db)):
+async def update_script(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
     # 1. Fetch the project
     project = await db.project.find_first(where={'id': id})
     if not project:
@@ -223,8 +236,8 @@ async def update_script(id: str, payload: dict, db: Any = Depends(get_db)):
 
     content = payload.get('content', '')
 
-    # 2. Upsert the script
-    existing = await db.script.find_first(where={'projectId': id})
+    # 2. Upsert the script for this episode
+    existing = await db.script.find_first(where={'projectId': id, 'episode': episode})
     if existing:
         await db.script.update(
             where={'id': existing.id},
@@ -233,17 +246,21 @@ async def update_script(id: str, payload: dict, db: Any = Depends(get_db)):
     else:
         await db.script.create({
             'projectId': id,
+            'episode': episode,
             'content': content
         })
 
     return {"status": "success"}
 
 @router.patch("/{id}/story")
-async def update_story(id: str, story_input: StoryInput, db: Any = Depends(get_db)):
-    # 1. Fetch the project and its story
-    project = await db.project.find_first(where={'id': id}, include={'story': {}})
-    if not project or not project.story:
-        return {"status": "error", "details": "Project or Story not found"}
+async def update_story(id: str, story_input: StoryInput, episode: int = 1, db: Any = Depends(get_db)):
+    # 1. Fetch the project and its story for this episode
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    story = await db.story.find_first(where={'projectId': id, 'episode': episode})
+    if not story:
+        return {"status": "error", "details": f"Story not found for episode {episode}"}
 
     # 2. Update the story in the database
     await db.story.update(
@@ -251,7 +268,7 @@ async def update_story(id: str, story_input: StoryInput, db: Any = Depends(get_d
             'rawInput': story_input.rawInput,
             'narrativeArc': story_input.narrativeArc if story_input.narrativeArc is not None else ""
         },
-        where={'projectId': id}
+        where={'id': story.id}
     )
 
     return {"status": "success", "data": story_input}

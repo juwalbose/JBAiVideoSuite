@@ -10,8 +10,8 @@ AUDIO_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path
 
 
 @router.get("/{id}/audio")
-async def get_audio(id: str, db: Any = Depends(get_db)):
-    items = await db.audioasset.find_many(where={'projectId': id})
+async def get_audio(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    items = await db.audioasset.find_many(where={'projectId': id, 'episode': episode})
     return {"status": "success", "audio": [a.dict() for a in items]}
 
 
@@ -22,6 +22,7 @@ async def import_audio(
     name: str = Form(...),
     audio_type: str = Form(...),
     transcript: str = Form(""),
+    episode: int = Form(1),
     db: Any = Depends(get_db),
 ):
     os.makedirs(AUDIO_DIR, exist_ok=True)
@@ -34,6 +35,7 @@ async def import_audio(
     audio_path = f"/assets/audio/{filename}"
     await db.audioasset.create({
         'projectId': id,
+        'episode': episode,
         'name': name,
         'audioPath': audio_path,
         'audioType': audio_type,

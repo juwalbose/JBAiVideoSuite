@@ -21,7 +21,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       setScript(currentProject.script?.content || '');
       // Fetch saved assets from DB and populate the cast box
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
+      fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
         .then(res => res.json())
         .then(data => {
           if (data.status === 'success' && data.assets) {
@@ -47,7 +47,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     setError('');
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-script`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/generate-script?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -74,7 +74,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     setError('');
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/extract-cast`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/extract-cast?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -103,7 +103,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     setError('');
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/refine-dialog`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/refine-dialog?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script }),
@@ -188,7 +188,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
 
       // Save script
-      const scriptRes = await fetch(`${baseUrl}/projects/${currentProject.id}/script`, {
+      const scriptRes = await fetch(`${baseUrl}/projects/${currentProject.id}/script?episode=${selectedEpisode}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: script }),
@@ -204,7 +204,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
             if (text.startsWith("json")) text = text.slice(4);
           }
           JSON.parse(text);
-          const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/save-assets`, {
+          const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/save-assets?episode=${selectedEpisode}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ cast }),

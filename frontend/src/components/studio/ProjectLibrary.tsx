@@ -1,15 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useProjectStore } from '../../store/projectStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { Folder } from 'lucide-react';
 import NewProjectModal from './NewProjectModal';
 
 const ProjectLibrary = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { projects, currentProject, setCurrentProject, fetchProjects, deleteAllProjects } = useProjectStore();
+  const baseUrl = useSettingsStore.getState().backend.apiUrl;
+  const [coverImages, setCoverImages] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    const fetchCovers = async () => {
+      const newCovers: Record<string, string | null> = {};
+      for (const project of projects) {
+        try {
+          const res = await fetch(`${baseUrl}/projects/${project.id}/assets`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'success') {
+              const chars = data.assets?.characters || [];
+              const firstChar = chars[0];
+              const firstState = firstChar?.states?.[0];
+              const imgPath = firstState?.characterSheet || firstState?.imagePath;
+              newCovers[project.id] = imgPath ? `${baseUrl}${imgPath}` : null;
+            } else {
+              newCovers[project.id] = null;
+            }
+          } else {
+            newCovers[project.id] = null;
+          }
+        } catch {
+          newCovers[project.id] = null;
+        }
+      }
+      setCoverImages(newCovers);
+    };
+    fetchCovers();
+  }, [projects]);
 
   return (
     <div className="p-8">
@@ -47,8 +80,24 @@ const ProjectLibrary = () => {
                 currentProject?.id === project.id ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-200 bg-white'
               }`}
             >
-              <div className="w-full h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                <span className="text-gray-300 text-xs uppercase tracking-wider">No Preview</span>
+              <div className="w-full h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                {coverImages[project.id] ? (
+                  <img
+                    src={coverImages[project.id]!}
+                    alt={project.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).parentElement!.classList.add('flex', 'items-center', 'justify-center');
+                      const span = document.createElement('span');
+                      span.className = 'text-gray-300 text-xs uppercase tracking-wider';
+                      span.textContent = 'No Preview';
+                      (e.target as HTMLImageElement).parentElement!.appendChild(span);
+                    }}
+                  />
+                ) : (
+                  <span className="text-gray-300 text-xs uppercase tracking-wider">No Preview</span>
+                )}
               </div>
               <h3 className="text-xl font-bold mb-1">{project.name || 'Untitled Project'}</h3>
               <span className={`text-xs px-2 py-0.5 rounded-full ${

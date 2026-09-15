@@ -49,10 +49,13 @@ model Project {
 
 model Story {
   id           String   @id @default(cuid())
-  projectId    String   @unique 
+  projectId    String
+  episode      Int      @default(1)
   project      Project  @relation(fields: [projectId], references: [id])
   narrativeArc String
   rawInput     String?
+
+  @@unique([projectId, episode])
 }
 
 model Beat {
@@ -69,6 +72,7 @@ model Beat {
 model Asset {
   id              String        @id @default(cuid())
   projectId       String
+  episode         Int           @default(1)
   project         Project       @relation(fields: [projectId], references: [id])
   beatId          String?
   beat            Beat?         @relation(fields: [beatId], references: [id])
@@ -80,6 +84,8 @@ model Asset {
   states          AssetState[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@index([projectId, episode])
 }
 
 model AssetState {
@@ -126,11 +132,14 @@ model ComfyWorkflowMapping {
 
 model Script {
   id           String   @id @default(cuid())
-  projectId    String   @unique
+  projectId    String
+  episode      Int      @default(1)
   project      Project  @relation(fields: [projectId], references: [id])
   content      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, episode])
 }
 
 model FinalVideo {
@@ -145,6 +154,7 @@ model FinalVideo {
 model AudioAsset {
   id          String   @id @default(cuid())
   projectId   String
+  episode     Int      @default(1)
   project     Project  @relation(fields: [projectId], references: [id])
   name        String
   audioPath   String
@@ -152,11 +162,14 @@ model AudioAsset {
   transcript  String   @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([projectId, episode])
 }
 
 model ShotList {
   id          String   @id @default(cuid())
   projectId   String
+  episode     Int      @default(1)
   project     Project  @relation(fields: [projectId], references: [id])
   shot        Int
   scene       Int      @default(0)
@@ -184,4 +197,6 @@ model ShotList {
   videoPath             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([projectId, episode])
 }

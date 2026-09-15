@@ -59,19 +59,19 @@ const Studio = () => {
     <div className="flex flex-col h-screen w-full bg-white text-black">
       {/* Top Navigation Tabs */}
       <header className="h-16 border-b flex items-center justify-between px-8 bg-gray-50">
-        <div className="font-bold text-xl">BionicProducer</div>
+        <div className="font-bold text-xl">JBAiVideoSuite</div>
         <nav className="flex gap-8 items-center">
           <button 
             onClick={() => setActiveTab('app')}
             className={`hover:text-blue-600 transition-colors ${activeTab === 'app' ? 'border-b-2 border-blue-600' : ''}`}
           >
-            App
+            Direct The Video
           </button>
           <button 
             onClick={() => setActiveTab('playground')}
             className={`hover:text-blue-600 transition-colors ${activeTab === 'playground' ? 'border-b-2 border-blue-600' : ''}`}
           >
-            Playground
+            Comfy Generation
           </button>
         </nav>
         <div className="flex gap-4 items-center">
@@ -162,7 +162,7 @@ const Studio = () => {
                       {stageTab === 'story' && (
                         <div>
                           {currentProject?.story ? (
-                            <StoryStage onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
+                            <StoryStage selectedEpisode={selectedEpisode} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
                           ) : (
                             <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
                               <p className="text-gray-400 italic">No story yet. Create a project to begin.</p>
@@ -190,7 +190,23 @@ const Studio = () => {
                         </div>
                       )}
                       {stageTab === 'assets' && (
-                        <AssetsStage />
+                        <div className="space-y-4">
+                          {currentProject?.type === 'episodic' && (
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-700">Episode:</label>
+                              <select
+                                value={selectedEpisode}
+                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
+                                className="p-2 border rounded bg-white text-black"
+                              >
+                                {Array.from({ length: episodeCount }, (_, i) => (
+                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          <AssetsStage selectedEpisode={selectedEpisode} />
+                        </div>
                       )}
                       {stageTab === 'shotlist' && (
                         <div className="space-y-4">

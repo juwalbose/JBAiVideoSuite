@@ -9,16 +9,16 @@ router = APIRouter(prefix="/projects", tags=["ShotList"])
 
 
 @router.get("/{id}/shotlist")
-async def get_shotlist(id: str, db: Any = Depends(get_db)):
-    shots = await db.shotlist.find_many(where={'projectId': id})
+async def get_shotlist(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    shots = await db.shotlist.find_many(where={'projectId': id, 'episode': episode})
     shots.sort(key=lambda s: s.shot)
     return [s.dict() for s in shots]
 
 
 @router.post("/{id}/shotlist")
-async def save_shotlist(id: str, payload: dict, db: Any = Depends(get_db)):
+async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
     shots = payload.get('shots', [])
-    await db.shotlist.delete_many(where={'projectId': id})
+    await db.shotlist.delete_many(where={'projectId': id, 'episode': episode})
     for s in shots:
         beats = s.get('beats', [])
         subs = s.get('subs', '')
@@ -30,6 +30,7 @@ async def save_shotlist(id: str, payload: dict, db: Any = Depends(get_db)):
         prop_states = [x for x in s.get('propStateIds', []) if x]
         await db.shotlist.create({
             'projectId': id,
+            'episode': episode,
             'shot': s.get('shot', 0),
             'scene': s.get('scene', 0),
             'beats': json.dumps(beats) if isinstance(beats, list) else str(beats),
@@ -59,8 +60,8 @@ async def save_shotlist(id: str, payload: dict, db: Any = Depends(get_db)):
 
 
 @router.delete("/{id}/shotlist")
-async def delete_shotlist(id: str, db: Any = Depends(get_db)):
-    await db.shotlist.delete_many(where={'projectId': id})
+async def delete_shotlist(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    await db.shotlist.delete_many(where={'projectId': id, 'episode': episode})
     return {"status": "success"}
 
 
@@ -82,7 +83,7 @@ def get_state_desc(asset, state_id: str | None) -> str:
 
 
 @router.post("/{id}/shotlist/generate-prompt")
-async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)):
+async def generate_shot_prompt(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
     system_prompt = await get_system_prompt(db, "Generate Video Prompt")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Generate Video Prompt'."}
@@ -93,7 +94,7 @@ async def generate_shot_prompt(id: str, payload: dict, db: Any = Depends(get_db)
         if isinstance(beats, str):
             beats = json.loads(beats) if beats.startswith('[') else [int(x) for x in beats.replace('[]', '').split(',') if x.strip()]
 
-        script = await db.script.find_first(where={'projectId': id})
+        script = await db.script.find_first(where={'projectId': id, 'episode': episode})
         scene_text = extract_scene(script.content, scene_num) if script else ''
 
         beat_list = ', '.join(str(b) for b in beats) if beats else 'unknown'

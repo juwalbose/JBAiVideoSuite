@@ -61,7 +61,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   useEffect(() => {
     if (!currentProject) return;
-    fetch(`${baseUrl}/projects/${currentProject.id}/shotlist`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -70,15 +70,15 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         }
       })
       .catch(console.error);
-    fetch(`${baseUrl}/projects/${currentProject.id}/assets`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => { if (data.status === 'success') setProjectAssets(data.assets); })
       .catch(console.error);
-    fetch(`${baseUrl}/projects/${currentProject.id}/audio`)
+    fetch(`${baseUrl}/projects/${currentProject.id}/audio?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => { if (data.status === 'success') setAudioAssets(data.audio); })
       .catch(console.error);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, selectedEpisode]);
 
   const parseArr = (v: any): string[] => {
     if (Array.isArray(v)) return v;
@@ -175,7 +175,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       const res = await fetch(`${baseUrl}/projects/${currentProject.id}/videogen/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shot: shot.shot, resolution, seed, prompt: shot.prompt }),
+        body: JSON.stringify({ shot: shot.shot, resolution, seed, prompt: shot.prompt, episode: selectedEpisode }),
       });
       const data = await res.json();
       if (data.status === 'error') {
@@ -195,7 +195,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     setIsSaving(true);
     setSaved(false);
     try {
-      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist`, {
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shots }),

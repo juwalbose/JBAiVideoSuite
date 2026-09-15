@@ -55,7 +55,7 @@ interface ProjectState {
   deleteAllProjects: () => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   updateProject: (name: string, duration?: number, episodeCount?: number) => Promise<void>;
-  updateStory: (narrativeArc: string, rawInput?: string) => Promise<void>;
+  updateStory: (narrativeArc: string, rawInput?: string, episode?: number) => Promise<void>;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
 }
@@ -138,12 +138,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  updateStory: async (narrativeArc: string, rawInput?: string) => {
+  updateStory: async (narrativeArc: string, rawInput?: string, episode?: number) => {
     const project = get().currentProject;
     if (!project || !project.story) return;
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      const response = await fetch(`${baseUrl}/projects/${project.id}/story`, {
+      const epParam = episode ? `?episode=${episode}` : '';
+      const response = await fetch(`${baseUrl}/projects/${project.id}/story${epParam}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ narrativeArc, rawInput })

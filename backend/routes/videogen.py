@@ -55,8 +55,9 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
     res_type = payload.get('resolution', 'low')
     seed = payload.get('seed', 0)
     prompt = payload.get('prompt', '')
+    episode = payload.get('episode', 1)
 
-    shot = await db.shotlist.find_first(where={'projectId': id, 'shot': shot_num})
+    shot = await db.shotlist.find_first(where={'projectId': id, 'episode': episode, 'shot': shot_num})
     if not shot:
         return {"status": "error", "details": f"Shot {shot_num} not found"}
 
@@ -160,6 +161,7 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         "shot_num": shot_num,
         "resolution": res_type,
         "project_id": id,
+        "episode": episode,
     }
 
     print(f"[VideoGen] task_id={task_id} prompt_id={prompt_id} shot={shot_num} res={res_type} "
@@ -216,7 +218,7 @@ async def check_video_status(id: str, task_id: str, db: Any = Depends(get_db)):
 
         if info["resolution"] == "high":
             await db.shotlist.update(
-                where={'projectId': info["project_id"], 'shot': info["shot_num"]},
+                where={'projectId': info["project_id"], 'episode': info.get("episode", 1), 'shot': info["shot_num"]},
                 data={'videoPath': video_path}
             )
 

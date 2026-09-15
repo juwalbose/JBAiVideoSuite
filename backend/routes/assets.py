@@ -20,38 +20,44 @@ DEFAULT_RESOLUTIONS = {
 }
 
 @router.post("/{id}/refine-dialog")
-async def refine_dialog(id: str, payload: dict, db: Any = Depends(get_db)):
-    project = await db.project.find_first(where={'id': id}, include={'script': {}})
-    if not project or not project.script:
-        return {"status": "error", "details": "Project or Script not found"}
+async def refine_dialog(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    script = await db.script.find_first(where={'projectId': id, 'episode': episode})
+    if not script:
+        return {"status": "error", "details": f"Script not found for episode {episode}"}
     system_prompt = await get_system_prompt(db, "Refine Dialog")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Refine Dialog'."}
     try:
-        script = payload.get('script', project.script.content)
-        result = await call_llm(db, system_prompt, f"Refine the dialog in this script:\n\n{script}")
+        script_content = payload.get('script', script.content)
+        result = await call_llm(db, system_prompt, f"Refine the dialog in this script:\n\n{script_content}")
         return {"status": "success", "script": result}
     except Exception as e:
         print(f"DEBUG: Error in refine_dialog: {e}")
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/extract-cast")
-async def extract_cast(id: str, db: Any = Depends(get_db)):
-    project = await db.project.find_first(where={'id': id}, include={'script': {}})
-    if not project or not project.script:
-        return {"status": "error", "details": "Project or Script not found"}
+async def extract_cast(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    project = await db.project.find_first(where={'id': id})
+    if not project:
+        return {"status": "error", "details": "Project not found"}
+    script = await db.script.find_first(where={'projectId': id, 'episode': episode})
+    if not script:
+        return {"status": "error", "details": f"Script not found for episode {episode}"}
     system_prompt = await get_system_prompt(db, "Extract Cast")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Extract Cast'."}
     try:
-        result = await call_llm(db, system_prompt, f"Extract all characters, environments, and props from this script:\n\n{project.script.content}")
+        result = await call_llm(db, system_prompt, f"Extract all characters, environments, and props from this script:\n\n{script.content}")
         return {"status": "success", "cast": result}
     except Exception as e:
         print(f"DEBUG: Error in extract_cast: {e}")
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/save-assets")
-async def save_assets(id: str, payload: dict, db: Any = Depends(get_db)):
+async def save_assets(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
     project = await db.project.find_first(where={'id': id})
     if not project:
         return {"status": "error", "details": "Project not found"}
@@ -67,34 +73,34 @@ async def save_assets(id: str, payload: dict, db: Any = Depends(get_db)):
         data = json.loads(text)
     except Exception as e:
         return {"status": "error", "details": f"Failed to parse JSON: {str(e)}"}
-    existing_assets = await db.asset.find_many(where={'projectId': id})
+    existing_assets = await db.asset.find_many(where={'projectId': id, 'episode': episode})
     for asset in existing_assets:
         await db.assetstate.delete_many(where={'assetId': asset.id})
-    await db.asset.delete_many(where={'projectId': id})
+    await db.asset.delete_many(where={'projectId': id, 'episode': episode})
     created = 0
     for char in data.get('characters', []):
-        asset = await db.asset.create({'projectId': id, 'type': 'CHARACTER', 'name': char.get('name', ''), 'description': char.get('description', '')})
+        asset = await db.asset.create({'projectId': id, 'episode': episode, 'type': 'CHARACTER', 'name': char.get('name', ''), 'description': char.get('description', '')})
         for state in char.get('states', []):
             await db.assetstate.create({'assetId': asset.id, 'name': state.get('name', ''), 'description': state.get('description', ''), 'prompt': state.get('description', ''), 'scenes': str(state.get('scenes', []))})
         created += 1
     for loc in data.get('locations', []):
-        asset = await db.asset.create({'projectId': id, 'type': 'LOCATION', 'name': loc.get('name', ''), 'description': loc.get('description', '')})
+        asset = await db.asset.create({'projectId': id, 'episode': episode, 'type': 'LOCATION', 'name': loc.get('name', ''), 'description': loc.get('description', '')})
         for state in loc.get('states', []):
             await db.assetstate.create({'assetId': asset.id, 'name': state.get('name', ''), 'description': state.get('description', ''), 'prompt': state.get('description', ''), 'scenes': str(state.get('scenes', []))})
         created += 1
     for prop in data.get('props', []):
-        asset = await db.asset.create({'projectId': id, 'type': 'PROP', 'name': prop.get('name', ''), 'description': prop.get('description', '')})
+        asset = await db.asset.create({'projectId': id, 'episode': episode, 'type': 'PROP', 'name': prop.get('name', ''), 'description': prop.get('description', '')})
         for state in prop.get('states', []):
             await db.assetstate.create({'assetId': asset.id, 'name': state.get('name', ''), 'description': state.get('description', ''), 'prompt': state.get('description', ''), 'scenes': str(state.get('scenes', []))})
         created += 1
     return {"status": "success", "assetsCreated": created}
 
 @router.get("/{id}/assets")
-async def get_assets(id: str, db: Any = Depends(get_db)):
+async def get_assets(id: str, episode: int = 1, db: Any = Depends(get_db)):
     project = await db.project.find_first(where={'id': id})
     if not project:
         return {"status": "error", "details": "Project not found"}
-    assets = await db.asset.find_many(where={'projectId': id}, include={'states': {}})
+    assets = await db.asset.find_many(where={'projectId': id, 'episode': episode}, include={'states': {}})
     result = {"characters": [], "locations": [], "props": []}
     for a in assets:
         entry = {"id": a.id, "name": a.name, "description": a.description or ""}
@@ -185,7 +191,7 @@ async def delete_state(id: str, asset_id: str, state_id: str, db: Any = Depends(
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/assets")
-async def add_asset(id: str, payload: dict, db: Any = Depends(get_db)):
+async def add_asset(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
     """Adds a new asset with its first state, or adds a new state to an existing asset."""
     try:
         asset_type = payload.get('type', '')
@@ -207,7 +213,7 @@ async def add_asset(id: str, payload: dict, db: Any = Depends(get_db)):
         else:
             if not asset_name:
                 return {"status": "error", "details": "Asset name required for new asset"}
-            asset = await db.asset.create({'projectId': id, 'type': asset_type, 'name': asset_name, 'description': asset_desc})
+            asset = await db.asset.create({'projectId': id, 'episode': episode, 'type': asset_type, 'name': asset_name, 'description': asset_desc})
             await db.assetstate.create({'assetId': asset.id, 'name': state_name, 'description': state_desc, 'prompt': state_desc, 'scenes': '[]'})
             return {"status": "success"}
     except Exception as e:
