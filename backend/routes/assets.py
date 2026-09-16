@@ -76,14 +76,34 @@ async def extract_cast(id: str, payload: dict = None, episode: int = 1, db: Any 
 
         # Parse the LLM result and compare against existing project-level assets
         text = result.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
+        # Try direct parse first
         try:
             data = json.loads(text)
         except Exception:
-            data = {"characters": [], "locations": [], "props": []}
+            # Extract JSON from markdown code fences
+            if "```" in text:
+                # Find the first { ... } block inside fences
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    try:
+                        data = json.loads(text[start:end+1])
+                    except Exception:
+                        data = {"characters": [], "locations": [], "props": []}
+                else:
+                    data = {"characters": [], "locations": [], "props": []}
+            else:
+                # No fences — try to find a JSON object anywhere in the text
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    try:
+                        data = json.loads(text[start:end+1])
+                    except Exception:
+                        data = {"characters": [], "locations": [], "props": []}
+                else:
+                    data = {"characters": [], "locations": [], "props": []}
+        print(f"DEBUG: extract-cast parsed {len(data.get('characters', []))} characters, {len(data.get('locations', []))} locations, {len(data.get('props', []))} props")
 
         # Fetch all existing project-level assets (shared across episodes)
         existing_assets = await db.asset.find_many(

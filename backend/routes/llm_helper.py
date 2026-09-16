@@ -18,7 +18,7 @@ async def get_system_prompt(db, action: str):
 async def call_llm(db, system_prompt: str, user_content: str) -> str:
     llm = await db.llmsettings.find_first()
     ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
-    max_tokens = getattr(llm, 'maxTokens', 4096)
+    max_tokens = getattr(llm, 'maxTokens', 20000)
     url = f"http://{ip}:{port}/v1/chat/completions"
     payload = {
         "model": modelName,

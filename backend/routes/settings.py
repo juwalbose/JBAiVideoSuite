@@ -54,7 +54,7 @@ async def get_settings(db = Depends(get_db)):
             "port": 1234,
             "modelName": "gemma-4-e4b-uncensored-hauhaucs-aggressive",
             "temperature": 0.7,
-            "maxTokens": 512,
+            "maxTokens": 20000,
         },
         "backend": backend if backend else {
             "apiUrl": "http://127.0.0.1:8000",

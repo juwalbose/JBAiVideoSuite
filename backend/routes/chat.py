@@ -54,12 +54,13 @@ async def chat(req: ChatRequest, db: Any = Depends(get_db)):
         else:
             messages.append({"role": msg.role, "content": msg.content})
 
+    max_tokens = getattr(llm, 'maxTokens', 20000)
     url = f"http://{ip}:{port}/v1/chat/completions"
     payload = {
         "model": modelName,
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": 16384,
+        "max_tokens": max_tokens,
     }
 
     timeout = httpx.Timeout(300.0, connect=10.0)

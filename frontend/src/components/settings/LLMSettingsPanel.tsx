@@ -99,6 +99,16 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
             onChange={(e) => setLLM({ temperature: parseFloat(e.target.value) || 0.7 })}
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground">Max Tokens</label>
+          <input
+            type="number"
+            step="256"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
+            value={llm.maxTokens}
+            onChange={(e) => setLLM({ maxTokens: parseInt(e.target.value) || 20000 })}
+          />
+        </div>
       </div>
       <div className="mb-6">
         <button

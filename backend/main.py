@@ -55,7 +55,7 @@ async def initialize_settings():
             "port": 1234,
             "modelName": "",
             "temperature": 0.7,
-            "maxTokens": 512,
+            "maxTokens": 20000,
         })
     
     backend = await db.backendsettings.find_first()

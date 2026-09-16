@@ -2,22 +2,9 @@ from fastapi import APIRouter, Depends
 from typing import Optional, Any
 from database import get_db
 from models import ProjectCreate, StoryInput
-from paths import PROMPTS_DIR
-import httpx
-import os
+from .llm_helper import get_system_prompt, call_llm
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
-
-async def get_system_prompt(db, action: str) -> Optional[str]:
-    """Fetch the mapped system prompt file content for an action, or None."""
-    mapping = await db.appactionmapping.find_first(where={'action': action})
-    if not mapping or not mapping.promptFile:
-        return None
-    filepath = os.path.join(PROMPTS_DIR, mapping.promptFile)
-    if not os.path.exists(filepath):
-        return None
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return f.read()
 
 @router.get("/")
 async def list_projects(db: Any = Depends(get_db)):
@@ -157,29 +144,10 @@ async def generate_story(id: str, story_input: StoryInput, episode: int = 1, db:
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Develop Raw Story'. Go to Settings > App Settings and map a prompt first."}
 
-    # 3. Call the LLM using our dynamic settings
-    llm = await db.llmsettings.find_first()
-    ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
-
-    url = f"http://{ip}:{port}/v1/chat/completions"
-    payload = {
-        "model": modelName,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this raw idea into a narrative arc: {story_input.rawInput}"}
-        ],
-        "temperature": temperature,
-        "max_tokens": 16384,
-    }
-
-    timeout = httpx.Timeout(300.0, connect=10.0)
+    # 3. Call the LLM
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-
-            return {"status": "success", "narrative_arc": result}
+        result = await call_llm(db, system_prompt, f"Duration: {project.duration} seconds. Turn this raw idea into a narrative arc: {story_input.rawInput}")
+        return {"status": "success", "narrative_arc": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_story: {e}")
         return {"status": "error", "details": str(e)}
@@ -199,29 +167,10 @@ async def generate_script(id: str, episode: int = 1, db: Any = Depends(get_db)):
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Generate Script'. Go to Settings > App Settings and map a prompt first."}
 
-    # 3. Call the LLM using our dynamic settings
-    llm = await db.llmsettings.find_first()
-    ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
-
-    url = f"http://{ip}:{port}/v1/chat/completions"
-    payload = {
-        "model": modelName,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{story.narrativeArc}"}
-        ],
-        "temperature": temperature,
-        "max_tokens": 16384,
-    }
-
-    timeout = httpx.Timeout(300.0, connect=10.0)
+    # 3. Call the LLM
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-
-            return {"status": "success", "script": result}
+        result = await call_llm(db, system_prompt, f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{story.narrativeArc}")
+        return {"status": "success", "script": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_script: {e}")
         return {"status": "error", "details": str(e)}
@@ -237,28 +186,10 @@ async def generate_shots(id: str, episode: int = 1, db: Any = Depends(get_db)):
     system_prompt = await get_system_prompt(db, "Generate Shots")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Generate Shots'. Go to Settings > App Settings and map a prompt first."}
-    llm = await db.llmsettings.find_first()
-    ip, port, modelName, temperature = llm.ip, llm.port, llm.modelName, llm.temperature
-    url = f"http://{ip}:{port}/v1/chat/completions"
-    payload = {
-        "model": modelName,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Split this script into shots for MiniMax H3 video model:\n\n{script.content}"}
-        ],
-        "temperature": temperature,
-        "max_tokens": 16384,
-    }
-    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            result = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            finish_reason = data.get("choices", [{}])[0].get("finish_reason", "unknown")
-            print(f"DEBUG: generate_shots response length={len(result)}, finish_reason={finish_reason}")
-            return {"status": "success", "shots": result}
+        result = await call_llm(db, system_prompt, f"Split this script into shots for MiniMax H3 video model:\n\n{script.content}")
+        print(f"DEBUG: generate_shots response length={len(result)}")
+        return {"status": "success", "shots": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_shots: {e}")
         return {"status": "error", "details": str(e)}
