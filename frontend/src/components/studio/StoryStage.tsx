@@ -10,7 +10,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
   const [episodeCount, setEpisodeCount] = useState(1);
   const [duration, setDuration] = useState(120);
   const [name, setName] = useState('');
-  const nameDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Draft lives in the store so it survives tab switches
   const rawInput = storyDraft?.rawInput ?? currentProject?.story?.rawInput ?? '';

@@ -90,7 +90,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       .catch(console.error);
   }, [currentProject?.id, selectedEpisode]);
 
-  const parseArr = (v: any): string[] => {
+  const parseArr = (v: any): any[] => {
     if (Array.isArray(v)) return v;
     if (typeof v === 'string' && v.startsWith('[')) {
       try { return JSON.parse(v); } catch { return []; }

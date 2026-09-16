@@ -96,6 +96,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   }, [currentProject?.id, selectedEpisode]);
 
   useEffect(() => {
+    if (activeTab === 'audio') { setSelected(null); setEditing(null); return; }
     const list = assets[activeTab] || [];
     if (list.length === 0) { setSelected(null); setEditing(null); return; }
     const first = list[0];
@@ -111,9 +112,10 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   }, [assets, activeTab]);
 
   const getItems = () => {
+    if (activeTab === 'audio') return [];
     const list = assets[activeTab] || [];
     const items: { label: string; desc: string; type: string; index: number; stateIndex: number }[] = [];
-    list.forEach((a, i) => {
+    list.forEach((a: AssetItem, i: number) => {
       if (a.states?.length) {
         a.states.forEach((s, si) => {
           items.push({ label: `${a.name} — ${s.name}`, desc: s.description, type: activeTab, index: i, stateIndex: si });

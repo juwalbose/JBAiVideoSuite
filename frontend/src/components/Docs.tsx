@@ -12,7 +12,7 @@ const Docs = () => {
         const res = await fetch('/docs/howto.md');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const md = await res.text();
-        setHtml(marked.parse(md));
+        setHtml(await marked.parse(md));
       } catch (e: any) {
         setError(e.message || 'Failed to load docs');
       } finally {

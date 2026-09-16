@@ -269,7 +269,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     }
   };
 
-  const updateShot = (index: number, field: keyof ShotData, value: string | number | number[] | string[] | null) => {
+  const updateShot = (index: number, field: keyof ShotData, value: string | number | boolean | number[] | string[] | null) => {
     setShots((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
     setSaved(false);
   };
