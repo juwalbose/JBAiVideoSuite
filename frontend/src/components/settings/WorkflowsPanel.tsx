@@ -28,12 +28,22 @@ const WorkflowsPanel: React.FC = () => {
     reader.onload = async () => {
       const content = reader.result as string;
       const baseUrl = backend.apiUrl.endsWith('/') ? backend.apiUrl.slice(0, -1) : backend.apiUrl;
-      await fetch(`${baseUrl}/workflows/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: file.name.replace('.json', ''), json_content: content }),
-      });
-      await fetchWorkflows();
+      try {
+        const res = await fetch(`${baseUrl}/workflows/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: file.name.replace('.json', ''), json_content: content }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ details: res.statusText }));
+          alert(`Workflow upload failed: ${err.details || res.statusText}`);
+          return;
+        }
+        await fetchWorkflows();
+      } catch (err) {
+        console.error('Workflow upload error:', err);
+        alert('Workflow upload failed. Check backend connection.');
+      }
     };
     reader.readAsText(file);
   };

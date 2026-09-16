@@ -163,22 +163,19 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     const check = async () => {
       try {
         const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/videogen/status/${taskId}`);
-        if (res.headers.get('X-Task-Status') === 'complete') {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
+        const data = await res.json();
+        if (data.status === 'complete') {
+          const url = `${baseUrl}${data.videoPath}`;
           setVideoUrl(url);
           if (resolution === 'high') {
-            setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, videoPath: url } : s)));
+            setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, videoPath: data.videoPath } : s)));
           }
           setIsGenerating(false);
+        } else if (data.status === 'pending') {
+          setTimeout(check, 3000);
         } else {
-          const data = await res.json();
-          if (data.status === 'pending') {
-            setTimeout(check, 3000);
-          } else {
-            console.error('Video gen error:', data.details);
-            setIsGenerating(false);
-          }
+          console.error('Video gen error:', data.details);
+          setIsGenerating(false);
         }
       } catch (err) {
         console.error('Poll error:', err);

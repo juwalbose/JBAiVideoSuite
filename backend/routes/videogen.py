@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 import httpx
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends
 from typing import Any, Dict
 
 from database import get_db
@@ -117,28 +117,28 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         if af:
             audio_files.append(af)
 
-    # Inject inputs into workflow nodes
+    # Inject inputs into workflow nodes (case-insensitive role matching)
     img_idx = 0
     aud_idx = 0
     for node_id, node_data in workflow_data.items():
-        title = node_data.get('_meta', {}).get('title', '')
+        title = node_data.get('_meta', {}).get('title', '').lower()
         inputs = node_data.setdefault('inputs', {})
 
-        if '(Input:prompt)' in title:
-            inputs['text'] = prompt
-        elif '(Input:seed)' in title:
+        if '(input:prompt)' in title:
+            inputs['value'] = prompt
+        elif '(input:seed)' in title:
             inputs['value'] = seed
-        elif '(Input:width)' in title:
+        elif '(input:width)' in title:
             inputs['value'] = w
-        elif '(Input:height)' in title:
+        elif '(input:height)' in title:
             inputs['value'] = h
-        elif '(Input:duration)' in title:
+        elif '(input:duration)' in title:
             inputs['value'] = shot.duration
-        elif '(Input:image)' in title:
+        elif '(input:image)' in title:
             if img_idx < len(image_files):
                 inputs['image'] = image_files[img_idx]
                 img_idx += 1
-        elif '(Input:audio)' in title:
+        elif '(input:audio)' in title:
             if aud_idx < len(audio_files):
                 inputs['audio'] = audio_files[aud_idx]
                 aud_idx += 1
@@ -217,19 +217,18 @@ async def check_video_status(id: str, task_id: str, db: Any = Depends(get_db)):
         video_path = f"/assets/generated/{output_info['filename']}"
 
         if info["resolution"] == "high":
-            await db.shotlist.update(
-                where={'projectId': info["project_id"], 'episode': info.get("episode", 1), 'shot': info["shot_num"]},
-                data={'videoPath': video_path}
+            shot = await db.shotlist.find_first(
+                where={'projectId': info["project_id"], 'episode': info.get("episode", 1), 'shot': info["shot_num"]}
             )
+            if shot:
+                await db.shotlist.update(where={'id': shot.id}, data={'videoPath': video_path})
 
         video_tasks.pop(task_id, None)
         print(f"[VideoGen] task_id={task_id} -> COMPLETE ({output_info['filename']}) res={info['resolution']}")
 
-        return Response(
-            content=file_res.content,
-            media_type="video/mp4",
-            headers={
-                "Content-Disposition": f'inline; filename="{output_info["filename"]}"',
-                "X-Task-Status": "complete",
-            },
-        )
+        return {
+            "status": "complete",
+            "task_id": task_id,
+            "videoPath": video_path,
+            "filename": output_info["filename"],
+        }

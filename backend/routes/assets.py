@@ -302,17 +302,18 @@ async def generate_image(id: str, asset_id: str, payload: dict, db: Any = Depend
         h = res.get(type_key, {}).get('h', 1024)
         seed = random.randint(0, 2**32 - 1)
 
-        # Inject inputs into workflow nodes
+        # Inject inputs into workflow nodes (case-insensitive role matching)
         for node_id, node_data in workflow_data.items():
-            title = node_data.get('_meta', {}).get('title', '')
-            if '(Input:prompt)' in title:
-                node_data.setdefault('inputs', {})['text'] = prompt
-            elif '(Input:seed)' in title:
-                node_data.setdefault('inputs', {})['value'] = seed
-            elif '(Input:width)' in title:
-                node_data.setdefault('inputs', {})['value'] = w
-            elif '(Input:height)' in title:
-                node_data.setdefault('inputs', {})['value'] = h
+            title = node_data.get('_meta', {}).get('title', '').lower()
+            inputs = node_data.setdefault('inputs', {})
+            if '(input:prompt)' in title:
+                inputs['value'] = prompt
+            elif '(input:seed)' in title:
+                inputs['value'] = seed
+            elif '(input:width)' in title:
+                inputs['value'] = w
+            elif '(input:height)' in title:
+                inputs['value'] = h
 
         # Get ComfyUI settings
         comfyui = await db.comfyuisettings.find_first()
@@ -431,8 +432,11 @@ async def generate_sheet(id: str, asset_id: str, payload: dict, db: Any = Depend
         comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
 
         # Upload the image to ComfyUI
-        # image_path is like /assets/generated/filename.png
-        local_path = os.path.join(base_dir, "..", image_path)
+        # image_path is like /assets/generated/filename.png — strip the /assets/ prefix
+        # and join onto the assets directory to get the real filesystem path.
+        assets_dir = os.path.abspath(os.path.join(base_dir, "..", "assets"))
+        rel = image_path.replace('/assets/', '', 1) if image_path.startswith('/assets/') else image_path.lstrip('/')
+        local_path = os.path.join(assets_dir, rel)
         if not os.path.exists(local_path):
             return {"status": "error", "details": f"Image file not found: {image_path}"}
 
