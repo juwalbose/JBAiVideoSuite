@@ -3,22 +3,34 @@ import { useProjectStore, Script } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
 const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode: number; onNavigateToAssets?: () => void }) => {
-  const { currentProject } = useProjectStore();
-  const [script, setScript] = useState('');
-  const [cast, setCast] = useState('');
-  const [formattedCast, setFormattedCast] = useState('');
+  const { currentProject, scriptDraft, setScriptDraft } = useProjectStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [hasSavedAssets, setHasSavedAssets] = useState(false);
-  const [refinedScript, setRefinedScript] = useState('');
   const [isRefining, setIsRefining] = useState(false);
 
-  // Sync local state with project data when currentProject changes
+  // Draft lives in the store so it survives tab switches
+  const script = scriptDraft?.script ?? currentProject?.script?.content ?? '';
+  const cast = scriptDraft?.cast ?? '';
+  const formattedCast = scriptDraft?.formattedCast ?? '';
+  const refinedScript = scriptDraft?.refinedScript ?? '';
+
+  const updateDraft = (patch: Partial<{ script: string; cast: string; formattedCast: string; refinedScript: string }>) => {
+    setScriptDraft({ script, cast, formattedCast, refinedScript, ...patch });
+  };
+
+  // Sync local state with project data when currentProject or episode changes
   useEffect(() => {
     if (currentProject) {
-      setScript(currentProject.script?.content || '');
+      // Reset draft to saved values when project or episode changes
+      setScriptDraft({
+        script: currentProject.script?.content || '',
+        cast: '',
+        formattedCast: '',
+        refinedScript: '',
+      });
       // Fetch saved assets from DB and populate the cast box
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
       fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
@@ -31,15 +43,14 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
               data.assets.props?.length;
             if (hasContent) {
               const json = JSON.stringify(data.assets, null, 2);
-              setCast(json);
-              setFormattedCast(formatCast(json));
+              setScriptDraft(prev => prev ? { ...prev, cast: json, formattedCast: formatCast(json) } : { script: currentProject.script?.content || '', cast: json, formattedCast: formatCast(json), refinedScript: '' });
               setHasSavedAssets(true);
             }
           }
         })
         .catch(err => console.warn('Failed to load saved assets:', err));
     }
-  }, [currentProject?.id]);
+  }, [currentProject?.id, selectedEpisode]);
 
   const handleGenerateScript = async () => {
     if (!currentProject) return;
@@ -59,7 +70,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
         setError(data.details);
         return;
       }
-      setScript(data.script || '');
+      updateDraft({ script: data.script || '' });
     } catch (error) {
       console.error("Error generating script:", error);
       setError('Failed to generate script. Check backend connection.');
@@ -77,6 +88,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       const response = await fetch(`${baseUrl}/projects/${currentProject.id}/extract-cast?episode=${selectedEpisode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script }),
       });
 
       const data = await response.json();
@@ -87,8 +99,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       }
       const castValue = data.cast || '';
       console.log("Cast value length:", castValue.length);
-      setCast(castValue);
-      setFormattedCast(formatCast(castValue));
+      updateDraft({ cast: castValue, formattedCast: formatCast(castValue) });
     } catch (error) {
       console.error("Error extracting cast:", error);
       setError('Failed to extract cast. Check backend connection.');
@@ -113,7 +124,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
         setError(data.details);
         return;
       }
-      setRefinedScript(data.script || '');
+      updateDraft({ refinedScript: data.script || '' });
     } catch (error) {
       console.error("Error refining dialog:", error);
       setError('Failed to refine dialog. Check backend connection.');
@@ -123,8 +134,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   };
 
   const handleApplyRefinement = () => {
-    setScript(refinedScript);
-    setRefinedScript('');
+    updateDraft({ script: refinedScript, refinedScript: '' });
   };
 
   const formatCast = (json: string): string => {
@@ -201,6 +211,8 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
         ...currentProject,
         script: { id: currentProject.script?.id || 'pending', content: script } as Script
       });
+      // Clear draft after successful save
+      setScriptDraft(null);
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');
@@ -251,7 +263,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           rows={15}
           placeholder="Script will appear here after generating from the Story tab..."
           value={script}
-          onChange={(e) => setScript(e.target.value)}
+          onChange={(e) => updateDraft({ script: e.target.value })}
         />
       </div>
 
@@ -292,7 +304,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
             className="w-full p-4 border border-teal-800 rounded bg-teal-950/40 text-foreground resize-y"
             rows={15}
             value={refinedScript}
-            onChange={(e) => setRefinedScript(e.target.value)}
+            onChange={(e) => updateDraft({ refinedScript: e.target.value })}
           />
           <div className="flex justify-center">
             <button
@@ -313,7 +325,6 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           value={formattedCast || cast}
           onChange={(e) => {
             const val = e.target.value;
-            setFormattedCast(val);
             // Try to parse as JSON — if valid, store raw JSON and show formatted
             try {
               let text = val.trim();
@@ -322,10 +333,10 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
                 if (text.startsWith("json")) text = text.slice(4);
               }
               JSON.parse(text);
-              setCast(val);
-              setFormattedCast(formatCast(val));
+              updateDraft({ cast: val, formattedCast: formatCast(val) });
             } catch {
               // Not valid JSON — keep the previous raw JSON for saving
+              updateDraft({ formattedCast: val });
             }
           }}
           placeholder="Paste JSON here or use Extract Assets..."

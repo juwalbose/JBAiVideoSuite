@@ -26,6 +26,7 @@ interface ShotData {
   characterAudioTypes: string[];
   musicOn: boolean;
   musicDesc: string;
+  videoPath: string | null;
 }
 
 interface AssetState {
@@ -89,6 +90,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     characterAudioTypes: Array.isArray(s.characterAudioTypes) ? s.characterAudioTypes : (typeof s.characterAudioTypes === 'string' && s.characterAudioTypes.startsWith('[') ? JSON.parse(s.characterAudioTypes) : []),
     musicOn: s.musicOn === true || s.musicOn === 'true',
     musicDesc: s.musicDesc || '',
+    videoPath: s.videoPath || null,
   });
 
   const parseShots = (raw: string): ShotData[] => {
@@ -232,26 +234,38 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     abortRef.current = false;
     const baseUrl = useSettingsStore.getState().backend.apiUrl;
     setGenAll({ active: true, current: 0, total: shots.length, done: 0, failed: 0 });
+    // Build a local copy so we save the freshly computed list, not the stale closure
+    const localShots = [...shots];
     let done = 0, failed = 0;
-    for (let i = 0; i < shots.length; i++) {
+    for (let i = 0; i < localShots.length; i++) {
       if (abortRef.current) break;
-      setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
+      setGenAll({ active: true, current: i + 1, total: localShots.length, done, failed });
       try {
         const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist/generate-prompt?episode=${selectedEpisode}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(shots[i]),
+          body: JSON.stringify(localShots[i]),
         });
         const data = await response.json();
         if (data.status === 'error') throw new Error(data.details);
+        localShots[i] = { ...localShots[i], prompt: data.prompt };
         setShots((prev) => prev.map((s, idx) => (idx === i ? { ...s, prompt: data.prompt } : s)));
         done++;
       } catch { failed++; }
-      setGenAll({ active: true, current: i + 1, total: shots.length, done, failed });
+      setGenAll({ active: true, current: i + 1, total: localShots.length, done, failed });
     }
-    setGenAll({ active: false, current: shots.length, total: shots.length, done, failed });
+    setGenAll({ active: false, current: localShots.length, total: localShots.length, done, failed });
     if (!abortRef.current && done > 0) {
-      await handleSave();
+      // Save the freshly computed list directly
+      const response = await fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shots: localShots }),
+      });
+      const data = await response.json();
+      if (data.status === 'error') { setError(data.details); return; }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     }
   };
 
@@ -271,7 +285,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const addShot = () => {
     const nextNum = shots.length > 0 ? Math.max(...shots.map((s) => s.shot)) + 1 : 1;
-    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '', locationAssetId: null, locationStateId: null, characterAssetIds: [], characterStateIds: [], propAssetIds: [], propStateIds: [], sceneDialogAudioId: null, characterAudioIds: [], characterAudioTypes: [], musicOn: false, musicDesc: '' }]);
+    setShots((prev) => [...prev, { shot: nextNum, scene: 0, beats: [], loc: '', subs: '', frames: 0, duration: 0, camera: '', action: '', dialogue: '', note: '', prompt: '', locationAssetId: null, locationStateId: null, characterAssetIds: [], characterStateIds: [], propAssetIds: [], propStateIds: [], sceneDialogAudioId: null, characterAudioIds: [], characterAudioTypes: [], musicOn: false, musicDesc: '', videoPath: null }]);
     setSelectedIdx(shots.length);
     setSaved(false);
   };

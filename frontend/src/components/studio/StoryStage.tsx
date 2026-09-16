@@ -3,9 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
 const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript }: { selectedEpisode: number; onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
-  const { currentProject, updateProject, updateStory } = useProjectStore();
-  const [rawInput, setRawInput] = useState('');
-  const [narrativeArc, setNarrativeArc] = useState('');
+  const { currentProject, updateProject, updateStory, storyDraft, setStoryDraft } = useProjectStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -14,14 +12,25 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
   const [name, setName] = useState('');
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Draft lives in the store so it survives tab switches
+  const rawInput = storyDraft?.rawInput ?? currentProject?.story?.rawInput ?? '';
+  const narrativeArc = storyDraft?.narrativeArc ?? currentProject?.story?.narrativeArc ?? '';
+
+  const updateDraft = (patch: Partial<{ rawInput: string; narrativeArc: string }>) => {
+    setStoryDraft({ rawInput, narrativeArc, ...patch });
+  };
+
   // Sync local state with project data when currentProject changes
   useEffect(() => {
     if (currentProject) {
-      setRawInput(currentProject.story?.rawInput || '');
-      setNarrativeArc(currentProject.story?.narrativeArc || '');
       setDuration(currentProject.duration || 120);
       setEpisodeCount(currentProject.episodeCount || 1);
       setName(currentProject.name);
+      // Reset draft to saved values when project changes
+      setStoryDraft({
+        rawInput: currentProject.story?.rawInput || '',
+        narrativeArc: currentProject.story?.narrativeArc || '',
+      });
     }
   }, [currentProject?.id]);
 
@@ -52,7 +61,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
         return;
       }
       console.log("LLM Response received:", data);
-      setNarrativeArc(data.narrative_arc);
+      updateDraft({ narrativeArc: data.narrative_arc });
     } catch (error) {
       console.error("Error generating story:", error);
       setError('Failed to generate story. Check backend connection.');
@@ -68,6 +77,8 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
     try {
       await updateProject(currentProject.name, duration, currentProject.type === 'episodic' ? episodeCount : undefined);
       await updateStory(narrativeArc, rawInput, selectedEpisode);
+      // Clear draft after successful save — store now matches saved state
+      setStoryDraft(null);
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');
@@ -102,7 +113,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
                 rows={6}
                 placeholder="Enter your raw story idea here..."
                 value={rawInput}
-                onChange={(e) => setRawInput(e.target.value)}
+                onChange={(e) => updateDraft({ rawInput: e.target.value })}
               />
             </div>
 
@@ -137,7 +148,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
                   className="w-full p-4 border border-border rounded bg-accent-soft text-foreground whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
                   rows={10}
                   value={narrativeArc}
-                  onChange={(e) => setNarrativeArc(e.target.value)}
+                  onChange={(e) => updateDraft({ narrativeArc: e.target.value })}
                   placeholder="Narrative arc will appear here..."
                 />
               </div>

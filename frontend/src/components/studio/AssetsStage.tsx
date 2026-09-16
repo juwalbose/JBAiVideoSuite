@@ -54,7 +54,33 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     if (!currentProject) return;
     const res = await fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`);
     const data = await res.json();
-    if (data.status === 'success') setAssets(data.assets);
+    if (data.status !== 'success') return;
+    // Preserve current selection and merge fresh data into editing buffer
+    const prevSelected = selected;
+    const prevEditing = editing;
+    setAssets(data.assets);
+    if (prevSelected) {
+      const list = data.assets[prevSelected.type as keyof typeof data.assets] || [];
+      const asset = list[prevSelected.index];
+      if (asset) {
+        // Selection still valid — keep it, refresh editing from fresh data
+        if (asset.states?.length && prevSelected.stateIndex >= 0 && asset.states[prevSelected.stateIndex]) {
+          const s = asset.states[prevSelected.stateIndex];
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, states: [{ ...s }] });
+        } else if (!asset.states?.length) {
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, scenes: asset.scenes });
+        } else {
+          // State index out of bounds — fall back to first state
+          const first = asset.states[0];
+          setSelected({ type: prevSelected.type, index: prevSelected.index, stateIndex: 0 });
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, states: [{ ...first }] });
+        }
+      } else {
+        // Asset no longer exists — reset
+        setSelected(null);
+        setEditing(null);
+      }
+    }
   };
 
   useEffect(() => {
@@ -178,14 +204,16 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         });
         const data = await res.json();
         if (data.status === 'error') throw new Error(data.details);
-        // PATCH to persist immediately
+        // PATCH only the single state that changed — avoids stale full-state snapshot
         const list = assets[item.type as keyof typeof assets];
         const asset = list[item.assetIndex];
-        const states = (asset.states || []).map((st, si) => si === item.stateIndex ? { ...st, prompt: data.prompt } : st);
-        await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}?episode=${selectedEpisode}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: asset.name, description: asset.description, states }),
-        });
+        const state = asset.states?.[item.stateIndex];
+        if (state) {
+          await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${item.assetId}/states/${state.id}?episode=${selectedEpisode}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: data.prompt }),
+          });
+        }
         done++;
       } catch { failed++; }
       setGenAll({ active: true, current: i + 1, total: allStates.length, done, failed });
@@ -280,6 +308,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     if (!selected || !editing) return;
     const stateId = getStateId();
     const assetId = getAssetId();
+    const assetName = editing.name;
+    const stateName = editing.states?.[0]?.name;
+    const msg = stateId
+      ? `Delete state "${stateName}" from "${assetName}"? Shots referencing this state will lose the link.`
+      : `Delete "${assetName}" and all its states? Shots referencing this asset will lose the link.`;
+    if (!window.confirm(msg)) return;
     try {
       if (stateId) {
         await fetch(`${baseUrl}/projects/${currentProject!.id}/assets/${assetId}/states/${stateId}`, { method: 'DELETE' });

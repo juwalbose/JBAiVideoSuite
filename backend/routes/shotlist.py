@@ -22,58 +22,62 @@ async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depe
     created = 0
     updated = 0
 
-    for s in shots:
-        shot_num = s.get('shot', 0)
-        beats = s.get('beats', [])
-        subs = s.get('subs', '')
-        if isinstance(subs, str) and ',' in subs:
-            subs = [x.strip() for x in subs.split(',') if x.strip()]
-        char_ids = [x for x in s.get('characterAssetIds', []) if x]
-        char_states = [x for x in s.get('characterStateIds', []) if x]
-        prop_ids = [x for x in s.get('propAssetIds', []) if x]
-        prop_states = [x for x in s.get('propStateIds', []) if x]
+    async with db.tx() as tx:
+        for s in shots:
+            shot_num = s.get('shot', 0)
+            beats = s.get('beats', [])
+            subs = s.get('subs', '')
+            if isinstance(subs, str) and ',' in subs:
+                subs = [x.strip() for x in subs.split(',') if x.strip()]
+            char_ids = [x for x in s.get('characterAssetIds', []) if x]
+            char_states = [x for x in s.get('characterStateIds', []) if x]
+            prop_ids = [x for x in s.get('propAssetIds', []) if x]
+            prop_states = [x for x in s.get('propStateIds', []) if x]
 
-        row_data = {
-            'scene': s.get('scene', 0),
-            'beats': json.dumps(beats) if isinstance(beats, list) else str(beats),
-            'loc': s.get('loc', ''),
-            'subs': json.dumps(subs) if isinstance(subs, list) else str(subs),
-            'frames': s.get('frames', 0),
-            'duration': s.get('duration', 0),
-            'camera': s.get('camera', ''),
-            'action': s.get('action', ''),
-            'dialogue': s.get('dialogue', ''),
-            'note': s.get('note', ''),
-            'prompt': s.get('prompt', ''),
-            'locationAssetId': s.get('locationAssetId') or None,
-            'locationStateId': s.get('locationStateId') or None,
-            'characterAssetIds': json.dumps(char_ids) if char_ids else None,
-            'characterStateIds': json.dumps(char_states) if char_states else None,
-            'propAssetIds': json.dumps(prop_ids) if prop_ids else None,
-            'propStateIds': json.dumps(prop_states) if prop_states else None,
-            'sceneDialogAudioId': s.get('sceneDialogAudioId') or None,
-            'characterAudioIds': json.dumps([x for x in s.get('characterAudioIds', []) if x]) if s.get('characterAudioIds') else None,
-            'characterAudioTypes': json.dumps(s.get('characterAudioTypes', [])) if s.get('characterAudioTypes') else None,
-            'musicOn': s.get('musicOn', False),
-            'musicDesc': s.get('musicDesc', ''),
-            'videoPath': s.get('videoPath') or None,
-        }
+            row_data = {
+                'scene': s.get('scene', 0),
+                'beats': json.dumps(beats) if isinstance(beats, list) else str(beats),
+                'loc': s.get('loc', ''),
+                'subs': json.dumps(subs) if isinstance(subs, list) else str(subs),
+                'frames': s.get('frames', 0),
+                'duration': s.get('duration', 0),
+                'camera': s.get('camera', ''),
+                'action': s.get('action', ''),
+                'dialogue': s.get('dialogue', ''),
+                'note': s.get('note', ''),
+                'prompt': s.get('prompt', ''),
+                'locationAssetId': s.get('locationAssetId') or None,
+                'locationStateId': s.get('locationStateId') or None,
+                'characterAssetIds': json.dumps(char_ids) if char_ids else None,
+                'characterStateIds': json.dumps(char_states) if char_states else None,
+                'propAssetIds': json.dumps(prop_ids) if prop_ids else None,
+                'propStateIds': json.dumps(prop_states) if prop_states else None,
+                'sceneDialogAudioId': s.get('sceneDialogAudioId') or None,
+                'characterAudioIds': json.dumps([x for x in s.get('characterAudioIds', []) if x]) if s.get('characterAudioIds') else None,
+                'characterAudioTypes': json.dumps(s.get('characterAudioTypes', [])) if s.get('characterAudioTypes') else None,
+                'musicOn': s.get('musicOn', False),
+                'musicDesc': s.get('musicDesc', ''),
+                'videoPath': s.get('videoPath') or None,
+            }
 
-        existing = await db.shotlist.find_first(where={
-            'projectId': id, 'episode': episode, 'shot': shot_num
-        })
-
-        if existing:
-            await db.shotlist.update(where={'id': existing.id}, data=row_data)
-            updated += 1
-        else:
-            await db.shotlist.create({
-                'projectId': id,
-                'episode': episode,
-                'shot': shot_num,
-                **row_data,
+            existing = await tx.shotlist.find_first(where={
+                'projectId': id, 'episode': episode, 'shot': shot_num
             })
-            created += 1
+
+            if existing:
+                # Preserve videoPath if the client did not send one
+                if 'videoPath' not in s or not s.get('videoPath'):
+                    row_data['videoPath'] = existing.videoPath
+                await tx.shotlist.update(where={'id': existing.id}, data=row_data)
+                updated += 1
+            else:
+                await tx.shotlist.create({
+                    'projectId': id,
+                    'episode': episode,
+                    'shot': shot_num,
+                    **row_data,
+                })
+                created += 1
 
     return {"status": "success", "count": len(shots), "created": created, "updated": updated}
 

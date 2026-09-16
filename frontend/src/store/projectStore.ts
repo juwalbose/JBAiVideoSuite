@@ -43,11 +43,25 @@ export interface Project {
   assets: any[];
 }
 
+interface StoryDraft {
+  rawInput: string;
+  narrativeArc: string;
+}
+
+interface ScriptDraft {
+  script: string;
+  cast: string;
+  formattedCast: string;
+  refinedScript: string;
+}
+
 interface ProjectState {
   projects: Project[];
   currentProject: Project | null;
   isLoading: boolean;
   error: string | null;
+  storyDraft: StoryDraft | null;
+  scriptDraft: ScriptDraft | null;
   setProjects: (newProject: Project) => void;
   addProject: (newProject: Project) => void;
   setCurrentProject: (project: Project | null) => void;
@@ -58,6 +72,8 @@ interface ProjectState {
   updateStory: (narrativeArc: string, rawInput?: string, episode?: number) => Promise<void>;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
+  setStoryDraft: (draft: StoryDraft | null | ((prev: StoryDraft | null) => StoryDraft | null)) => void;
+  setScriptDraft: (draft: ScriptDraft | null | ((prev: ScriptDraft | null) => ScriptDraft | null)) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -65,6 +81,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   currentProject: null,
   isLoading: false,
   error: null,
+  storyDraft: null,
+  scriptDraft: null,
 
   setProjects: (newProject) => set((state) => { 
     return { projects: state.projects.length === 0 ? [newProject] : [...state.projects, newProject] };
@@ -210,4 +228,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       } 
     });
   },
+
+  setStoryDraft: (draft) => set((state) => ({ storyDraft: typeof draft === 'function' ? draft(state.storyDraft) : draft })),
+  setScriptDraft: (draft) => set((state) => ({ scriptDraft: typeof draft === 'function' ? draft(state.scriptDraft) : draft })),
 }));

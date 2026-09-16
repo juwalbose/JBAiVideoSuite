@@ -3,17 +3,21 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import os
 import json
+import time
 import uuid
 import asyncio
 import httpx
 from database import get_db
-from paths import WORKFLOWS_DIR
+from paths import WORKFLOWS_DIR, GENERATED_DIR
 from .playground_parser import PlaygroundParser
 
 router = APIRouter(prefix="/playground", tags=["Playground"])
 
-# In-memory task tracker: task_id -> prompt_id
-active_tasks: Dict[str, str] = {}
+# In-memory task tracker: task_id -> (prompt_id, timestamp)
+active_tasks: Dict[str, tuple] = {}
+
+# Tasks older than this (seconds) are considered stale and removed
+TASK_TTL = 300  # 5 minutes
 
 @router.get("/list")
 def list_workflows():
@@ -108,7 +112,7 @@ async def generate(request: GenerateRequest, db: Any = Depends(get_db)):
             )
 
         prompt_id = queue_res.json()["prompt_id"]
-        active_tasks[task_id] = prompt_id
+        active_tasks[task_id] = (prompt_id, time.time())
         print(f"[Queue] task_id={task_id} prompt_id={prompt_id} (active: {len(active_tasks)})")
 
     # Small delay to let ComfyUI register the prompt in history before we return
@@ -123,7 +127,7 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
         print(f"[Status] task_id={task_id} NOT FOUND in active_tasks ({len(active_tasks)} tasks)")
         raise HTTPException(status_code=404, detail="Task not found.")
 
-    prompt_id = active_tasks[task_id]
+    prompt_id, _ts = active_tasks[task_id]
 
     comfyui = await db.comfyuisettings.find_first()
     if not comfyui:
@@ -159,9 +163,8 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
         }
         file_res = await client.get(f"{comfy_http}/view", params=params)
 
-        gen_dir = os.path.join(base_dir, "..", "assets", "generated")
-        os.makedirs(gen_dir, exist_ok=True)
-        save_path = os.path.join(gen_dir, output_info["filename"])
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        save_path = os.path.join(GENERATED_DIR, output_info["filename"])
         with open(save_path, "wb") as f:
             f.write(file_res.content)
 
@@ -181,14 +184,23 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
 async def remove_task(task_id: str):
     """Remove a completed task from the tracker after the frontend confirms receipt."""
     if task_id in active_tasks:
-        prompt_id = active_tasks.pop(task_id)
+        prompt_id, _ts = active_tasks.pop(task_id)
         print(f"[Cleanup] task_id={task_id} prompt_id={prompt_id} removed (active: {len(active_tasks)})")
         return {"status": "removed", "task_id": task_id}
     return {"status": "not_found", "task_id": task_id}
 
+def _purge_stale_tasks():
+    """Remove tasks older than TASK_TTL seconds."""
+    now = time.time()
+    stale = [tid for tid, (_pid, ts) in active_tasks.items() if now - ts > TASK_TTL]
+    for tid in stale:
+        del active_tasks[tid]
+        print(f"[Cleanup] purged stale task {tid}")
+
 @router.get("/active")
 async def get_active_tasks():
     """Return all active task IDs so the frontend can poll them all."""
+    _purge_stale_tasks()
     return {"tasks": list(active_tasks.keys()), "count": len(active_tasks)}
 
 @router.delete("/active")

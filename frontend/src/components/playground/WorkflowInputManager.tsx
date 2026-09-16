@@ -40,6 +40,7 @@ const WorkflowInputManager = ({
 }: WorkflowInputManagerProps) => {
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [resultType, setResultType] = useState<'image' | 'video'>('image');
+  const [genError, setGenError] = useState('');
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPollingRef = useRef(false);
   const { comfyui } = useSettingsStore();
@@ -170,14 +171,14 @@ const WorkflowInputManager = ({
               body: formData,
             });
 
-            if (!res.ok) throw new Error(`Upload failed for Node ${nodeId}`);
+            if (!res.ok) throw new Error(`Upload failed for "${role}" (node ${nodeId})`);
 
             const resultData = await res.json();
             setInputValues(prev => ({ ...prev, [role]: { type: data.type, value: resultData.name } }));
             finalInputs[role] = [nodeId, resultData.name];
-          } catch (err) {
-            const fallbackValue = data.value instanceof File ? data.value.name : data.value;
-            finalInputs[role] = [nodeId, fallbackValue];
+          } catch (err: any) {
+            setGenError(`Upload failed: ${err.message}`);
+            return;
           }
         } else {
           finalInputs[role] = [nodeId, data.value];
@@ -259,6 +260,12 @@ const WorkflowInputManager = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {genError && (
+        <div className="p-3 border border-destructive/40 bg-destructive/10 rounded-lg text-destructive text-sm">
+          {genError}
+          <button onClick={() => setGenError('')} className="ml-2 text-xs underline">Dismiss</button>
+        </div>
+      )}
       {/* Preview + Controls */}
       <div className="flex gap-4">
         <div className="flex-1">

@@ -40,18 +40,22 @@ async def refine_dialog(id: str, payload: dict, episode: int = 1, db: Any = Depe
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/extract-cast")
-async def extract_cast(id: str, episode: int = 1, db: Any = Depends(get_db)):
+async def extract_cast(id: str, payload: dict = None, episode: int = 1, db: Any = Depends(get_db)):
     project = await db.project.find_first(where={'id': id})
     if not project:
         return {"status": "error", "details": "Project not found"}
-    script = await db.script.find_first(where={'projectId': id, 'episode': episode})
-    if not script:
-        return {"status": "error", "details": f"Script not found for episode {episode}"}
+    # Use the script from the request body if provided (unsaved local edits), otherwise fall back to DB
+    script_content = (payload or {}).get('script', '')
+    if not script_content:
+        script = await db.script.find_first(where={'projectId': id, 'episode': episode})
+        if not script:
+            return {"status": "error", "details": f"Script not found for episode {episode}"}
+        script_content = script.content
     system_prompt = await get_system_prompt(db, "Extract Cast")
     if not system_prompt:
         return {"status": "error", "details": "No system prompt mapped for 'Extract Cast'."}
     try:
-        result = await call_llm(db, system_prompt, f"Extract all characters, environments, and props from this script:\n\n{script.content}")
+        result = await call_llm(db, system_prompt, f"Extract all characters, environments, and props from this script:\n\n{script_content}")
         return {"status": "success", "cast": result}
     except Exception as e:
         print(f"DEBUG: Error in extract_cast: {e}")
@@ -176,6 +180,26 @@ async def update_asset(id: str, asset_id: str, payload: dict, db: Any = Depends(
         return {"status": "success"}
     except Exception as e:
         print(f"DEBUG: Error in update_asset: {e}")
+        return {"status": "error", "details": str(e)}
+
+@router.patch("/{id}/assets/{asset_id}/states/{state_id}")
+async def update_asset_state(id: str, asset_id: str, state_id: str, payload: dict, db: Any = Depends(get_db)):
+    """Updates a single asset state (prompt, name, description, imagePath, characterSheet)."""
+    try:
+        state = await db.assetstate.find_first(where={'id': state_id, 'assetId': asset_id})
+        if not state:
+            return {"status": "error", "details": "State not found"}
+        data = {}
+        for k in ('name', 'description', 'prompt', 'imagePath', 'characterSheet'):
+            if k in payload:
+                data[k] = payload[k]
+        if 'scenes' in payload:
+            data['scenes'] = str(payload['scenes'])
+        if data:
+            await db.assetstate.update(where={'id': state_id}, data=data)
+        return {"status": "success"}
+    except Exception as e:
+        print(f"DEBUG: Error in update_asset_state: {e}")
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/assets/{asset_id}/generate-prompt")
