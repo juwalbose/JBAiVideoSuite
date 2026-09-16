@@ -327,7 +327,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       if (data.status === 'error') throw new Error(data.details);
       setShowAudioModal(false);
       setAudioFile(null); setAudioName(''); setAudioType('VOICE_SAMPLE'); setAudioTranscript('');
-      const audioRes = await fetch(`${baseUrl}/projects/${currentProject.id}/audio`);
+      const audioRes = await fetch(`${baseUrl}/projects/${currentProject.id}/audio?episode=${selectedEpisode}`);
       const audioData = await audioRes.json();
       if (audioData.status === 'success') setAudioList(audioData.audio);
     } catch (e: any) { setError(e.message || 'Failed to import audio'); } finally { setAudioImporting(false); }

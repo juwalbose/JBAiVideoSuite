@@ -43,6 +43,7 @@ model Project {
   finalVideo    FinalVideo?
   shotList      ShotList[]
   audioAssets   AudioAsset[]
+  // cascade handled via child-side onDelete
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -51,7 +52,7 @@ model Story {
   id           String   @id @default(cuid())
   projectId    String
   episode      Int      @default(1)
-  project      Project  @relation(fields: [projectId], references: [id])
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   narrativeArc String
   rawInput     String?
 
@@ -61,7 +62,7 @@ model Story {
 model Beat {
   id          String   @id @default(cuid())
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   storyId     String?
   order       Int
   content     String
@@ -73,9 +74,9 @@ model Asset {
   id              String        @id @default(cuid())
   projectId       String
   episode         Int           @default(1)
-  project         Project       @relation(fields: [projectId], references: [id])
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   beatId          String?
-  beat            Beat?         @relation(fields: [beatId], references: [id])
+  beat            Beat?         @relation(fields: [beatId], references: [id], onDelete: SetNull)
   type            String   // "CHARACTER", "LOCATION", "PROP"
   name            String
   description     String?
@@ -91,7 +92,7 @@ model Asset {
 model AssetState {
   id              String   @id @default(cuid())
   assetId         String
-  asset           Asset    @relation(fields: [assetId], references: [id])
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
   name            String
   description     String?
   prompt          String?
@@ -105,7 +106,7 @@ model AssetState {
 model Shot {
   id             String   @id @default(cuid())
   beatId         String
-  beat           Beat     @relation(fields: [beatId], references: [id])
+  beat           Beat     @relation(fields: [beatId], references: [id], onDelete: Cascade)
   order          Int
   prompt         String
   cameraMovement String?
@@ -134,7 +135,7 @@ model Script {
   id           String   @id @default(cuid())
   projectId    String
   episode      Int      @default(1)
-  project      Project  @relation(fields: [projectId], references: [id])
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   content      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -145,7 +146,7 @@ model Script {
 model FinalVideo {
   id           String   @id @default(cuid())
   projectId    String   @unique
-  project      Project  @relation(fields: [projectId], references: [id])
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   totalDuration Float?
   exportPath   String?
   thumbnailUrl String?
@@ -155,7 +156,7 @@ model AudioAsset {
   id          String   @id @default(cuid())
   projectId   String
   episode     Int      @default(1)
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name        String
   audioPath   String
   audioType   String   // "VOICE_SAMPLE", "CHARACTER_DIALOG", "SCENE_DIALOG"
@@ -170,7 +171,7 @@ model ShotList {
   id          String   @id @default(cuid())
   projectId   String
   episode     Int      @default(1)
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   shot        Int
   scene       Int      @default(0)
   beats       String   @default("[]")

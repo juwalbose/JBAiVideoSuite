@@ -22,7 +22,7 @@ async def import_audio(
     name: str = Form(...),
     audio_type: str = Form(...),
     transcript: str = Form(""),
-    episode: int = Form(1),
+    episode: int = 1,
     db: Any = Depends(get_db),
 ):
     os.makedirs(AUDIO_DIR, exist_ok=True)
