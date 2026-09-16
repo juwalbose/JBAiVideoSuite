@@ -6,6 +6,18 @@ router = APIRouter(prefix="/systemprompts", tags=["SystemPrompts"])
 current_dir = os.path.dirname(os.path.abspath(__file__))
 PROMPTS_DIR = os.path.abspath(os.path.join(current_dir, "..", "..", "assets", "systemprompts"))
 
+def _safe_prompt_path(filename: str) -> str | None:
+    """Return a safe absolute path inside PROMPTS_DIR, or None if the name is unsafe."""
+    base = os.path.basename(filename)
+    if base != filename or "/" in base or "\\" in base or base.startswith("."):
+        return None
+    if not base.lower().endswith(".txt"):
+        return None
+    path = os.path.realpath(os.path.join(PROMPTS_DIR, base))
+    if not path.startswith(os.path.realpath(PROMPTS_DIR)):
+        return None
+    return path
+
 @router.get("/")
 async def list_prompts():
     if not os.path.exists(PROMPTS_DIR):
@@ -16,16 +28,24 @@ async def list_prompts():
 
 @router.get("/{filename}")
 async def get_prompt(filename: str):
-    filepath = os.path.join(PROMPTS_DIR, filename)
-    if not os.path.exists(filepath):
+    filepath = _safe_prompt_path(filename)
+    if filepath is None or not os.path.exists(filepath):
         return {"status": "error", "details": "Prompt not found"}
     with open(filepath, 'r', encoding='utf-8') as f:
         return {"content": f.read()}
 
 @router.post("/add")
-async def add_prompt(name: str, content: str):
+async def add_prompt(payload: dict):
+    name = payload.get("name", "")
+    content = payload.get("content", "")
+    if not name:
+        return {"status": "error", "details": "Missing name"}
     filename = f"{name}.txt"
-    filepath = os.path.join(PROMPTS_DIR, filename)
+    filepath = _safe_prompt_path(filename)
+    if filepath is None:
+        return {"status": "error", "details": "Invalid prompt name"}
+    if not os.path.exists(PROMPTS_DIR):
+        os.makedirs(PROMPTS_DIR, exist_ok=True)
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)
     return {"status": "success", "filename": filename}

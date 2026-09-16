@@ -25,11 +25,14 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      const modelList = data.models || [];
-      if (modelList.length === 0) {
+      if (data.status === 'unhealthy') {
+        setTestStatus(`🔴 ${data.details || 'Connection failed'}`);
+        setAvailableModels([]);
+      } else if (data.status === 'no_models') {
         setTestStatus('🔵 No Models Loaded');
         setAvailableModels([]);
       } else {
+        const modelList = data.models || [];
         setAvailableModels(modelList);
         setTestStatus('🟢 Healthy');
       }

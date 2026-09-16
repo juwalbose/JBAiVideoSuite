@@ -1,7 +1,6 @@
-fastapi
-uvicorn
-prisma-client-py
-requests
-httpx
-pydantic
-python-multipart
+fastapi==0.115.12
+uvicorn==0.34.2
+prisma-client-py==0.9.1
+httpx==0.28.1
+pydantic==2.11.4
+python-multipart==0.0.20

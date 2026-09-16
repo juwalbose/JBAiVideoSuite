@@ -67,7 +67,12 @@ async def upload_image(payload: dict):
 @router.delete("/{filename}")
 async def delete_image(filename: str):
     """Deletes an image file from the assets/generated folder."""
-    filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
+    base = os.path.basename(filename)
+    if base != filename or "/" in base or "\\" in base or base.startswith("."):
+        return {"status": "error", "details": "Invalid filename"}
+    filepath = os.path.realpath(os.path.join(GENERATED_IMAGES_DIR, base))
+    if not filepath.startswith(os.path.realpath(GENERATED_IMAGES_DIR)):
+        return {"status": "error", "details": "Invalid path"}
     if not os.path.exists(filepath):
         return {"status": "error", "details": "File not found"}
     try:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from typing import Any
-import requests
+import httpx
 from database import get_db
 from models import (
     LLMSettingsModel, 
@@ -27,14 +27,16 @@ async def call_llm(prompt: str, db) -> str:
         ],
         "temperature": temperature,
     }
+    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        response = requests.post(url, json=payload)
-        print(f'DEBUG: Request sent to {url}')
-        print(f'DEBUG: Response Status Code: {response.status_code}')
-        response.raise_for_status()
-        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        print(f'DEBUG: LLM Result received: {result[:50]}...')
-        return result
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            print(f'DEBUG: Request sent to {url}')
+            print(f'DEBUG: Response Status Code: {response.status_code}')
+            response.raise_for_status()
+            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+            print(f'DEBUG: LLM Result received: {result[:50]}...')
+            return result
     except Exception as e:
         print(f'DEBUG: Error in call_llm: {e}')
         return f"LM Studio Error: {str(e)}"

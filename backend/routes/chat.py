@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Any, Optional
-import requests
+import httpx
 from database import get_db
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -61,11 +61,13 @@ async def chat(req: ChatRequest, db: Any = Depends(get_db)):
         "temperature": temperature,
     }
 
+    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        return {"status": "success", "response": result}
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+            return {"status": "success", "response": result}
     except Exception as e:
         return {"status": "error", "details": str(e)}
 

@@ -28,9 +28,11 @@ const WorkflowsPanel: React.FC = () => {
     reader.onload = async () => {
       const content = reader.result as string;
       const baseUrl = backend.apiUrl.endsWith('/') ? backend.apiUrl.slice(0, -1) : backend.apiUrl;
-      const url = `${baseUrl}/workflows/add?name=${file.name.replace('.json', '')}&json_content=${encodeURIComponent(content)}`;
-      console.log('Fetching workflow from:', url);
-      await fetch(url, { method: 'POST' });
+      await fetch(`${baseUrl}/workflows/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name.replace('.json', ''), json_content: content }),
+      });
       await fetchWorkflows();
     };
     reader.readAsText(file);

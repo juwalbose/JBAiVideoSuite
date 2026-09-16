@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import Optional, Any
 from database import get_db
 from models import ProjectCreate, StoryInput
-import requests
+import httpx
 import os
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -163,12 +163,14 @@ async def generate_story(id: str, story_input: StoryInput, episode: int = 1, db:
         "temperature": temperature,
     }
 
+    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
 
-        return {"status": "success", "narrative_arc": result}
+            return {"status": "success", "narrative_arc": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_story: {e}")
         return {"status": "error", "details": str(e)}
@@ -202,12 +204,14 @@ async def generate_script(id: str, episode: int = 1, db: Any = Depends(get_db)):
         "temperature": temperature,
     }
 
+    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
 
-        return {"status": "success", "script": result}
+            return {"status": "success", "script": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_script: {e}")
         return {"status": "error", "details": str(e)}
@@ -235,14 +239,16 @@ async def generate_shots(id: str, episode: int = 1, db: Any = Depends(get_db)):
         "temperature": temperature,
         "max_tokens": 16384,
     }
+    timeout = httpx.Timeout(300.0, connect=10.0)
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        result = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-        finish_reason = data.get("choices", [{}])[0].get("finish_reason", "unknown")
-        print(f"DEBUG: generate_shots response length={len(result)}, finish_reason={finish_reason}")
-        return {"status": "success", "shots": result}
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            result = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            finish_reason = data.get("choices", [{}])[0].get("finish_reason", "unknown")
+            print(f"DEBUG: generate_shots response length={len(result)}, finish_reason={finish_reason}")
+            return {"status": "success", "shots": result}
     except Exception as e:
         print(f"DEBUG: Error in generate_shots: {e}")
         return {"status": "error", "details": str(e)}

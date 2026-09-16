@@ -69,7 +69,7 @@ The backend lives in `backend/` and ships with a pre-built virtual environment (
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
-pip install fastapi uvicorn prisma-client-py prisma httpx
+pip install -r requirements.txt
 ```
 
 Then generate the Prisma client and create the SQLite database:

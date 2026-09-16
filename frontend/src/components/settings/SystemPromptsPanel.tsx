@@ -34,9 +34,11 @@ const SystemPromptsPanel: React.FC = () => {
     reader.onload = async () => {
       const content = reader.result as string;
       const baseUrl = backend.apiUrl.endsWith('/') ? backend.apiUrl.slice(0, -1) : backend.apiUrl;
-      const url = `${baseUrl}/systemprompts/add?name=${file.name.replace('.txt', '')}&content=${encodeURIComponent(content)}`;
-      console.log('Adding system prompt:', url);
-      await fetch(url, { method: 'POST' });
+      await fetch(`${baseUrl}/systemprompts/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name.replace('.txt', ''), content }),
+      });
       await fetchPrompts();
     };
     reader.readAsText(file);

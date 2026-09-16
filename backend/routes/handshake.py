@@ -116,43 +116,45 @@ async def test_llm(db = Depends(get_db)):
     ip, port = llm.ip, llm.port
     url = f"http://{ip}:{port}/v1/models"
 
-    try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            return {
-                "status": "unhealthy", 
-                "server_reachable": False, 
-                "ping_success": False, 
-                "details": f"LM Studio responded with HTTP {response.status_code}"
-            }
-        
-        data = response.json()
-        model_list = data.get("data", [])
-        
-        if not model_list:
-            return {
-                "status": "no_models", 
-                "server_reachable": True, 
-                "active_model": "No Model Loaded", 
-                "ping_success": True, 
-                "details": "LM Studio is ready, but no models are loaded.",
-                "models": []
-            }
+    timeout = httpx.Timeout(10.0, connect=3.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            response = await client.get(url)
+            if response.status_code != 200:
+                return {
+                    "status": "unhealthy",
+                    "server_reachable": False,
+                    "ping_success": False,
+                    "details": f"LM Studio responded with HTTP {response.status_code}"
+                }
 
-        active_model = model_list[0].get("id", "Unnamed Model")
+            data = response.json()
+            model_list = data.get("data", [])
 
-        return {
-            "status": "healthy",
-            "server_reachable": True,
-            "active_model": active_model,
-            "ping_success": True,
-            "details": f"Connected to LM Studio at {ip}:{port}",
-            "models": model_list
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy", 
-            "server_reachable": False, 
-            "ping_success": False, 
-            "details": str(e)
-        }
+            if not model_list:
+                return {
+                    "status": "no_models",
+                    "server_reachable": True,
+                    "active_model": "No Model Loaded",
+                    "ping_success": True,
+                    "details": "LM Studio is ready, but no models are loaded.",
+                    "models": []
+                }
+
+            active_model = model_list[0].get("id", "Unnamed Model")
+
+            return {
+                "status": "healthy",
+                "server_reachable": True,
+                "active_model": active_model,
+                "ping_success": True,
+                "details": f"Connected to LM Studio at {ip}:{port}",
+                "models": model_list
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "server_reachable": False,
+                "ping_success": False,
+                "details": str(e)
+            }
