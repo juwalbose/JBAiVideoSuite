@@ -97,6 +97,7 @@ async def import_project(payload: dict, db: Any = Depends(get_db)):
     data = payload.get('data', payload)
     if not data:
         return {"status": "error", "details": "No data provided"}
+    import_settings = payload.get('import_settings', False)
 
     proj = data.get('project', {})
     if not proj:
@@ -295,10 +296,76 @@ async def import_project(payload: dict, db: Any = Depends(get_db)):
             'thumbnailUrl': fv.get('thumbnailUrl'),
         })
 
-    # Settings, action mappings, and workflow mappings are intentionally NOT imported.
-    # They are machine-specific (IPs, ports, file paths) and importing them would
-    # silently replace the local configuration, potentially locking the UI out
-    # of its own backend.
+    # Import settings and mappings only if explicitly requested by the user.
+    # They are machine-specific (IPs, ports, file paths) and silently importing
+    # them could lock the UI out of its own backend.
+    if import_settings:
+        settings = data.get('settings', {})
+        if settings.get('llm'):
+            llm = await db.llmsettings.find_first()
+            ld = settings['llm']
+            if llm:
+                await db.llmsettings.update(where={'id': llm.id}, data={
+                    'ip': ld.get('ip'), 'port': ld.get('port'),
+                    'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
+                    'maxTokens': ld.get('maxTokens'),
+                })
+            else:
+                await db.llmsettings.create({
+                    'ip': ld.get('ip'), 'port': ld.get('port'),
+                    'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
+                    'maxTokens': ld.get('maxTokens'),
+                })
+        if settings.get('backend'):
+            backend = await db.backendsettings.find_first()
+            bd = settings['backend']
+            if backend:
+                await db.backendsettings.update(where={'id': backend.id}, data={
+                    'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
+                })
+            else:
+                await db.backendsettings.create({
+                    'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
+                })
+        if settings.get('comfyui'):
+            comfy = await db.comfyuisettings.find_first()
+            cd = settings['comfyui']
+            if comfy:
+                await db.comfyuisettings.update(where={'id': comfy.id}, data={
+                    'ip': cd.get('ip'), 'port': cd.get('port'),
+                    'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
+                })
+            else:
+                await db.comfyuisettings.create({
+                    'ip': cd.get('ip'), 'port': cd.get('port'),
+                    'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
+                })
+
+        for m in data.get('appActionMappings', []):
+            existing = await db.appactionmapping.find_first(where={'action': m.get('action')})
+            if existing:
+                await db.appactionmapping.update(where={'id': existing.id}, data={
+                    'promptFile': m.get('promptFile'),
+                })
+            else:
+                await db.appactionmapping.create({
+                    'action': m.get('action'),
+                    'promptFile': m.get('promptFile'),
+                })
+
+        for m in data.get('comfyWorkflowMappings', []):
+            existing = await db.comfyworkflowmapping.find_first(where={'action': m.get('action')})
+            if existing:
+                await db.comfyworkflowmapping.update(where={'id': existing.id}, data={
+                    'workflowFile': m.get('workflowFile'),
+                    'resolutionJson': m.get('resolutionJson'),
+                })
+            else:
+                await db.comfyworkflowmapping.create({
+                    'action': m.get('action'),
+                    'workflowFile': m.get('workflowFile'),
+                    'resolutionJson': m.get('resolutionJson'),
+                })
 
     # Import system prompts (write files) — sanitised
     os.makedirs(PROMPTS_DIR, exist_ok=True)

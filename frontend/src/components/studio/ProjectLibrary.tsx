@@ -65,10 +65,20 @@ const ProjectLibrary = () => {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
+      const payload = data.data || data;
+      const hasSettings = payload.settings && (payload.settings.llm || payload.settings.backend || payload.settings.comfyui);
+      let importSettings = false;
+      if (hasSettings) {
+        importSettings = window.confirm(
+          'This export includes settings (LLM, backend, ComfyUI) and action mappings.\n\n' +
+          'Import them too? This will replace your current settings with the imported ones.\n\n' +
+          'OK = import settings, Cancel = project only'
+        );
+      }
       const res = await fetch(`${baseUrl}/export/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, import_settings: importSettings }),
       });
       const result = await res.json();
       if (result.status === 'error') {
