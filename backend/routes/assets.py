@@ -34,9 +34,9 @@ async def refine_dialog(id: str, payload: dict, episode: int = 1, db: Any = Depe
     try:
         script_content = payload.get('script', script.content)
 
-        # Fetch character assets with their characteristics
+        # Fetch character assets with their characteristics (project-level, shared across episodes)
         characters = await db.asset.find_many(
-            where={'projectId': id, 'episode': episode, 'type': 'CHARACTER'}
+            where={'projectId': id, 'type': 'CHARACTER'}
         )
         char_context = ""
         if characters:
@@ -73,98 +73,232 @@ async def extract_cast(id: str, payload: dict = None, episode: int = 1, db: Any 
         return {"status": "error", "details": "No system prompt mapped for 'Extract Cast'."}
     try:
         result = await call_llm(db, system_prompt, f"Extract all characters, environments, and props from this script:\n\n{script_content}")
-        return {"status": "success", "cast": result}
+
+        # Parse the LLM result and compare against existing project-level assets
+        text = result.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        try:
+            data = json.loads(text)
+        except Exception:
+            data = {"characters": [], "locations": [], "props": []}
+
+        # Fetch all existing project-level assets (shared across episodes)
+        existing_assets = await db.asset.find_many(
+            where={'projectId': id},
+            include={'states': {}}
+        )
+        existing_by_key = {}
+        for a in existing_assets:
+            key = f"{a.type}:{a.name}"
+            existing_by_key[key] = {
+                "id": a.id,
+                "name": a.name,
+                "type": a.type,
+                "description": a.description or "",
+                "states": [{"id": s.id, "name": s.name, "description": s.description or ""} for s in a.states]
+            }
+
+        comparison = {"new": [], "existing": []}
+        for asset_type, key in [('CHARACTER', 'characters'), ('LOCATION', 'locations'), ('PROP', 'props')]:
+            for item in data.get(key, []):
+                name = item.get('name', '')
+                if not name:
+                    continue
+                lookup_key = f"{asset_type}:{name}"
+                if lookup_key in existing_by_key:
+                    comparison["existing"].append({
+                        "type": asset_type,
+                        "name": name,
+                        "description": item.get('description', ''),
+                        "states": item.get('states', []),
+                        "existingAssetId": existing_by_key[lookup_key]["id"],
+                        "existingStates": existing_by_key[lookup_key]["states"]
+                    })
+                else:
+                    comparison["new"].append({
+                        "type": asset_type,
+                        "name": name,
+                        "description": item.get('description', ''),
+                        "states": item.get('states', [])
+                    })
+
+        return {"status": "success", "cast": result, "comparison": comparison}
     except Exception as e:
         print(f"DEBUG: Error in extract_cast: {e}")
         return {"status": "error", "details": str(e)}
 
 @router.post("/{id}/save-assets")
 async def save_assets(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
-    """Upsert assets keyed by (type, name, episode). Preserves existing IDs, images, sheets."""
+    """Save selected assets from an extraction. Accepts either:
+    - 'selections': array of {type, name, description, states, mode, existingAssetId, stateName, stateDescription}
+    - 'cast': raw JSON string (legacy — upserts all, project-level)
+    """
     project = await db.project.find_first(where={'id': id})
     if not project:
         return {"status": "error", "details": "Project not found"}
-    raw = payload.get('cast', '')
-    if not raw:
-        return {"status": "error", "details": "No cast data provided"}
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    try:
-        data = json.loads(text)
-    except Exception as e:
-        return {"status": "error", "details": f"Failed to parse JSON: {str(e)}"}
-
-    # Validate structure before any DB writes
-    for key in ('characters', 'locations', 'props'):
-        if key in data and not isinstance(data[key], list):
-            return {"status": "error", "details": f"'{key}' must be a list"}
 
     created = 0
     updated = 0
+    states_added = 0
 
     async with db.tx() as tx:
-        for asset_type, key in [('CHARACTER', 'characters'), ('LOCATION', 'locations'), ('PROP', 'props')]:
-            for item in data.get(key, []):
-                name = item.get('name', '')
-                if not name:
+        if 'selections' in payload:
+            for sel in payload['selections']:
+                asset_type = sel.get('type', '')
+                name = sel.get('name', '')
+                description = sel.get('description', '')
+                states = sel.get('states', [])
+                mode = sel.get('mode', 'new')  # 'new' or 'add_state'
+                existing_asset_id = sel.get('existingAssetId')
+
+                if not asset_type or not name:
                     continue
-                description = item.get('description', '')
-                states = item.get('states', [])
 
-                existing = await tx.asset.find_first(where={
-                    'projectId': id, 'episode': episode, 'type': asset_type, 'name': name
-                }, include={'states': True})
+                if mode == 'add_state' and existing_asset_id:
+                    # Add states to an existing asset
+                    asset = await tx.asset.find_first(where={'id': existing_asset_id, 'projectId': id})
+                    if not asset:
+                        continue
+                    # Update asset description if provided
+                    if description:
+                        await tx.asset.update(where={'id': asset.id}, data={'description': description})
+                    # Add the specific state the user defined
+                    state_name = sel.get('stateName', '')
+                    state_desc = sel.get('stateDescription', '')
+                    if state_name:
+                        await tx.assetstate.create({
+                            'assetId': asset.id, 'name': state_name,
+                            'description': state_desc, 'prompt': state_desc,
+                            'scenes': '[]'
+                        })
+                        states_added += 1
+                    updated += 1
+                else:
+                    # Create a new asset (project-level, no episode scoping)
+                    existing = await tx.asset.find_first(where={
+                        'projectId': id, 'type': asset_type, 'name': name
+                    }, include={'states': True})
 
-                if existing:
-                    await tx.asset.update(where={'id': existing.id}, data={'description': description})
-                    existing_states = {s.name: s for s in existing.states}
-                    for state in states:
-                        sname = state.get('name', '')
-                        if not sname:
-                            continue
-                        sdesc = state.get('description', '')
-                        if sname in existing_states:
-                            await tx.assetstate.update(where={'id': existing_states[sname].id}, data={
-                                'description': sdesc, 'prompt': sdesc, 'scenes': str(state.get('scenes', []))
-                            })
-                        else:
+                    if existing:
+                        await tx.asset.update(where={'id': existing.id}, data={'description': description})
+                        existing_states = {s.name: s for s in existing.states}
+                        for state in states:
+                            sname = state.get('name', '')
+                            if not sname:
+                                continue
+                            sdesc = state.get('description', '')
+                            if sname in existing_states:
+                                await tx.assetstate.update(where={'id': existing_states[sname].id}, data={
+                                    'description': sdesc, 'prompt': sdesc, 'scenes': str(state.get('scenes', []))
+                                })
+                            else:
+                                await tx.assetstate.create({
+                                    'assetId': existing.id, 'name': sname,
+                                    'description': sdesc, 'prompt': sdesc,
+                                    'scenes': str(state.get('scenes', []))
+                                })
+                                states_added += 1
+                        updated += 1
+                    else:
+                        asset = await tx.asset.create({
+                            'projectId': id, 'type': asset_type,
+                            'name': name, 'description': description
+                        })
+                        for state in states:
+                            sname = state.get('name', '')
+                            if not sname:
+                                continue
+                            sdesc = state.get('description', '')
                             await tx.assetstate.create({
-                                'assetId': existing.id, 'name': sname,
+                                'assetId': asset.id, 'name': sname,
                                 'description': sdesc, 'prompt': sdesc,
                                 'scenes': str(state.get('scenes', []))
                             })
-                    updated += 1
-                else:
-                    asset = await tx.asset.create({
-                        'projectId': id, 'episode': episode, 'type': asset_type,
-                        'name': name, 'description': description
-                    })
-                    for state in states:
-                        sname = state.get('name', '')
-                        if not sname:
-                            continue
-                        sdesc = state.get('description', '')
-                        await tx.assetstate.create({
-                            'assetId': asset.id, 'name': sname,
-                            'description': sdesc, 'prompt': sdesc,
-                            'scenes': str(state.get('scenes', []))
-                        })
-                    created += 1
+                            states_added += 1
+                        created += 1
+        else:
+            # Legacy: raw cast JSON — upsert all, project-level
+            raw = payload.get('cast', '')
+            if not raw:
+                return {"status": "error", "details": "No cast data provided"}
+            text = raw.strip()
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            try:
+                data = json.loads(text)
+            except Exception as e:
+                return {"status": "error", "details": f"Failed to parse JSON: {str(e)}"}
 
-    return {"status": "success", "assetsCreated": created, "assetsUpdated": updated}
+            for key in ('characters', 'locations', 'props'):
+                if key in data and not isinstance(data[key], list):
+                    return {"status": "error", "details": f"'{key}' must be a list"}
+
+            for asset_type, key in [('CHARACTER', 'characters'), ('LOCATION', 'locations'), ('PROP', 'props')]:
+                for item in data.get(key, []):
+                    name = item.get('name', '')
+                    if not name:
+                        continue
+                    description = item.get('description', '')
+                    states = item.get('states', [])
+
+                    existing = await tx.asset.find_first(where={
+                        'projectId': id, 'type': asset_type, 'name': name
+                    }, include={'states': True})
+
+                    if existing:
+                        await tx.asset.update(where={'id': existing.id}, data={'description': description})
+                        existing_states = {s.name: s for s in existing.states}
+                        for state in states:
+                            sname = state.get('name', '')
+                            if not sname:
+                                continue
+                            sdesc = state.get('description', '')
+                            if sname in existing_states:
+                                await tx.assetstate.update(where={'id': existing_states[sname].id}, data={
+                                    'description': sdesc, 'prompt': sdesc, 'scenes': str(state.get('scenes', []))
+                                })
+                            else:
+                                await tx.assetstate.create({
+                                    'assetId': existing.id, 'name': sname,
+                                    'description': sdesc, 'prompt': sdesc,
+                                    'scenes': str(state.get('scenes', []))
+                                })
+                                states_added += 1
+                        updated += 1
+                    else:
+                        asset = await tx.asset.create({
+                            'projectId': id, 'type': asset_type,
+                            'name': name, 'description': description
+                        })
+                        for state in states:
+                            sname = state.get('name', '')
+                            if not sname:
+                                continue
+                            sdesc = state.get('description', '')
+                            await tx.assetstate.create({
+                                'assetId': asset.id, 'name': sname,
+                                'description': sdesc, 'prompt': sdesc,
+                                'scenes': str(state.get('scenes', []))
+                            })
+                            states_added += 1
+                        created += 1
+
+    return {"status": "success", "assetsCreated": created, "assetsUpdated": updated, "statesAdded": states_added}
 
 @router.get("/{id}/assets")
 async def get_assets(id: str, episode: int = 1, db: Any = Depends(get_db)):
     project = await db.project.find_first(where={'id': id})
     if not project:
         return {"status": "error", "details": "Project not found"}
-    assets = await db.asset.find_many(where={'projectId': id, 'episode': episode}, include={'states': {}})
+    assets = await db.asset.find_many(where={'projectId': id}, include={'states': {}})
     result = {"characters": [], "locations": [], "props": []}
     for a in assets:
-        entry = {"id": a.id, "name": a.name, "description": a.description or "", "characteristics": a.characteristics or ""}
+        entry = {"id": a.id, "name": a.name, "type": a.type, "description": a.description or "", "characteristics": a.characteristics or ""}
         entry["states"] = [{"id": s.id, "name": s.name, "description": s.description or "", "prompt": s.prompt or "", "scenes": s.scenes, "imagePath": s.imagePath or "", "characterSheet": s.characterSheet or ""} for s in a.states]
         result["characters" if a.type == "CHARACTER" else "locations" if a.type == "LOCATION" else "props"].append(entry)
     return {"status": "success", "assets": result}
@@ -275,7 +409,7 @@ async def delete_state(id: str, asset_id: str, state_id: str, db: Any = Depends(
 
 @router.post("/{id}/assets")
 async def add_asset(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
-    """Adds a new asset with its first state, or adds a new state to an existing asset."""
+    """Adds a new asset with its first state, or adds a new state to an existing asset. Project-level (shared across episodes)."""
     try:
         asset_type = payload.get('type', '')
         asset_name = payload.get('assetName', '')
@@ -296,7 +430,7 @@ async def add_asset(id: str, payload: dict, episode: int = 1, db: Any = Depends(
         else:
             if not asset_name:
                 return {"status": "error", "details": "Asset name required for new asset"}
-            asset = await db.asset.create({'projectId': id, 'episode': episode, 'type': asset_type, 'name': asset_name, 'description': asset_desc})
+            asset = await db.asset.create({'projectId': id, 'type': asset_type, 'name': asset_name, 'description': asset_desc})
             await db.assetstate.create({'assetId': asset.id, 'name': state_name, 'description': state_desc, 'prompt': state_desc, 'scenes': '[]'})
             return {"status": "success"}
     except Exception as e:

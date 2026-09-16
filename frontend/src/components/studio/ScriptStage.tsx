@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProjectStore, Script } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
+import ExtractComparisonModal from './ExtractComparisonModal';
 
 const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode: number; onNavigateToAssets?: () => void }) => {
   const { currentProject, scriptDraft, setScriptDraft } = useProjectStore();
@@ -10,6 +11,8 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   const [error, setError] = useState('');
   const [hasSavedAssets, setHasSavedAssets] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
+  const [comparisonData, setComparisonData] = useState<{ new: any[]; existing: any[] } | null>(null);
+  const [existingAssetsList, setExistingAssetsList] = useState<{ id: string; name: string; type: string }[]>([]);
 
   // Draft lives in the store so it survives tab switches
   const script = scriptDraft?.script ?? currentProject?.script?.content ?? '';
@@ -100,6 +103,24 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       const castValue = data.cast || '';
       console.log("Cast value length:", castValue.length);
       updateDraft({ cast: castValue, formattedCast: formatCast(castValue) });
+
+      // Fetch existing project-level assets for the comparison modal
+      const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/assets`);
+      const assetsData = await assetsRes.json();
+      if (assetsData.status === 'success' && assetsData.assets) {
+        const all: { id: string; name: string; type: string }[] = [];
+        for (const list of [assetsData.assets.characters, assetsData.assets.locations, assetsData.assets.props]) {
+          for (const a of list || []) {
+            all.push({ id: a.id, name: a.name, type: a.type });
+          }
+        }
+        setExistingAssetsList(all);
+      }
+
+      // Show the comparison modal
+      if (data.comparison) {
+        setComparisonData(data.comparison);
+      }
     } catch (error) {
       console.error("Error extracting cast:", error);
       setError('Failed to extract cast. Check backend connection.');
@@ -247,6 +268,39 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     }
   };
 
+  const handleComparisonConfirm = async (selections: any[]) => {
+    if (!currentProject) return;
+    setComparisonData(null);
+    setIsSaving(true);
+    setError('');
+    try {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/save-assets?episode=${selectedEpisode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selections }),
+      });
+      const data = await assetsRes.json();
+      if (data.status === 'error') {
+        setError(data.details);
+        return;
+      }
+      setHasSavedAssets(true);
+      // Refresh the cast display from the saved assets
+      const assetsRes2 = await fetch(`${baseUrl}/projects/${currentProject.id}/assets`);
+      const assetsData2 = await assetsRes2.json();
+      if (assetsData2.status === 'success' && assetsData2.assets) {
+        const json = JSON.stringify(assetsData2.assets, null, 2);
+        updateDraft({ cast: json, formattedCast: formatCast(json) });
+      }
+    } catch (error) {
+      console.error("Error saving selections:", error);
+      setError('Failed to save selections. Check backend connection.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {currentProject?.type === 'episodic' && (
@@ -372,6 +426,15 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           </button>
         )}
       </div>
+
+      {comparisonData && (
+        <ExtractComparisonModal
+          comparison={comparisonData}
+          existingAssets={existingAssetsList}
+          onConfirm={handleComparisonConfirm}
+          onCancel={() => setComparisonData(null)}
+        />
+      )}
     </div>
   );
 };

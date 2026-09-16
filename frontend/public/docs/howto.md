@@ -119,7 +119,7 @@ Maps **system prompts** to app actions, and **ComfyUI workflows** to generation 
 
 ![App Settings tab](images/placeholder.svg)
 
-**LLM System Prompt Mapping** — for each app action, pick which system prompt file (from `assets/systemprompts/`) to use. Leave as *None* to use the built-in default.
+**LLM System Prompt Mapping** — for each app action, pick which system prompt file (from `assets/systemprompts/`) to use. Leave as *None* to disable the action — it will return an error if invoked without a mapped prompt.
 
 | Action | Purpose |
 |--------|---------|
@@ -784,7 +784,7 @@ An episodic project is simply a **collection of single video flows** — each ep
 4. Switch to Episode 2 — the stages reset and you start fresh
 5. Repeat for as many episodes as you need
 
-> **Tip:** Assets (characters, locations, props) are shared across episodes within the same project. You define them once in Episode 1 and they're available in every subsequent episode.
+> **Tip:** Assets (characters, locations, props) are shared across episodes within the same project. When you extract assets for a new episode, a comparison modal shows you what's new vs. what already exists. You can add new assets, or add new states to existing ones (e.g. *Jake Injured* as a state on the existing *Jake* character).
 
 > **Note:** A Single Video project behaves identically to a one-episode Episodic project — it just hides the episode selector since there's only one.
 
