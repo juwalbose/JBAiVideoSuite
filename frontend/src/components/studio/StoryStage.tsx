@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
@@ -11,6 +11,8 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
   const [error, setError] = useState('');
   const [episodeCount, setEpisodeCount] = useState(1);
   const [duration, setDuration] = useState(120);
+  const [name, setName] = useState('');
+  const nameDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Sync local state with project data when currentProject changes
   useEffect(() => {
@@ -19,8 +21,18 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
       setNarrativeArc(currentProject.story?.narrativeArc || '');
       setDuration(currentProject.duration || 120);
       setEpisodeCount(currentProject.episodeCount || 1);
+      setName(currentProject.name);
     }
   }, [currentProject?.id]);
+
+  // Debounced name save: fires 800ms after the user stops typing
+  useEffect(() => {
+    if (!currentProject || name === currentProject.name) return;
+    nameDebounceRef.current = setTimeout(() => {
+      updateProject(name).catch(() => {});
+    }, 800);
+    return () => clearTimeout(nameDebounceRef.current);
+  }, [name]);
 
   const handleGenerateStory = async () => {
     if (!currentProject) return;
@@ -75,8 +87,8 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
                 <label className="block text-sm font-medium text-muted-foreground">Name</label>
                 <input
                   className="w-full p-2 border border-border rounded bg-card text-foreground"
-                  value={currentProject.name}
-                  onChange={(e) => updateProject(e.target.value)}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
             </div>

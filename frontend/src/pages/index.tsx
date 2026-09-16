@@ -92,6 +92,12 @@ const Studio = () => {
     return () => window.removeEventListener('open-chat', handler);
   }, []);
 
+  // Reset episode state when the project changes; single-video projects always have 1 episode
+  useEffect(() => {
+    setSelectedEpisode(1);
+    setEpisodeCount(currentProject?.type === 'episodic' ? (currentProject.episodeCount || 1) : 1);
+  }, [currentProject?.id]);
+
   return (
     <div className="flex flex-col h-screen w-full bg-background text-foreground">
       {/* Top Navigation Tabs */}

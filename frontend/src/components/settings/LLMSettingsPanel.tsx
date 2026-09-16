@@ -15,6 +15,16 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
   setIsTesting,
 }) => {
   const { llm, setLLM, saveLLM, availableModels, setAvailableModels, backend } = useSettingsStore();
+  const [saveError, setSaveError] = useState('');
+
+  const handleSave = async () => {
+    setSaveError('');
+    try {
+      await saveLLM();
+    } catch (e) {
+      setSaveError((e as Error).message);
+    }
+  };
 
   const runLLMTest = async () => {
     setIsTesting(true);
@@ -116,11 +126,14 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
       )}
       <div className="mt-8 pt-4 border-t border-border">
         <button
-          onClick={saveLLM}
+          onClick={handleSave}
           className="bg-success text-white px-6 py-2 rounded hover:opacity-90 transition-colors"
         >
           Save LLM Settings
         </button>
+        {saveError && (
+          <p className="mt-2 text-sm text-destructive">{saveError}</p>
+        )}
       </div>
     </div>
   );

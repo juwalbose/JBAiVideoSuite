@@ -15,6 +15,16 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
   setIsTesting,
 }) => {
   const { comfyui, setComfyUI, saveComfyUI, testComfyuiConnection } = useSettingsStore();
+  const [saveError, setSaveError] = useState('');
+
+  const handleSave = async () => {
+    setSaveError('');
+    try {
+      await saveComfyUI();
+    } catch (e) {
+      setSaveError((e as Error).message);
+    }
+  };
 
   const handleTest = async () => {
     setIsTesting(true);
@@ -82,11 +92,14 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
       </div>
       <div className="mt-8 pt-4 border-t border-border">
         <button
-          onClick={saveComfyUI}
+          onClick={handleSave}
           className="bg-success text-white px-6 py-2 rounded hover:opacity-90 transition-colors"
         >
           Save ComfyUI Settings
         </button>
+        {saveError && (
+          <p className="mt-2 text-sm text-destructive">{saveError}</p>
+        )}
       </div>
     </div>
   );

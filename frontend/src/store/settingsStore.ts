@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiFetch } from '../lib/apiFetch';
 
 export interface LLMSettings {
   ip: string;
@@ -94,7 +95,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       saveLLM: async () => {
         const state = get();
-        await fetch(`${state.backend.apiUrl}/settings/save-llm`, {
+        await apiFetch(`${state.backend.apiUrl}/settings/save-llm`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.llm),
@@ -102,7 +103,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveBackend: async () => {
         const state = get();
-        await fetch(`${state.backend.apiUrl}/settings/save-backend`, {
+        await apiFetch(`${state.backend.apiUrl}/settings/save-backend`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.backend),
@@ -110,7 +111,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveComfyUI: async () => {
         const state = get();
-        await fetch(`${state.backend.apiUrl}/settings/save-comfyui`, {
+        await apiFetch(`${state.backend.apiUrl}/settings/save-comfyui`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.comfyui),

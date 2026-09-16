@@ -26,6 +26,7 @@ interface PromptItem {
 const STORAGE_KEY = 'chat-history';
 const PROMPT_KEY = 'chat-system-prompt';
 const SESSION_ID = 'bionic-chat';
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB cap for image attachments
 
 const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
   const { backend } = useSettingsStore();
@@ -62,9 +63,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
       .catch(() => {});
   }, [baseUrl]);
 
-  // Persist messages
+  // Persist messages (strip base64 images to avoid QuotaExceededError)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    const stripped = messages.map(m => m.image ? { ...m, image: undefined } : m);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped));
+    } catch { /* quota exceeded — skip persist */ }
   }, [messages]);
 
   // Scroll to bottom on new message
@@ -117,6 +121,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
     const isText = /\.(md|txt)$/i.test(file.name);
 
     if (isImage) {
+      if (file.size > MAX_IMAGE_BYTES) {
+        alert(`Image is ${(file.size / 1024 / 1024).toFixed(1)} MB. Max size is ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`);
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         setAttachment({ file, preview: reader.result as string });
@@ -163,12 +172,18 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
     try {
       const spToSend = activePromptContent === null ? '__CLEAR__' : activePromptContent;
       console.log('[Chat] sending system_prompt:', spToSend === '__CLEAR__' ? 'CLEAR' : spToSend?.substring(0, 50));
+      // Only send the current message's attachment; strip base64 from history
+      // to avoid re-sending megabytes of image data on every turn.
+      const apiMessages = updatedMessages.map(m => m.image ? { ...m, image: undefined } : m);
+      if (image) {
+        apiMessages[apiMessages.length - 1] = { ...apiMessages[apiMessages.length - 1], image };
+      }
       const res = await fetch(`${baseUrl}/chat/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: SESSION_ID,
-          messages: updatedMessages,
+          messages: apiMessages,
           system_prompt: spToSend,
         }),
       });

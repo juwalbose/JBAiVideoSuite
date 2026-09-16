@@ -133,8 +133,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         body: JSON.stringify(body)
       });
       if (!response.ok) throw new Error('Failed to update project');
+      const data = await response.json();
+      // Apply the server's response to the store so the UI reflects the saved state
+      set((state) => {
+        const updated: Project = {
+          ...state.currentProject!,
+          name: data.name ?? name,
+          duration: data.duration ?? duration ?? state.currentProject!.duration,
+          episodeCount: data.episodeCount ?? episodeCount ?? state.currentProject!.episodeCount,
+        };
+        return {
+          currentProject: updated,
+          projects: state.projects.map(p => p.id === updated.id ? updated : p),
+        };
+      });
     } catch (error) {
       console.error("Error updating project:", error);
+      throw error;
     }
   },
 
