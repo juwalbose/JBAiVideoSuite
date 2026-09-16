@@ -17,9 +17,13 @@ async def get_shotlist(id: str, episode: int = 1, db: Any = Depends(get_db)):
 
 @router.post("/{id}/shotlist")
 async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
+    """Upsert shots keyed by (projectId, episode, shot number). Preserves existing IDs and fields not in payload."""
     shots = payload.get('shots', [])
-    await db.shotlist.delete_many(where={'projectId': id, 'episode': episode})
+    created = 0
+    updated = 0
+
     for s in shots:
+        shot_num = s.get('shot', 0)
         beats = s.get('beats', [])
         subs = s.get('subs', '')
         if isinstance(subs, str) and ',' in subs:
@@ -28,10 +32,8 @@ async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depe
         char_states = [x for x in s.get('characterStateIds', []) if x]
         prop_ids = [x for x in s.get('propAssetIds', []) if x]
         prop_states = [x for x in s.get('propStateIds', []) if x]
-        await db.shotlist.create({
-            'projectId': id,
-            'episode': episode,
-            'shot': s.get('shot', 0),
+
+        row_data = {
             'scene': s.get('scene', 0),
             'beats': json.dumps(beats) if isinstance(beats, list) else str(beats),
             'loc': s.get('loc', ''),
@@ -55,8 +57,25 @@ async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depe
             'musicOn': s.get('musicOn', False),
             'musicDesc': s.get('musicDesc', ''),
             'videoPath': s.get('videoPath') or None,
+        }
+
+        existing = await db.shotlist.find_first(where={
+            'projectId': id, 'episode': episode, 'shot': shot_num
         })
-    return {"status": "success", "count": len(shots)}
+
+        if existing:
+            await db.shotlist.update(where={'id': existing.id}, data=row_data)
+            updated += 1
+        else:
+            await db.shotlist.create({
+                'projectId': id,
+                'episode': episode,
+                'shot': shot_num,
+                **row_data,
+            })
+            created += 1
+
+    return {"status": "success", "count": len(shots), "created": created, "updated": updated}
 
 
 @router.delete("/{id}/shotlist")

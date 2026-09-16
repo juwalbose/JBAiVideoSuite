@@ -187,38 +187,13 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     try {
       const baseUrl = useSettingsStore.getState().backend.apiUrl;
 
-      // Save script
+      // Save script only
       const scriptRes = await fetch(`${baseUrl}/projects/${currentProject.id}/script?episode=${selectedEpisode}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: script }),
       });
       if (!scriptRes.ok) throw new Error('Failed to save script');
-
-      // Save assets if valid JSON exists
-      if (cast) {
-        try {
-          let text = cast.trim();
-          if (text.startsWith("```")) {
-            text = text.split("```")[1];
-            if (text.startsWith("json")) text = text.slice(4);
-          }
-          JSON.parse(text);
-          const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/save-assets?episode=${selectedEpisode}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cast }),
-          });
-          if (!assetsRes.ok) throw new Error('Failed to save assets');
-        } catch (e) {
-          console.warn("Cast is not valid JSON, skipping asset save");
-        }
-      }
-
-      // Mark that assets are saved (if we just saved them)
-      if (cast) {
-        setHasSavedAssets(true);
-      }
 
       // Update local store to reflect the saved script
       const { setCurrentProject } = useProjectStore.getState();
@@ -229,6 +204,32 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveCast = async () => {
+    if (!currentProject || !cast) return;
+    if (!window.confirm('Save the extracted cast to assets? Existing assets with matching names will be updated; others are kept.')) return;
+    setIsSaving(true);
+    setError('');
+    try {
+      const baseUrl = useSettingsStore.getState().backend.apiUrl;
+      const assetsRes = await fetch(`${baseUrl}/projects/${currentProject.id}/save-assets?episode=${selectedEpisode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cast }),
+      });
+      const data = await assetsRes.json();
+      if (data.status === 'error') {
+        setError(data.details);
+        return;
+      }
+      setHasSavedAssets(true);
+    } catch (error) {
+      console.error("Error saving cast:", error);
+      setError('Failed to save cast. Check backend connection.');
     } finally {
       setIsSaving(false);
     }
@@ -338,6 +339,13 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
           className="px-6 py-2 bg-muted text-foreground rounded hover:bg-muted/80 disabled:opacity-50 transition-colors"
         >
           {isSaving ? 'Saving...' : 'Save'}
+        </button>
+        <button
+          onClick={handleSaveCast}
+          disabled={isSaving || !cast}
+          className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 transition-colors"
+        >
+          Save Cast
         </button>
         {hasSavedAssets && onNavigateToAssets && (
           <button

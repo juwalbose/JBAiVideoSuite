@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import Any
 import os
 import base64
+import uuid
 
 from database import get_db
 
@@ -28,19 +29,37 @@ async def get_gallery():
     items.sort(key=lambda x: x["path"])
     return {"images": [item["path"] for item in items], "types": {item["path"]: item["type"] for item in items}}
 
+ALLOWED_UPLOAD_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm'}
+
+MIME_TO_EXT = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/webp': '.webp',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+}
+
 @router.post("/upload")
 async def upload_image(payload: dict):
-    """Receives a base64-encoded image and writes it to the assets/generated folder."""
-    filename = payload.get("filename", "upload.png")
+    """Receives a base64-encoded file and writes it to the assets/generated folder."""
     data_url = payload.get("data", "")
     if not data_url:
-        return {"status": "error", "details": "Missing image data"}
-    # Strip data URL prefix (e.g. "data:image/png;base64,")
+        return {"status": "error", "details": "Missing file data"}
+    # Extract MIME type from data URL prefix (e.g. "data:image/png;base64,")
+    ext = '.png'
     if "," in data_url:
-        data_url = data_url.split(",", 1)[1]
+        prefix, data_url = data_url.split(",", 1)
+        if prefix.startswith("data:"):
+            mime = prefix[len("data:"):].split(";")[0].strip().lower()
+            ext = MIME_TO_EXT.get(mime, '.png')
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        return {"status": "error", "details": f"File type not allowed: {ext}"}
     if not os.path.exists(GENERATED_IMAGES_DIR):
         os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
-    dest = os.path.join(GENERATED_IMAGES_DIR, filename)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = os.path.realpath(os.path.join(GENERATED_IMAGES_DIR, filename))
+    if not dest.startswith(os.path.realpath(GENERATED_IMAGES_DIR)):
+        return {"status": "error", "details": "Invalid path"}
     with open(dest, "wb") as out:
         out.write(base64.b64decode(data_url))
     return {"status": "success", "path": f"/assets/generated/{filename}"}

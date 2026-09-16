@@ -365,15 +365,27 @@ async def import_project(payload: dict, db: Any = Depends(get_db)):
                 'resolutionJson': m.get('resolutionJson'),
             })
 
-    # Import system prompts (write files)
+    # Import system prompts (write files) — sanitised
+    os.makedirs(PROMPTS_DIR, exist_ok=True)
     for filename, content in data.get('systemPrompts', {}).items():
-        filepath = os.path.join(PROMPTS_DIR, filename)
+        safe_name = os.path.basename(filename)
+        if not safe_name.lower().endswith('.txt'):
+            continue
+        filepath = os.path.realpath(os.path.join(PROMPTS_DIR, safe_name))
+        if not filepath.startswith(os.path.realpath(PROMPTS_DIR)):
+            continue
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
 
-    # Import workflows (write files)
+    # Import workflows (write files) — sanitised
+    os.makedirs(WORKFLOWS_DIR, exist_ok=True)
     for filename, content in data.get('workflows', {}).items():
-        filepath = os.path.join(WORKFLOWS_DIR, filename)
+        safe_name = os.path.basename(filename)
+        if not safe_name.lower().endswith('.json'):
+            continue
+        filepath = os.path.realpath(os.path.join(WORKFLOWS_DIR, safe_name))
+        if not filepath.startswith(os.path.realpath(WORKFLOWS_DIR)):
+            continue
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
 

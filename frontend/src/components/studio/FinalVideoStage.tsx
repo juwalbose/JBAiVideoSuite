@@ -5,8 +5,16 @@ import { useSettingsStore } from '../../store/settingsStore';
 interface ShotData {
   shot: number;
   scene: number;
-  prompt: string;
+  beats: number[];
+  loc: string;
+  subs: string[];
+  frames: number;
   duration: number;
+  camera: string;
+  action: string;
+  dialogue: string;
+  note: string;
+  prompt: string;
   locationAssetId: string | null;
   locationStateId: string | null;
   characterAssetIds: string[];
@@ -16,6 +24,8 @@ interface ShotData {
   sceneDialogAudioId: string | null;
   characterAudioIds: string[];
   characterAudioTypes: string[];
+  musicOn: boolean;
+  musicDesc: string;
   videoPath: string | null;
 }
 
@@ -91,8 +101,16 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const mapShot = (s: any): ShotData => ({
     shot: Number(s.shot) || 0,
     scene: Number(s.scene) || 0,
-    prompt: s.prompt || '',
+    beats: parseArr(s.beats),
+    loc: s.loc || '',
+    subs: parseArr(s.subs),
+    frames: Number(s.frames) || 0,
     duration: Number(s.duration) || 0,
+    camera: s.camera || '',
+    action: s.action || '',
+    dialogue: s.dialogue || '',
+    note: s.note || '',
+    prompt: s.prompt || '',
     locationAssetId: s.locationAssetId || null,
     locationStateId: s.locationStateId || null,
     characterAssetIds: parseArr(s.characterAssetIds),
@@ -102,6 +120,8 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     sceneDialogAudioId: s.sceneDialogAudioId || null,
     characterAudioIds: parseArr(s.characterAudioIds),
     characterAudioTypes: parseArr(s.characterAudioTypes),
+    musicOn: !!s.musicOn,
+    musicDesc: s.musicDesc || '',
     videoPath: s.videoPath || null,
   });
 
