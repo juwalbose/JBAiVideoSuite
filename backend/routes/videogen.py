@@ -174,6 +174,8 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
     # Inject inputs into workflow nodes (case-insensitive role matching)
     img_idx = 0
     aud_idx = 0
+    provided_img_nodes = set()
+    provided_aud_nodes = set()
     for node_id, node_data in workflow_data.items():
         if not isinstance(node_data, dict):
             continue
@@ -193,10 +195,12 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         elif '(input:image)' in title:
             if img_idx < len(image_files):
                 inputs['image'] = image_files[img_idx]
+                provided_img_nodes.add(node_id)
                 img_idx += 1
         elif '(input:audio)' in title:
             if aud_idx < len(audio_files):
                 inputs['audio'] = audio_files[aud_idx]
+                provided_aud_nodes.add(node_id)
                 aud_idx += 1
 
     # Prune unused image/audio input nodes
@@ -205,16 +209,18 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         if not isinstance(ndata, dict):
             continue
         title = ndata.get('_meta', {}).get('title', '').lower()
-        if '(input:image)' in title or '(input:audio)' in title:
-            node_inputs = ndata.get('inputs', {})
-            if '(input:image)' in title and 'image' not in node_inputs:
-                to_remove.append(nid)
-            elif '(input:audio)' in title and 'audio' not in node_inputs:
-                to_remove.append(nid)
+        if '(input:image)' in title and nid not in provided_img_nodes:
+            to_remove.append(nid)
+        elif '(input:audio)' in title and nid not in provided_aud_nodes:
+            to_remove.append(nid)
     for nid in to_remove:
         del workflow_data[nid]
     if to_remove:
         print(f"[VideoGen] pruned {len(to_remove)} unused input node(s): {to_remove}")
+
+    print(f"\n--- VideoGen Workflow ({wf_mapping.workflowFile}) ---")
+    print(json.dumps(workflow_data, indent=2))
+    print("-----------------------------------------------\n")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         queue_res = await client.post(f"{comfy_http}/prompt", json={"prompt": workflow_data})

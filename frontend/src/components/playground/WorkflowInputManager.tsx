@@ -43,6 +43,7 @@ const WorkflowInputManager = ({
   const [genError, setGenError] = useState('');
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPollingRef = useRef(false);
+  const editedRolesRef = useRef<Set<string>>(new Set());
   const { comfyui } = useSettingsStore();
   const pollInterval = comfyui.pollInterval || 4000;
 
@@ -66,6 +67,7 @@ const WorkflowInputManager = ({
       });
       setInputValues(newInputs);
       setResultType(activeWorkflowData.output_type === 'video' ? 'video' : 'image');
+      editedRolesRef.current = new Set();
     }
   }, [activeWorkflowData]);
 
@@ -142,13 +144,24 @@ const WorkflowInputManager = ({
              (parseInt(titleB.toLowerCase().replace(/\D/g, '')) || 0);
     });
 
-    if (fileRoles.length > 0) {
-      for (const [role, _] of sortedFileRoles) {
-        if (!inputValues[role]) {
-          const label = inputValues[role]?.type === 'audio' ? 'audio' : 'image';
-          alert(`Please select a ${label} for the "${role}" input.`);
-          return;
-        }
+    // Validate: if workflow has image inputs, at least one must be edited
+    const hasImageInputs = Object.values(activeWorkflowData.inputs).some(f => f.type === 'image');
+    const editedImageCount = sortedFileRoles.filter(([role]) =>
+      inputValues[role]?.type === 'image' && editedRolesRef.current.has(role) && inputValues[role]?.value
+    ).length;
+
+    if (hasImageInputs && editedImageCount === 0) {
+      alert('Please select at least one image.');
+      return;
+    }
+
+    // Validate edited inputs have values
+    for (const [role, _] of sortedFileRoles) {
+      if (!editedRolesRef.current.has(role)) continue;
+      if (!inputValues[role]?.value) {
+        const label = inputValues[role]?.type === 'audio' ? 'audio' : 'image';
+        alert(`Please select a ${label} for the "${role}" input.`);
+        return;
       }
     }
 
@@ -156,6 +169,9 @@ const WorkflowInputManager = ({
 
     for (const [role, data] of Object.entries(inputValues)) {
       if (data?.type === 'image' || data?.type === 'audio') {
+        // Only include image/audio inputs that were actually edited
+        if (!editedRolesRef.current.has(role)) continue;
+
         const nodeMap = data.type === 'image'
           ? activeWorkflowData.image_node_map
           : activeWorkflowData.audio_node_map;
@@ -367,7 +383,10 @@ const WorkflowInputManager = ({
         values={inputValues}
         nodes={activeWorkflowData.nodes}
         baseUrl={baseUrl}
-        onChange={(nodeId, value) => setInputValues(prev => ({ ...prev, [nodeId]: { type: prev[nodeId]?.type ?? 'string', value } }))}
+        onChange={(nodeId, value) => {
+          editedRolesRef.current.add(nodeId);
+          setInputValues(prev => ({ ...prev, [nodeId]: { type: prev[nodeId]?.type ?? 'string', value } }));
+        }}
       />
     </div>
   );
