@@ -81,6 +81,7 @@ model Asset {
   type            String   // "CHARACTER", "LOCATION", "PROP"
   name            String
   description     String?
+  characteristics String?
   imagePath       String?
   prompt          String?
   states          AssetState[]

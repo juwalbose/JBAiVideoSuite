@@ -6,6 +6,7 @@ type AssetItem = {
   id: string;
   name: string;
   description: string;
+  characteristics?: string;
   states?: { id: string; name: string; description: string; prompt: string; scenes: string; imagePath: string; characterSheet: string }[];
   scenes?: string;
 };
@@ -66,14 +67,14 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         // Selection still valid — keep it, refresh editing from fresh data
         if (asset.states?.length && prevSelected.stateIndex >= 0 && asset.states[prevSelected.stateIndex]) {
           const s = asset.states[prevSelected.stateIndex];
-          setEditing({ id: asset.id, name: asset.name, description: asset.description, states: [{ ...s }] });
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, characteristics: asset.characteristics, states: [{ ...s }] });
         } else if (!asset.states?.length) {
-          setEditing({ id: asset.id, name: asset.name, description: asset.description, scenes: asset.scenes });
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, characteristics: asset.characteristics, scenes: asset.scenes });
         } else {
           // State index out of bounds — fall back to first state
           const first = asset.states[0];
           setSelected({ type: prevSelected.type, index: prevSelected.index, stateIndex: 0 });
-          setEditing({ id: asset.id, name: asset.name, description: asset.description, states: [{ ...first }] });
+          setEditing({ id: asset.id, name: asset.name, description: asset.description, characteristics: asset.characteristics, states: [{ ...first }] });
         }
       } else {
         // Asset no longer exists — reset
@@ -105,9 +106,9 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       : { type: activeTab, index: 0, stateIndex: -1 };
     setSelected(item);
     if (first.states?.length) {
-      setEditing({ id: first.id, name: first.name, description: first.description, states: [{ ...first.states[0] }] });
+      setEditing({ id: first.id, name: first.name, description: first.description, characteristics: first.characteristics, states: [{ ...first.states[0] }] });
     } else {
-      setEditing({ id: first.id, name: first.name, description: first.description, scenes: first.scenes });
+      setEditing({ id: first.id, name: first.name, description: first.description, characteristics: first.characteristics, scenes: first.scenes });
     }
   }, [assets, activeTab]);
 
@@ -133,9 +134,9 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     const asset = list[item.index];
     if (asset.states?.length && item.stateIndex >= 0) {
       const s = asset.states[item.stateIndex];
-      setEditing({ id: asset.id, name: asset.name, description: asset.description, states: [{ ...s }] });
+      setEditing({ id: asset.id, name: asset.name, description: asset.description, characteristics: asset.characteristics, states: [{ ...s }] });
     } else {
-      setEditing({ id: asset.id, name: asset.name, description: asset.description, scenes: asset.scenes });
+      setEditing({ id: asset.id, name: asset.name, description: asset.description, characteristics: asset.characteristics, scenes: asset.scenes });
     }
   };
 
@@ -156,6 +157,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       const list = assets[selected.type as keyof typeof assets];
       const asset = list[selected.index];
       const body: Record<string, any> = { name: editing.name, description: editing.description };
+      if (editing.characteristics !== undefined) body.characteristics = editing.characteristics;
       if (editing.states && asset.states?.length) {
         body.states = asset.states.map((st, i) => i === selected.stateIndex ? editing.states![0] : st);
       }
@@ -520,6 +522,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               <label className="text-xs font-medium text-muted-foreground">Asset Description</label>
               <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
             </div>
+            {selected?.type === 'characters' && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Characteristics</label>
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={3} value={editing.characteristics || ''} placeholder="Personality traits, speech patterns, mannerisms..." onChange={e => setEditing({ ...editing, characteristics: e.target.value })} />
+              </div>
+            )}
             {editing.states?.[0] && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground">State Description</label>

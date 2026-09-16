@@ -33,7 +33,24 @@ async def refine_dialog(id: str, payload: dict, episode: int = 1, db: Any = Depe
         return {"status": "error", "details": "No system prompt mapped for 'Refine Dialog'."}
     try:
         script_content = payload.get('script', script.content)
-        result = await call_llm(db, system_prompt, f"Refine the dialog in this script:\n\n{script_content}")
+
+        # Fetch character assets with their characteristics
+        characters = await db.asset.find_many(
+            where={'projectId': id, 'episode': episode, 'type': 'CHARACTER'}
+        )
+        char_context = ""
+        if characters:
+            char_lines = []
+            for c in characters:
+                line = f"  {c.name}"
+                if c.characteristics:
+                    line += f" — {c.characteristics}"
+                elif c.description:
+                    line += f" — {c.description}"
+                char_lines.append(line)
+            char_context = "\n\nCharacter characteristics:\n" + "\n".join(char_lines)
+
+        result = await call_llm(db, system_prompt, f"Refine the dialog in this script:{char_context}\n\n{script_content}")
         return {"status": "success", "script": result}
     except Exception as e:
         print(f"DEBUG: Error in refine_dialog: {e}")
@@ -147,7 +164,7 @@ async def get_assets(id: str, episode: int = 1, db: Any = Depends(get_db)):
     assets = await db.asset.find_many(where={'projectId': id, 'episode': episode}, include={'states': {}})
     result = {"characters": [], "locations": [], "props": []}
     for a in assets:
-        entry = {"id": a.id, "name": a.name, "description": a.description or ""}
+        entry = {"id": a.id, "name": a.name, "description": a.description or "", "characteristics": a.characteristics or ""}
         entry["states"] = [{"id": s.id, "name": s.name, "description": s.description or "", "prompt": s.prompt or "", "scenes": s.scenes, "imagePath": s.imagePath or "", "characterSheet": s.characterSheet or ""} for s in a.states]
         result["characters" if a.type == "CHARACTER" else "locations" if a.type == "LOCATION" else "props"].append(entry)
     return {"status": "success", "assets": result}
@@ -163,6 +180,8 @@ async def update_asset(id: str, asset_id: str, payload: dict, db: Any = Depends(
             data['name'] = payload['name']
         if 'description' in payload:
             data['description'] = payload['description']
+        if 'characteristics' in payload:
+            data['characteristics'] = payload['characteristics']
         if data:
             await db.asset.update(where={'id': asset_id}, data=data)
         if 'states' in payload:
