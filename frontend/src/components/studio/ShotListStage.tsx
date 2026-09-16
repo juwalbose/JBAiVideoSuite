@@ -541,7 +541,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
-                ) : (
+                ) : shot.characterAudioIds.length > 0 ? (
                   shot.characterAudioIds.map((aid, i) => (
                     <select
                       key={i}
@@ -561,6 +561,8 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                         ))}
                     </select>
                   ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">None</p>
                 )}
               </div>
               <div>

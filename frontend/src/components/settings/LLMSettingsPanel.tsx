@@ -35,15 +35,13 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      const modelList = data.models || [];
+      setAvailableModels(modelList);
       if (data.status === 'unhealthy') {
         setTestStatus(`🔴 ${data.details || 'Connection failed'}`);
-        setAvailableModels([]);
       } else if (data.status === 'no_models') {
         setTestStatus('🔵 No Models Loaded');
-        setAvailableModels([]);
       } else {
-        const modelList = data.models || [];
-        setAvailableModels(modelList);
         setTestStatus('🟢 Healthy');
       }
     } catch (error) {
@@ -126,9 +124,15 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
         <div>
           <h3 className="text-sm font-bold text-foreground mb-2">Available Models:</h3>
           <ul className="list-disc ml-5 text-sm text-muted-foreground">
-            {availableModels.map((m, i) => (
+            {availableModels.map((m: any, i) => (
               <li key={i}>
-                {typeof m === 'object' ? (m.id || m.name || m.object?.name || JSON.stringify(m)) : m}
+                {typeof m === 'object' ? (
+                  <span>
+                    <span className="font-mono text-xs">{m.key}</span>
+                    <span className="ml-2 text-muted-foreground">({m.display_name})</span>
+                    {m.loaded_instances?.length > 0 && <span className="ml-2 text-green-500">● loaded</span>}
+                  </span>
+                ) : m}
               </li>
             ))}
           </ul>

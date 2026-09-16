@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import Any
 from database import get_db
-from paths import WORKFLOWS_DIR, GENERATED_DIR
+from paths import WORKFLOWS_DIR, GENERATED_DIR, ASSETS_DIR
 import json
 import os
 import uuid
@@ -185,14 +185,16 @@ async def save_assets(id: str, payload: dict, episode: int = 1, db: Any = Depend
                     # Update asset description if provided
                     if description:
                         await tx.asset.update(where={'id': asset.id}, data={'description': description})
-                    # Add the specific state the user defined
-                    state_name = sel.get('stateName', '')
-                    state_desc = sel.get('stateDescription', '')
-                    if state_name:
+                    # Add each selected state
+                    for state in states:
+                        sname = state.get('name', '')
+                        if not sname:
+                            continue
+                        sdesc = state.get('description', '')
                         await tx.assetstate.create({
-                            'assetId': asset.id, 'name': state_name,
-                            'description': state_desc, 'prompt': state_desc,
-                            'scenes': '[]'
+                            'assetId': asset.id, 'name': sname,
+                            'description': sdesc, 'prompt': sdesc,
+                            'scenes': str(state.get('scenes', []))
                         })
                         states_added += 1
                     updated += 1
@@ -649,7 +651,7 @@ async def generate_sheet(id: str, asset_id: str, payload: dict, db: Any = Depend
         # Upload the image to ComfyUI
         # image_path is like /assets/generated/filename.png — strip the /assets/ prefix
         # and join onto the assets directory to get the real filesystem path.
-        assets_dir = os.path.abspath(os.path.join(base_dir, "..", "assets"))
+        assets_dir = ASSETS_DIR
         rel = image_path.replace('/assets/', '', 1) if image_path.startswith('/assets/') else image_path.lstrip('/')
         local_path = os.path.join(assets_dir, rel)
         if not os.path.exists(local_path):

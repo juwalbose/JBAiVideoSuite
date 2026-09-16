@@ -56,6 +56,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [audioTranscript, setAudioTranscript] = useState('');
   const [audioImporting, setAudioImporting] = useState(false);
   const [selectedAudio, setSelectedAudio] = useState<AudioItem | null>(null);
+  const [imageModal, setImageModal] = useState<{ src: string; label: string } | null>(null);
 
   const refreshAssets = async () => {
     if (!currentProject) return;
@@ -561,7 +562,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     </button>
                   </div>
                   {editing.states[0].imagePath ? (
-                    <img src={`${baseUrl}${editing.states[0].imagePath}`} alt="Image" className="w-full h-32 object-cover rounded" />
+                    <img
+                      src={`${baseUrl}${editing.states[0].imagePath}`}
+                      alt="Image"
+                      className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setImageModal({ src: `${baseUrl}${editing.states[0].imagePath}`, label: 'Image' })}
+                    />
                   ) : (
                     <div className="w-full h-32 flex items-center justify-center bg-muted/50 rounded text-xs text-muted-foreground">No image</div>
                   )}
@@ -580,7 +586,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                       </button>
                     </div>
                     {editing.states[0].characterSheet ? (
-                      <img src={`${baseUrl}${editing.states[0].characterSheet}`} alt="Sheet" className="w-full h-32 object-cover rounded" />
+                      <img
+                        src={`${baseUrl}${editing.states[0].characterSheet}`}
+                        alt="Sheet"
+                        className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setImageModal({ src: `${baseUrl}${editing.states[0].characterSheet}`, label: 'Character Sheet' })}
+                      />
                     ) : (
                       <div className="w-full h-32 flex items-center justify-center bg-muted/50 rounded text-xs text-muted-foreground">No sheet</div>
                     )}
@@ -676,6 +687,30 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                 {adding ? 'Adding...' : 'Add'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-screen Image Modal */}
+      {imageModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setImageModal(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-4xl leading-none z-10"
+            onClick={() => setImageModal(null)}
+            aria-label="Close"
+          >
+            &times;
+          </button>
+          <div className="flex flex-col items-center gap-2 max-w-[90vw] max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <img
+              src={imageModal.src}
+              alt={imageModal.label}
+              className="max-w-full max-h-[85vh] object-contain rounded"
+            />
+            <p className="text-white/60 text-sm">{imageModal.label}</p>
           </div>
         </div>
       )}

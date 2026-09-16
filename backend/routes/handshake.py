@@ -14,12 +14,13 @@ async def check_lmstudio_health(db = Depends(get_db)):
     else:
         ip, port = llm.ip, llm.port
 
-    BASE_URL = f"http://{ip}:{port}/v1"
+    BASE_URL = f"http://{ip}:{port}"
     timeout = httpx.Timeout(3.0, connect=2.0)
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
-            response = await client.get(f"{BASE_URL}/models")
+            # Use LM Studio's native /api/v1/models which includes loaded_instances
+            response = await client.get(f"{BASE_URL}/api/v1/models")
             if response.status_code != 200:
                 return HandshakeResponse(
                     status="unhealthy",
@@ -30,9 +31,12 @@ async def check_lmstudio_health(db = Depends(get_db)):
                 )
 
             data = response.json()
-            model_list = data.get("data", [])
+            model_list = data.get("models", [])
 
-            if not model_list:
+            # Find models that actually have loaded instances
+            loaded_models = [m for m in model_list if m.get("loaded_instances")]
+
+            if not loaded_models:
                 return HandshakeResponse(
                     status="no_models",
                     server_reachable=True,
@@ -41,7 +45,9 @@ async def check_lmstudio_health(db = Depends(get_db)):
                     details="LM Studio is ready, but no models are loaded."
                 )
 
-            active_model = model_list[0].get("id", model_list[0].get("name", "Unnamed Model"))
+            # Use the first loaded model's display name
+            first = loaded_models[0]
+            active_model = first.get("display_name", first.get("key", "Unnamed Model"))
 
             return HandshakeResponse(
                 status="healthy",
@@ -95,13 +101,15 @@ async def unload_llm(db = Depends(get_db)):
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
-            # Use OpenAI-compat endpoint to get loaded models
-            resp = await client.get(f"http://{ip}:{port}/v1/models")
+            # Use LM Studio's native /api/v1/models which includes loaded_instances
+            resp = await client.get(f"http://{ip}:{port}/api/v1/models")
             resp.raise_for_status()
-            model_list = resp.json().get("data", [])
-            if not model_list:
+            model_list = resp.json().get("models", [])
+            # Find models that actually have loaded instances
+            loaded_models = [m for m in model_list if m.get("loaded_instances")]
+            if not loaded_models:
                 return {"status": "error", "details": "No models loaded"}
-            instance_id = model_list[0].get("id", "")
+            instance_id = loaded_models[0]["loaded_instances"][0].get("id", "")
             unload_resp = await client.post(f"http://{ip}:{port}/api/v1/models/unload", json={"instance_id": instance_id})
             unload_data = unload_resp.json()
             return {"status": "success", "model": instance_id, "details": "Model unloaded"}
@@ -115,7 +123,7 @@ async def test_llm(db = Depends(get_db)):
         return {"status": "error", "details": "No LLM settings found in database."}
 
     ip, port = llm.ip, llm.port
-    url = f"http://{ip}:{port}/v1/models"
+    url = f"http://{ip}:{port}/api/v1/models"
 
     timeout = httpx.Timeout(10.0, connect=3.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -130,19 +138,23 @@ async def test_llm(db = Depends(get_db)):
                 }
 
             data = response.json()
-            model_list = data.get("data", [])
+            model_list = data.get("models", [])
 
-            if not model_list:
+            # Find models that actually have loaded instances
+            loaded_models = [m for m in model_list if m.get("loaded_instances")]
+
+            if not loaded_models:
                 return {
                     "status": "no_models",
                     "server_reachable": True,
                     "active_model": "No Model Loaded",
                     "ping_success": True,
                     "details": "LM Studio is ready, but no models are loaded.",
-                    "models": []
+                    "models": model_list
                 }
 
-            active_model = model_list[0].get("id", "Unnamed Model")
+            first = loaded_models[0]
+            active_model = first.get("display_name", first.get("key", "Unnamed Model"))
 
             return {
                 "status": "healthy",

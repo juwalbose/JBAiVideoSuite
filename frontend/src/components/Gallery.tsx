@@ -146,19 +146,6 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
           <button onClick={fetchImages} className="px-3 py-1.5 bg-accent text-accent-foreground text-sm rounded-md hover:opacity-90 transition-colors shadow-sm">
             Refresh
           </button>
-          <button
-            onClick={async () => {
-              if (!window.confirm('Delete ALL files in assets/generated/? This cannot be undone.')) return;
-              for (const img of images) {
-                const filename = img.split('/').pop() || '';
-                await fetch(`${baseUrl}/gallery/${filename}`, { method: 'DELETE' }).catch(() => {});
-              }
-              fetchImages();
-            }}
-            className="px-3 py-1.5 bg-destructive text-white text-sm rounded-md hover:opacity-90 transition-colors shadow-sm"
-          >
-            Clear All
-          </button>
         </div>
       </div>
 

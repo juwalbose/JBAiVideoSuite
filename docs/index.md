@@ -164,6 +164,8 @@ The list of available models appears below the test button. Pick one as your **M
 
 Click **Save LLM Settings** to persist.
 
+> **Tip:** If your model supports reasoning (e.g. DeepSeek R1, Qwen reasoning variants), consider disabling it in LM Studio's model settings. Most of the work this app does is formatting and structuring — not deep reasoning — so turning reasoning off can make responses noticeably faster with no quality loss.
+
 ### Backend Settings
 
 Points the frontend at the backend API.

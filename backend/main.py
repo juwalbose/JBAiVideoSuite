@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
 
@@ -18,9 +18,9 @@ from models import (
 from routes import settings, projects, handshake, comfyui, workflows, playground, gallery, systemprompts, chat, appsettings, assets, shotlist, audio, videogen, export
 
 from database import db, get_db
-from paths import ASSETS_DIR
+from paths import ASSETS_DIR, ROOT_DIR
 
-app = FastAPI(title="BionicProducer API")
+app = FastAPI(title="BionicProducer API", docs_url="/api-docs", redoc_url="/redoc")
 
 # --- Static Files Mounting ---
 # This allows the browser to access files in the assets folder via /assets/ path.
@@ -100,3 +100,27 @@ app.include_router(export.router)
 @app.get("/")
 async def root():
     return {"message": "BionicProducer API is running"}
+
+# --- Docs Endpoint ---
+@app.get("/docs")
+async def get_docs():
+    """Serve the docs markdown file from the repo root."""
+    import os
+    docs_path = os.path.join(ROOT_DIR, "docs", "index.md")
+    if not os.path.exists(docs_path):
+        raise HTTPException(status_code=404, detail="Docs file not found")
+    with open(docs_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    # Rewrite relative image paths to absolute /docs-images/ paths
+    content = content.replace("](images/", "](/docs-images/")
+    return {"content": content}
+
+@app.get("/docs-images/{filename}")
+async def get_docs_image(filename: str):
+    """Serve doc images from the repo docs/images folder."""
+    import os
+    img_path = os.path.join(ROOT_DIR, "docs", "images", filename)
+    if not os.path.exists(img_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    from fastapi.responses import FileResponse
+    return FileResponse(img_path)

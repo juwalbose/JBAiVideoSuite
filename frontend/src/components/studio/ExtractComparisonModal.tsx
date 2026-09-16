@@ -22,8 +22,6 @@ interface Selection {
   states: StateItem[];
   mode: 'new' | 'add_state';
   existingAssetId?: string;
-  stateName?: string;
-  stateDescription?: string;
 }
 
 interface Props {
@@ -45,72 +43,139 @@ const TYPE_COLORS: Record<string, string> = {
   PROP: 'bg-amber-900/30 border-amber-700',
 };
 
+// A state row: either extracted (new) or existing (from DB)
+interface StateRow {
+  key: string;
+  name: string;
+  description: string;
+  scenes?: number[];
+  source: 'extracted' | 'existing';
+  existingStateId?: string;
+}
+
 const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCancel }: Props) => {
-  // Per-item state: selected (bool), mode ('new' | 'add_state'), existingAssetId, stateName, stateDescription
-  const [itemStates, setItemStates] = useState<Record<string, {
-    selected: boolean;
-    mode: 'new' | 'add_state';
-    existingAssetId: string;
-    stateName: string;
-    stateDescription: string;
-  }>>({});
+  // Per-state-row selection: key -> selected (bool)
+  const [stateSelections, setStateSelections] = useState<Record<string, boolean>>({});
+  // Per-asset mode: key -> 'new' | 'add_state'
+  const [assetModes, setAssetModes] = useState<Record<string, 'new' | 'add_state'>>({});
+  // Per-asset existing target (for add_state mode)
+  const [assetTargets, setAssetTargets] = useState<Record<string, string>>({});
 
   const allItems = [
     ...comparison.new.map((item) => ({ ...item, isNew: true })),
     ...comparison.existing.map((item) => ({ ...item, isNew: false })),
   ];
 
-  const getItemKey = (item: ExtractItem & { isNew: boolean }) => `${item.type}:${item.name}`;
+  const getAssetKey = (item: ExtractItem & { isNew: boolean }) => `${item.type}:${item.name}`;
 
-  const getItemState = (item: ExtractItem & { isNew: boolean }) => {
-    const key = getItemKey(item);
-    if (!itemStates[key]) {
-      return { selected: true, mode: 'new' as const, existingAssetId: '', stateName: '', stateDescription: '' };
+  // Build state rows for an item: extracted states + existing DB states (for existing items)
+  const getStateRows = (item: ExtractItem & { isNew: boolean }): StateRow[] => {
+    const rows: StateRow[] = [];
+    // Extracted states
+    for (const s of item.states || []) {
+      rows.push({
+        key: `${getAssetKey(item)}:${s.name}`,
+        name: s.name,
+        description: s.description,
+        scenes: s.scenes,
+        source: 'extracted',
+      });
     }
-    return itemStates[key];
+    // Existing DB states (only for existing items)
+    if (!item.isNew && item.existingStates) {
+      for (const s of item.existingStates) {
+        // Skip if already covered by an extracted state with the same name
+        const alreadyCovered = rows.some((r) => r.name.toLowerCase() === s.name.toLowerCase());
+        if (!alreadyCovered) {
+          rows.push({
+            key: `${getAssetKey(item)}:existing:${s.id}`,
+            name: s.name,
+            description: s.description,
+            source: 'existing',
+            existingStateId: s.id,
+          });
+        }
+      }
+    }
+    return rows;
   };
 
-  const setItemState = (item: ExtractItem & { isNew: boolean }, patch: Partial<{
-    selected: boolean;
-    mode: 'new' | 'add_state';
-    existingAssetId: string;
-    stateName: string;
-    stateDescription: string;
-  }>) => {
-    const key = getItemKey(item);
-    setItemStates((prev) => ({
+  const isStateSelected = (row: StateRow) => stateSelections[row.key] !== false; // default: selected
+
+  const toggleState = (row: StateRow) => {
+    setStateSelections((prev) => ({
       ...prev,
-      [key]: { ...getItemState(item), ...patch },
+      [row.key]: !isStateSelected(row),
     }));
+  };
+
+  const getAssetMode = (item: ExtractItem & { isNew: boolean }) => {
+    const key = getAssetKey(item);
+    if (item.isNew) return 'new' as const;
+    return assetModes[key] || 'add_state';
+  };
+
+  const setAssetMode = (item: ExtractItem & { isNew: boolean }, mode: 'new' | 'add_state') => {
+    const key = getAssetKey(item);
+    setAssetModes((prev) => ({ ...prev, [key]: mode }));
+  };
+
+  const getAssetTarget = (item: ExtractItem & { isNew: boolean }) => {
+    const key = getAssetKey(item);
+    return assetTargets[key] || (item.existingAssetId || '');
+  };
+
+  const setAssetTarget = (item: ExtractItem & { isNew: boolean }, id: string) => {
+    const key = getAssetKey(item);
+    setAssetTargets((prev) => ({ ...prev, [key]: id }));
   };
 
   const handleConfirm = () => {
     const selections: Selection[] = [];
     for (const item of allItems) {
-      const st = getItemState(item);
-      if (!st.selected) continue;
+      const rows = getStateRows(item);
+      const selectedStates = rows.filter((r) => isStateSelected(r));
+      if (selectedStates.length === 0) continue;
+
+      const mode = getAssetMode(item);
+      const targetId = getAssetTarget(item);
+
+      // Build the states array from selected rows
+      const states: StateItem[] = selectedStates.map((r) => ({
+        name: r.name,
+        description: r.description,
+        scenes: r.scenes,
+      }));
+
       selections.push({
         type: item.type,
         name: item.name,
         description: item.description,
-        states: item.states,
-        mode: st.mode,
-        existingAssetId: st.mode === 'add_state' ? st.existingAssetId : undefined,
-        stateName: st.mode === 'add_state' ? st.stateName : undefined,
-        stateDescription: st.mode === 'add_state' ? st.stateDescription : undefined,
+        states,
+        mode,
+        existingAssetId: mode === 'add_state' ? targetId : undefined,
       });
     }
     onConfirm(selections);
   };
 
-  const selectedCount = allItems.filter((item) => getItemState(item).selected).length;
+  // Count total selected states
+  let totalStates = 0;
+  let selectedStates = 0;
+  for (const item of allItems) {
+    const rows = getStateRows(item);
+    for (const r of rows) {
+      totalStates++;
+      if (isStateSelected(r)) selectedStates++;
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
       <div className="bg-card border border-border rounded-lg w-[90vw] max-w-4xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Review Extracted Assets</h2>
+          <h2 className="text-lg font-semibold text-foreground">Review Extracted States</h2>
           <button onClick={onCancel} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
         </div>
 
@@ -128,23 +193,21 @@ const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCance
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   {TYPE_LABELS[type]}s ({items.length})
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {items.map((item) => {
-                    const st = getItemState(item);
+                    const rows = getStateRows(item);
+                    const mode = getAssetMode(item);
+                    const targetId = getAssetTarget(item);
                     const existingOptions = existingAssets.filter((a) => a.type === item.type);
+                    const selectedCount = rows.filter((r) => isStateSelected(r)).length;
+
                     return (
                       <div
-                        key={getItemKey(item)}
-                        className={`border rounded-lg p-3 ${TYPE_COLORS[item.type]} ${!st.selected ? 'opacity-50' : ''}`}
+                        key={getAssetKey(item)}
+                        className={`border rounded-lg p-3 ${TYPE_COLORS[item.type]}`}
                       >
-                        {/* Top row: checkbox + name + badge */}
+                        {/* Asset header */}
                         <div className="flex items-center gap-2 mb-2">
-                          <input
-                            type="checkbox"
-                            checked={st.selected}
-                            onChange={(e) => setItemState(item, { selected: e.target.checked })}
-                            className="accent-accent"
-                          />
                           <span className="font-medium text-foreground">{item.name}</span>
                           <span className="text-xs text-muted-foreground">{item.description}</span>
                           {!item.isNew && (
@@ -154,34 +217,52 @@ const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCance
                           )}
                         </div>
 
-                        {/* States list */}
-                        {item.states.length > 0 && (
-                          <div className="ml-6 mb-2 space-y-1">
-                            {item.states.map((s, i) => (
-                              <div key={i} className="text-xs text-muted-foreground">
-                                <span className="text-foreground">{s.name}</span>: {s.description}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {/* States list — each state is a selectable row */}
+                        <div className="ml-4 space-y-1 mb-2">
+                          {rows.length === 0 && (
+                            <p className="text-xs text-muted-foreground italic">No states</p>
+                          )}
+                          {rows.map((row) => (
+                            <label
+                              key={row.key}
+                              className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 ${
+                                isStateSelected(row) ? 'bg-card/50' : 'opacity-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isStateSelected(row)}
+                                onChange={() => toggleState(row)}
+                                className="accent-accent"
+                              />
+                              <span className="text-foreground font-medium">{row.name}</span>
+                              <span className="text-muted-foreground truncate">{row.description}</span>
+                              {row.source === 'existing' && (
+                                <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                                  existing
+                                </span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
 
-                        {/* Mode selector */}
-                        <div className="ml-6 flex items-center gap-3">
-                          <label className="text-xs text-muted-foreground">Add as:</label>
-                          <select
-                            value={st.mode}
-                            onChange={(e) => setItemState(item, { mode: e.target.value as 'new' | 'add_state' })}
-                            className="bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
-                          >
-                            <option value="new">New Asset</option>
-                            <option value="add_state">Add State to Existing</option>
-                          </select>
+                        {/* Mode selector (only for existing assets) */}
+                        {!item.isNew && (
+                          <div className="ml-4 flex items-center gap-3">
+                            <label className="text-xs text-muted-foreground">Add as:</label>
+                            <select
+                              value={mode}
+                              onChange={(e) => setAssetMode(item, e.target.value as 'new' | 'add_state')}
+                              className="bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
+                            >
+                              <option value="add_state">Add States to Existing</option>
+                              <option value="new">Create New Asset</option>
+                            </select>
 
-                          {st.mode === 'add_state' && (
-                            <>
+                            {mode === 'add_state' && (
                               <select
-                                value={st.existingAssetId}
-                                onChange={(e) => setItemState(item, { existingAssetId: e.target.value })}
+                                value={targetId}
+                                onChange={(e) => setAssetTarget(item, e.target.value)}
                                 className="bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
                               >
                                 <option value="">Select existing asset...</option>
@@ -189,35 +270,14 @@ const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCance
                                   <option key={a.id} value={a.id}>{a.name}</option>
                                 ))}
                               </select>
-                            </>
-                          )}
-                        </div>
-
-                        {/* State details (when adding to existing) */}
-                        {st.mode === 'add_state' && st.existingAssetId && (
-                          <div className="ml-6 mt-2 space-y-2">
-                            <div>
-                              <label className="text-xs text-muted-foreground block mb-1">State Name</label>
-                              <input
-                                type="text"
-                                value={st.stateName}
-                                onChange={(e) => setItemState(item, { stateName: e.target.value })}
-                                className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
-                                placeholder="e.g. Injured, Night, Wounded"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-muted-foreground block mb-1">State Description</label>
-                              <input
-                                type="text"
-                                value={st.stateDescription}
-                                onChange={(e) => setItemState(item, { stateDescription: e.target.value })}
-                                className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
-                                placeholder="Description of this state"
-                              />
-                            </div>
+                            )}
                           </div>
                         )}
+
+                        {/* Selection count */}
+                        <div className="ml-4 mt-1 text-[10px] text-muted-foreground">
+                          {selectedCount} of {rows.length} states selected
+                        </div>
                       </div>
                     );
                   })}
@@ -230,7 +290,7 @@ const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCance
         {/* Footer */}
         <div className="p-4 border-t border-border flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {selectedCount} of {allItems.length} selected
+            {selectedStates} of {totalStates} states selected
           </span>
           <div className="flex gap-3">
             <button
@@ -241,10 +301,10 @@ const ExtractComparisonModal = ({ comparison, existingAssets, onConfirm, onCance
             </button>
             <button
               onClick={handleConfirm}
-              disabled={selectedCount === 0}
+              disabled={selectedStates === 0}
               className="px-4 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 transition-colors"
             >
-              Save Selected ({selectedCount})
+              Save Selected ({selectedStates} states)
             </button>
           </div>
         </div>
