@@ -37,6 +37,7 @@ class ComfyUISettingsModel(BaseModel):
     port: int
     deviceId: str
     pollInterval: int = 4000
+    taskTTL: int = 600
 
 # --- Handshake Model ---
 

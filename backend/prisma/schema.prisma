@@ -28,6 +28,7 @@ model ComfyUISettings {
   port        Int
   deviceId    String
   pollInterval Int     @default(4000)
+  taskTTL     Int      @default(600)
 }
 
 model Project {

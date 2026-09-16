@@ -16,8 +16,8 @@ router = APIRouter(prefix="/playground", tags=["Playground"])
 # In-memory task tracker: task_id -> (prompt_id, timestamp)
 active_tasks: Dict[str, tuple] = {}
 
-# Tasks older than this (seconds) are considered stale and removed
-TASK_TTL = 300  # 5 minutes
+# Default TTL (seconds) — overridden by ComfyUISettings.taskTTL from DB
+DEFAULT_TASK_TTL = 600  # 10 minutes
 
 @router.get("/list")
 def list_workflows():
@@ -189,18 +189,20 @@ async def remove_task(task_id: str):
         return {"status": "removed", "task_id": task_id}
     return {"status": "not_found", "task_id": task_id}
 
-def _purge_stale_tasks():
-    """Remove tasks older than TASK_TTL seconds."""
+async def _purge_stale_tasks(db):
+    """Remove tasks older than the configured TTL (from ComfyUISettings.taskTTL)."""
+    comfyui = await db.comfyuisettings.find_first()
+    ttl = comfyui.taskTTL if comfyui and comfyui.taskTTL else DEFAULT_TASK_TTL
     now = time.time()
-    stale = [tid for tid, (_pid, ts) in active_tasks.items() if now - ts > TASK_TTL]
+    stale = [tid for tid, (_pid, ts) in active_tasks.items() if now - ts > ttl]
     for tid in stale:
         del active_tasks[tid]
-        print(f"[Cleanup] purged stale task {tid}")
+        print(f"[Cleanup] purged stale task {tid} (ttl={ttl}s)")
 
 @router.get("/active")
-async def get_active_tasks():
+async def get_active_tasks(db: Any = Depends(get_db)):
     """Return all active task IDs so the frontend can poll them all."""
-    _purge_stale_tasks()
+    await _purge_stale_tasks(db)
     return {"tasks": list(active_tasks.keys()), "count": len(active_tasks)}
 
 @router.delete("/active")

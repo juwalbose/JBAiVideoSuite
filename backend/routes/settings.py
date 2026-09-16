@@ -65,6 +65,7 @@ async def get_settings(db = Depends(get_db)):
             "port": 8188,
             "deviceId": "0",
             "pollInterval": 4000,
+            "taskTTL": 600,
         }
     }
 
@@ -103,7 +104,8 @@ async def save_comfyui_settings(settings: ComfyUISettingsModel, db = Depends(get
             "ip": settings.ip,
             "port": settings.port,
             "deviceId": settings.deviceId,
-            "pollInterval": settings.pollInterval
+            "pollInterval": settings.pollInterval,
+            "taskTTL": settings.taskTTL
         }, where={"id": comfy.id})
     else:
         await db.comfyuisettings.create(**settings.dict())

@@ -73,6 +73,15 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
             onChange={(e) => setComfyUI({ pollInterval: parseInt(e.target.value) || 4000 })}
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground">Task Timeout (s)</label>
+          <input
+            type="number"
+            className="border border-border p-2 rounded w-full bg-card text-foreground"
+            value={comfyui.taskTTL}
+            onChange={(e) => setComfyUI({ taskTTL: parseInt(e.target.value) || 600 })}
+          />
+        </div>
       </div>
       <div className="mb-6">
         <button
