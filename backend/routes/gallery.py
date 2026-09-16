@@ -5,12 +5,11 @@ import base64
 import uuid
 
 from database import get_db
+from paths import GENERATED_DIR
 
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
 
-# Path to the generated images folder relative to the backend directory
-# Since main.py is inside 'backend/', we go up one level (..) to find 'assets'
-GENERATED_IMAGES_DIR = "../assets/generated"
+GENERATED_IMAGES_DIR = GENERATED_DIR
 
 @router.get("/")
 async def get_gallery():

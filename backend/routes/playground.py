@@ -7,6 +7,7 @@ import uuid
 import asyncio
 import httpx
 from database import get_db
+from paths import WORKFLOWS_DIR
 from .playground_parser import PlaygroundParser
 
 router = APIRouter(prefix="/playground", tags=["Playground"])
@@ -16,9 +17,7 @@ active_tasks: Dict[str, str] = {}
 
 @router.get("/list")
 def list_workflows():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    workflow_dir = os.path.join(base_dir, "..", "assets", "workflows")
-    files = os.listdir(workflow_dir)
+    files = os.listdir(WORKFLOWS_DIR)
     workflow_files = sorted([f for f in files if f.endswith(".json")])
     return [
         {"id": f.replace(".json", ""), "name": f.replace(".json", "").replace("_", " ")}
@@ -75,8 +74,7 @@ async def generate(request: GenerateRequest, db: Any = Depends(get_db)):
     workflow_id = request.workflow_id
     inputs = request.inputs
 
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    full_path = os.path.join(base_dir, "..", "assets", "workflows", f"{workflow_id}.json")
+    full_path = os.path.join(WORKFLOWS_DIR, f"{workflow_id}.json")
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found.")
 
@@ -126,7 +124,6 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found.")
 
     prompt_id = active_tasks[task_id]
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     comfyui = await db.comfyuisettings.find_first()
     if not comfyui:

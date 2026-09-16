@@ -2,10 +2,9 @@ from fastapi import APIRouter
 import os
 import json
 
-router = APIRouter(prefix="/workflows", tags=["Workflows"])
+from paths import WORKFLOWS_DIR
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-WORKFLOWS_DIR = os.path.abspath(os.path.join(current_dir, "..", "..", "assets", "workflows"))
+router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
 def _safe_workflow_path(filename: str) -> str | None:
     """Return a safe absolute path inside WORKFLOWS_DIR, or None if the name is unsafe."""

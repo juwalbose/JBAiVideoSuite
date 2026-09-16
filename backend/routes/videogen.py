@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from typing import Any, Dict
 
 from database import get_db
+from paths import WORKFLOWS_DIR, GENERATED_DIR
 
 router = APIRouter(prefix="/projects", tags=["VideoGen"])
 
@@ -65,8 +66,7 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
     if not wf_mapping or not wf_mapping.workflowFile:
         return {"status": "error", "details": "No workflow mapped for MinimaxH3 Ref2VA Generation"}
 
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    workflow_path = os.path.join(base_dir, "..", "assets", "workflows", wf_mapping.workflowFile)
+    workflow_path = os.path.join(WORKFLOWS_DIR, wf_mapping.workflowFile)
     if not os.path.exists(workflow_path):
         return {"status": "error", "details": f"Workflow file not found: {wf_mapping.workflowFile}"}
 
@@ -207,9 +207,8 @@ async def check_video_status(id: str, task_id: str, db: Any = Depends(get_db)):
         }
         file_res = await client.get(f"{comfy_http}/view", params=params)
 
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        gen_dir = os.path.join(base_dir, "..", "assets", "generated")
-        os.makedirs(gen_dir, exist_ok=True)
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        gen_dir = GENERATED_DIR
         save_path = os.path.join(gen_dir, output_info["filename"])
         with open(save_path, "wb") as f:
             f.write(file_res.content)

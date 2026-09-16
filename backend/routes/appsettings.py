@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import Any, Optional
 from pydantic import BaseModel
 from database import get_db
+from paths import WORKFLOWS_DIR
 import os
 
 router = APIRouter(prefix="/appsettings", tags=["AppSettings"])
@@ -19,8 +20,6 @@ COMFY_ACTIONS = [
     "Character Sheet Generation",
     "MinimaxH3 Ref2VA Generation",
 ]
-
-WORKFLOWS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "workflows")
 
 class MappingUpdate(BaseModel):
     action: str

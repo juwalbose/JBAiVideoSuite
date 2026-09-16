@@ -2,12 +2,11 @@ from fastapi import APIRouter, Depends
 from typing import Optional, Any
 from database import get_db
 from models import ProjectCreate, StoryInput
+from paths import PROMPTS_DIR
 import httpx
 import os
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
-
-PROMPTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "systemprompts"))
 
 async def get_system_prompt(db, action: str) -> Optional[str]:
     """Fetch the mapped system prompt file content for an action, or None."""

@@ -2,6 +2,8 @@ import json
 import re
 import os
 
+from paths import WORKFLOWS_DIR
+
 class PlaygroundParser:
     def __init__(self):
         # Define our known roles and their expected data types for the UI
@@ -21,10 +23,7 @@ class PlaygroundParser:
         :param workflow_path: Path to the .json file (relative to backend root)
         :return: Dictionary containing inputs, output type, and validity.
         """
-        # Use path relative to this file (backend/routes/playground_parser.py)
-        # Up 3 levels from here reaches the project root
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        full_path = os.path.join(base_dir, "assets", "workflows", workflow_path.replace(".json", ""))
+        full_path = os.path.join(WORKFLOWS_DIR, workflow_path.replace(".json", ""))
         if not full_path.endswith(".json"):
             full_path += ".json"
 

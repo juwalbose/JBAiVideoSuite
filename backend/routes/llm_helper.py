@@ -1,7 +1,7 @@
 import httpx
 import os
 
-PROMPTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "systemprompts"))
+from paths import PROMPTS_DIR
 
 LLM_TIMEOUT = httpx.Timeout(300.0, connect=10.0)
 

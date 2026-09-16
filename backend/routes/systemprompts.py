@@ -1,10 +1,9 @@
 from fastapi import APIRouter
 import os
 
-router = APIRouter(prefix="/systemprompts", tags=["SystemPrompts"])
+from paths import PROMPTS_DIR
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-PROMPTS_DIR = os.path.abspath(os.path.join(current_dir, "..", "..", "assets", "systemprompts"))
+router = APIRouter(prefix="/systemprompts", tags=["SystemPrompts"])
 
 def _safe_prompt_path(filename: str) -> str | None:
     """Return a safe absolute path inside PROMPTS_DIR, or None if the name is unsafe."""

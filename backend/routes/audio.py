@@ -3,10 +3,9 @@ import shutil
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from typing import Any
 from database import get_db
+from paths import AUDIO_DIR
 
 router = APIRouter(prefix="/projects", tags=["AudioAssets"])
-
-AUDIO_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "audio")
 
 
 @router.get("/{id}/audio")

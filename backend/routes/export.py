@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, UploadFile, File
 from typing import Any
 from database import get_db
+from paths import ROOT_DIR, PROMPTS_DIR, WORKFLOWS_DIR
 import os
 import json
 import uuid
 
 router = APIRouter(prefix="/export", tags=["Export"])
-
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PROMPTS_DIR = os.path.join(ROOT_DIR, "assets", "systemprompts")
-WORKFLOWS_DIR = os.path.join(ROOT_DIR, "assets", "workflows")
 
 
 def _dict_or_none(obj):

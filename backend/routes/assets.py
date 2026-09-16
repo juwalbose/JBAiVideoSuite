@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import Any
 from database import get_db
+from paths import WORKFLOWS_DIR, GENERATED_DIR
 import json
 import os
 import uuid
@@ -281,8 +282,7 @@ async def generate_image(id: str, asset_id: str, payload: dict, db: Any = Depend
         if not wf_mapping or not wf_mapping.workflowFile:
             return {"status": "error", "details": "No workflow mapped for Asset Generation"}
 
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        workflow_path = os.path.join(base_dir, "..", "assets", "workflows", wf_mapping.workflowFile)
+        workflow_path = os.path.join(WORKFLOWS_DIR, wf_mapping.workflowFile)
         if not os.path.exists(workflow_path):
             return {"status": "error", "details": f"Workflow file not found: {wf_mapping.workflowFile}"}
 
@@ -371,9 +371,8 @@ async def check_image_status(id: str, asset_id: str, task_id: str, db: Any = Dep
         img_res = await client.get(f"{comfy_http}/view", params=params)
 
         # Save to assets/generated/
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        gen_dir = os.path.join(base_dir, "..", "assets", "generated")
-        os.makedirs(gen_dir, exist_ok=True)
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        gen_dir = GENERATED_DIR
         save_path = os.path.join(gen_dir, image_info["filename"])
         with open(save_path, "wb") as f:
             f.write(img_res.content)
@@ -416,8 +415,7 @@ async def generate_sheet(id: str, asset_id: str, payload: dict, db: Any = Depend
         if not wf_mapping or not wf_mapping.workflowFile:
             return {"status": "error", "details": "No workflow mapped for Character Sheet Generation"}
 
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        workflow_path = os.path.join(base_dir, "..", "assets", "workflows", wf_mapping.workflowFile)
+        workflow_path = os.path.join(WORKFLOWS_DIR, wf_mapping.workflowFile)
         if not os.path.exists(workflow_path):
             return {"status": "error", "details": f"Workflow file not found: {wf_mapping.workflowFile}"}
 
