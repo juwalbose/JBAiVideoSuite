@@ -213,9 +213,21 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
             to_remove.append(nid)
         elif '(input:audio)' in title and nid not in provided_aud_nodes:
             to_remove.append(nid)
-    for nid in to_remove:
-        del workflow_data[nid]
+
     if to_remove:
+        removed_set = set(to_remove)
+        for nid in to_remove:
+            del workflow_data[nid]
+
+        # Clean up references to removed nodes in all remaining nodes
+        for nid, ndata in workflow_data.items():
+            if not isinstance(ndata, dict):
+                continue
+            inputs = ndata.get('inputs', {})
+            for key, val in list(inputs.items()):
+                if isinstance(val, list) and len(val) >= 1 and val[0] in removed_set:
+                    del inputs[key]
+
         print(f"[VideoGen] pruned {len(to_remove)} unused input node(s): {to_remove}")
 
     print(f"\n--- VideoGen Workflow ({wf_mapping.workflowFile}) ---")

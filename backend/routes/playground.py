@@ -74,7 +74,8 @@ def _inject_inputs(workflow_data: dict, inputs: Dict[str, Any]) -> dict:
 
 
 def _prune_unused_inputs(workflow_data: dict, provided_node_ids: set) -> dict:
-    """Remove unused (input:image)/(input:audio) nodes not in provided_node_ids."""
+    """Remove unused (input:image)/(input:audio) nodes not in provided_node_ids,
+    and clean up any references to them in other nodes' inputs."""
     to_remove = []
     for nid, ndata in workflow_data.items():
         if not isinstance(ndata, dict):
@@ -83,10 +84,24 @@ def _prune_unused_inputs(workflow_data: dict, provided_node_ids: set) -> dict:
         if "(input:image)" in title or "(input:audio)" in title:
             if nid not in provided_node_ids:
                 to_remove.append(nid)
+
+    if not to_remove:
+        return workflow_data
+
+    removed_set = set(to_remove)
     for nid in to_remove:
         del workflow_data[nid]
-    if to_remove:
-        print(f"[Prune] removed {len(to_remove)} unused input node(s): {to_remove}")
+
+    # Clean up references to removed nodes in all remaining nodes
+    for nid, ndata in workflow_data.items():
+        if not isinstance(ndata, dict):
+            continue
+        inputs = ndata.get("inputs", {})
+        for key, val in list(inputs.items()):
+            if isinstance(val, list) and len(val) >= 1 and val[0] in removed_set:
+                del inputs[key]
+
+    print(f"[Prune] removed {len(to_remove)} unused input node(s): {to_remove}")
     return workflow_data
 
 @router.post("/generate")
