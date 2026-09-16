@@ -58,7 +58,7 @@ def _inject_inputs(workflow_data: dict, inputs: Dict[str, Any]) -> dict:
         target_node_id = None
         for nid, ndata in workflow_data.items():
             title = ndata.get("_meta", {}).get("title", "")
-            if f"(Input:{role})" in title.lower():
+            if f"(input:{role})" in title.lower():
                 target_node_id = nid
                 break
 
