@@ -273,7 +273,11 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
         </div>
       )}
 
-      <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-border">
+      <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
+        Workflow: Finalise script → Extract Assets → Add character traits → Refine dialog → Choose to overwrite script or not
+      </p>
+
+      <div className="flex justify-center gap-4 mt-2">
         <button
           onClick={handleGenerateScript}
           disabled={isLoading || !currentProject?.story?.narrativeArc}
