@@ -29,17 +29,22 @@ async def import_audio(
     safe_name = "".join(c for c in name if c.isalnum() or c in " _-").strip().replace(" ", "_")
     filename = f"{safe_name}{ext}"
     dest = os.path.join(AUDIO_DIR, filename)
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    audio_path = f"/assets/audio/{filename}"
-    await db.audioasset.create({
-        'projectId': id,
-        'episode': episode,
-        'name': name,
-        'audioPath': audio_path,
-        'audioType': audio_type,
-        'transcript': transcript,
-    })
+    try:
+        with open(dest, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        audio_path = f"/assets/audio/{filename}"
+        await db.audioasset.create({
+            'projectId': id,
+            'episode': episode,
+            'name': name,
+            'audioPath': audio_path,
+            'audioType': audio_type,
+            'transcript': transcript,
+        })
+    except Exception:
+        if os.path.exists(dest):
+            os.unlink(dest)
+        raise
     return {"status": "success", "audioPath": audio_path}
 
 
@@ -64,6 +69,12 @@ async def delete_audio(id: str, audio_id: str, db: Any = Depends(get_db)):
         item = await db.audioasset.find_first(where={'id': audio_id, 'projectId': id})
         if not item:
             return {"status": "error", "details": "Audio asset not found"}
+        # Delete the physical file if it exists
+        if item.audioPath:
+            filename = os.path.basename(item.audioPath)
+            file_path = os.path.join(AUDIO_DIR, filename)
+            if os.path.exists(file_path):
+                os.unlink(file_path)
         await db.audioasset.delete(where={'id': audio_id})
         return {"status": "success"}
     except Exception as e:

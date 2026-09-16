@@ -38,6 +38,6 @@ async def add_workflow(payload: dict):
         return {"status": "error", "details": "Invalid workflow name"}
     if not os.path.exists(WORKFLOWS_DIR):
         os.makedirs(WORKFLOWS_DIR, exist_ok=True)
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         f.write(json_content)
     return {"status": "success", "filename": filename}

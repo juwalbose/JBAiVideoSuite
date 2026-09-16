@@ -37,7 +37,7 @@ const SystemPromptsPanel: React.FC = () => {
       await fetch(`${baseUrl}/systemprompts/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: file.name.replace('.txt', ''), content }),
+        body: JSON.stringify({ name: file.name.replace(/\.txt$/, ''), content }),
       });
       await fetchPrompts();
     };

@@ -5,6 +5,17 @@ from database import get_db
 from paths import WORKFLOWS_DIR
 import os
 
+def _safe_filename(filename: Optional[str]) -> Optional[str]:
+    """Sanitize a filename: basename only, must end with .txt or .json."""
+    if not filename:
+        return None
+    base = os.path.basename(filename)
+    if base != filename or "/" in base or "\\" in base or base.startswith("."):
+        return None
+    if not (base.endswith(".txt") or base.endswith(".json")):
+        return None
+    return base
+
 router = APIRouter(prefix="/appsettings", tags=["AppSettings"])
 
 APP_ACTIONS = [
@@ -43,16 +54,20 @@ async def get_mappings(db: Any = Depends(get_db)):
 
 @router.post("/save")
 async def save_mapping(update: MappingUpdate, db: Any = Depends(get_db)):
+    # M8: sanitize promptFile
+    safe_file = _safe_filename(update.promptFile)
+    if update.promptFile and safe_file is None:
+        return {"status": "error", "details": f"Invalid prompt file: {update.promptFile}"}
     existing = await db.appactionmapping.find_first(where={'action': update.action})
     if existing:
         await db.appactionmapping.update(
-            data={'promptFile': update.promptFile},
+            data={'promptFile': safe_file},
             where={'id': existing.id}
         )
     else:
         await db.appactionmapping.create({
             'action': update.action,
-            'promptFile': update.promptFile
+            'promptFile': safe_file
         })
     return {"status": "success"}
 
@@ -76,16 +91,20 @@ async def list_workflow_files():
 
 @router.post("/workflows/save")
 async def save_workflow_mapping(update: WorkflowMappingUpdate, db: Any = Depends(get_db)):
+    # M8: sanitize workflowFile
+    safe_file = _safe_filename(update.workflowFile)
+    if update.workflowFile and safe_file is None:
+        return {"status": "error", "details": f"Invalid workflow file: {update.workflowFile}"}
     existing = await db.comfyworkflowmapping.find_first(where={'action': update.action})
     if existing:
         await db.comfyworkflowmapping.update(
-            data={'workflowFile': update.workflowFile},
+            data={'workflowFile': safe_file},
             where={'id': existing.id}
         )
     else:
         await db.comfyworkflowmapping.create({
             'action': update.action,
-            'workflowFile': update.workflowFile
+            'workflowFile': safe_file
         })
     return {"status": "success"}
 

@@ -138,8 +138,17 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
     async with httpx.AsyncClient(timeout=10.0) as client:
         history_res = await client.get(f"{comfy_http}/history/{prompt_id}")
         history_data = history_res.json()
+        entry = history_data.get(prompt_id, {})
+        outputs = entry.get("outputs", {})
 
-        outputs = history_data.get(prompt_id, {}).get("outputs", {})
+        # M1: check for ComfyUI errors before assuming pending
+        status_info = entry.get("status", {})
+        if status_info.get("status") == "error":
+            detail = status_info.get("message", "ComfyUI generation failed")
+            active_tasks.pop(task_id, None)
+            print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> ERROR: {detail}")
+            return {"status": "error", "details": detail, "task_id": task_id}
+
         output_info = None
         output_type = None
         for node_output in outputs.values():
@@ -163,19 +172,22 @@ async def check_status(task_id: str, db: Any = Depends(get_db)):
         }
         file_res = await client.get(f"{comfy_http}/view", params=params)
 
+        # M2: save with a stable name (task_id) instead of ComfyUI's counter name
         os.makedirs(GENERATED_DIR, exist_ok=True)
-        save_path = os.path.join(GENERATED_DIR, output_info["filename"])
+        ext = os.path.splitext(output_info["filename"])[1] or ".png"
+        stable_name = f"{task_id}{ext}"
+        save_path = os.path.join(GENERATED_DIR, stable_name)
         with open(save_path, "wb") as f:
             f.write(file_res.content)
 
         media_type = "video/mp4" if output_type == "video" else "image/png"
-        print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> COMPLETE ({output_info['filename']}) [{output_type}]")
+        print(f"[Status] task_id={task_id} prompt_id={prompt_id} -> COMPLETE ({stable_name}) [{output_type}]")
 
         return Response(
             content=file_res.content,
             media_type=media_type,
             headers={
-                "Content-Disposition": f'inline; filename="{output_info["filename"]}"',
+                "Content-Disposition": f'inline; filename="{stable_name}"',
                 "X-Task-Status": "complete",
             },
         )

@@ -59,8 +59,12 @@ async def upload_image(payload: dict):
     dest = os.path.realpath(os.path.join(GENERATED_IMAGES_DIR, filename))
     if not dest.startswith(os.path.realpath(GENERATED_IMAGES_DIR)):
         return {"status": "error", "details": "Invalid path"}
+    try:
+        decoded = base64.b64decode(data_url, validate=True)
+    except Exception as e:
+        return {"status": "error", "details": f"Invalid base64 data: {str(e)}"}
     with open(dest, "wb") as out:
-        out.write(base64.b64decode(data_url))
+        out.write(decoded)
     return {"status": "success", "path": f"/assets/generated/{filename}"}
 
 @router.delete("/{filename}")

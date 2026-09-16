@@ -126,11 +126,11 @@ export const useSettingsStore = create<SettingsState>()(
           const response = await fetch(`${state.backend.apiUrl}/settings/`);
           if (response.ok) {
             const data = await response.json();
-            set({
-              llm: data.llm,
-              backend: data.backend,
-              comfyui: data.comfyui,
-            });
+            set((state) => ({
+              llm: { ...state.llm, ...data.llm },
+              backend: { ...state.backend, ...data.backend },
+              comfyui: { ...state.comfyui, ...data.comfyui },
+            }));
           }
         } catch (error) {
           console.error("Error loading settings from DB:", error);

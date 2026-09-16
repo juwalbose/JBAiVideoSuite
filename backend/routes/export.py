@@ -103,266 +103,267 @@ async def import_project(payload: dict, db: Any = Depends(get_db)):
     # Generate new project ID
     new_project_id = str(uuid.uuid4())
 
-    # Create project (strip old id, set new)
-    proj_data = {
-        'id': new_project_id,
-        'name': proj.get('name', 'Imported Project'),
-        'type': proj.get('type', 'single'),
-        'duration': proj.get('duration', 120),
-        'episodeCount': proj.get('episodeCount', 1),
-    }
-    await db.project.create(data=proj_data)
+    async with db.tx() as tx:
+        # Create project (strip old id, set new)
+        proj_data = {
+            'id': new_project_id,
+            'name': proj.get('name', 'Imported Project'),
+            'type': proj.get('type', 'single'),
+            'duration': proj.get('duration', 120),
+            'episodeCount': proj.get('episodeCount', 1),
+        }
+        await tx.project.create(data=proj_data)
 
-    # Import stories
-    story_id_map = {}
-    for s in data.get('stories', []):
-        new_id = str(uuid.uuid4())
-        story_id_map[s.get('id')] = new_id
-        await db.story.create({
-            'id': new_id,
-            'projectId': new_project_id,
-            'episode': s.get('episode', 1),
-            'narrativeArc': s.get('narrativeArc', ''),
-            'rawInput': s.get('rawInput', ''),
-        })
-
-    # Import scripts
-    for s in data.get('scripts', []):
-        await db.script.create({
-            'id': str(uuid.uuid4()),
-            'projectId': new_project_id,
-            'episode': s.get('episode', 1),
-            'content': s.get('content', ''),
-        })
-
-    # Import shot lists
-    for s in data.get('shotLists', []):
-        await db.shotlist.create({
-            'id': str(uuid.uuid4()),
-            'projectId': new_project_id,
-            'episode': s.get('episode', 1),
-            'shot': s.get('shot', 0),
-            'scene': s.get('scene', 0),
-            'beats': s.get('beats', '[]'),
-            'loc': s.get('loc', ''),
-            'subs': s.get('subs', ''),
-            'frames': s.get('frames', 0),
-            'duration': s.get('duration', 0),
-            'camera': s.get('camera', ''),
-            'action': s.get('action', ''),
-            'dialogue': s.get('dialogue', ''),
-            'note': s.get('note', ''),
-            'prompt': s.get('prompt', ''),
-            'locationAssetId': s.get('locationAssetId'),
-            'locationStateId': s.get('locationStateId'),
-            'characterAssetIds': s.get('characterAssetIds'),
-            'characterStateIds': s.get('characterStateIds'),
-            'propAssetIds': s.get('propAssetIds'),
-            'propStateIds': s.get('propStateIds'),
-            'sceneDialogAudioId': s.get('sceneDialogAudioId'),
-            'characterAudioIds': s.get('characterAudioIds'),
-            'characterAudioTypes': s.get('characterAudioTypes'),
-            'musicOn': s.get('musicOn', False),
-            'musicDesc': s.get('musicDesc', ''),
-            'videoPath': s.get('videoPath'),
-        })
-
-    # Import assets (with states) — build ID maps for FK remapping
-    asset_id_map = {}
-    state_id_map = {}
-    for a in data.get('assets', []):
-        new_asset_id = str(uuid.uuid4())
-        asset_id_map[a.get('id')] = new_asset_id
-        await db.asset.create({
-            'id': new_asset_id,
-            'projectId': new_project_id,
-            'episode': a.get('episode', 1),
-            'beatId': None,
-            'type': a.get('type', 'CHARACTER'),
-            'name': a.get('name', ''),
-            'description': a.get('description'),
-            'imagePath': a.get('imagePath'),
-            'prompt': a.get('prompt'),
-        })
-        for st in a.get('states', []):
-            new_state_id = str(uuid.uuid4())
-            state_id_map[st.get('id')] = new_state_id
-            await db.assetstate.create({
-                'id': new_state_id,
-                'assetId': new_asset_id,
-                'name': st.get('name', ''),
-                'description': st.get('description'),
-                'prompt': st.get('prompt'),
-                'imagePath': st.get('imagePath'),
-                'characterSheet': st.get('characterSheet'),
-                'scenes': st.get('scenes'),
+        # Import stories
+        story_id_map = {}
+        for s in data.get('stories', []):
+            new_id = str(uuid.uuid4())
+            story_id_map[s.get('id')] = new_id
+            await tx.story.create({
+                'id': new_id,
+                'projectId': new_project_id,
+                'episode': s.get('episode', 1),
+                'narrativeArc': s.get('narrativeArc', ''),
+                'rawInput': s.get('rawInput', ''),
             })
 
-    # Remap shot list FKs to new asset/state IDs
-    for s in data.get('shotLists', []):
-        old_loc_asset = s.get('locationAssetId')
-        old_loc_state = s.get('locationStateId')
-        new_loc_asset = asset_id_map.get(old_loc_asset) if old_loc_asset else None
-        new_loc_state = state_id_map.get(old_loc_state) if old_loc_state else None
+        # Import scripts
+        for s in data.get('scripts', []):
+            await tx.script.create({
+                'id': str(uuid.uuid4()),
+                'projectId': new_project_id,
+                'episode': s.get('episode', 1),
+                'content': s.get('content', ''),
+            })
 
-        char_assets = s.get('characterAssetIds')
-        char_states = s.get('characterStateIds')
-        prop_assets = s.get('propAssetIds')
-        prop_states = s.get('propStateIds')
-
-        def remap_json_arr(val, asset_map, state_map):
-            if not val:
-                return val
-            try:
-                arr = json.loads(val) if isinstance(val, str) else val
-                if asset_map is not None:
-                    return json.dumps([asset_map.get(x, x) for x in arr])
-                return json.dumps([state_map.get(x, x) for x in arr])
-            except Exception:
-                return val
-
-        updates = {}
-        if new_loc_asset:
-            updates['locationAssetId'] = new_loc_asset
-        if new_loc_state:
-            updates['locationStateId'] = new_loc_state
-        if char_assets:
-            updates['characterAssetIds'] = remap_json_arr(char_assets, asset_id_map, None)
-        if char_states:
-            updates['characterStateIds'] = remap_json_arr(char_states, None, state_id_map)
-        if prop_assets:
-            updates['propAssetIds'] = remap_json_arr(prop_assets, asset_id_map, None)
-        if prop_states:
-            updates['propStateIds'] = remap_json_arr(prop_states, None, state_id_map)
-
-        if updates:
-            # Find the shot list entry we just created (match by shot number + episode)
-            sl = await db.shotlist.find_first({
+        # Import shot lists
+        for s in data.get('shotLists', []):
+            await tx.shotlist.create({
+                'id': str(uuid.uuid4()),
                 'projectId': new_project_id,
                 'episode': s.get('episode', 1),
                 'shot': s.get('shot', 0),
+                'scene': s.get('scene', 0),
+                'beats': s.get('beats', '[]'),
+                'loc': s.get('loc', ''),
+                'subs': s.get('subs', ''),
+                'frames': s.get('frames', 0),
+                'duration': s.get('duration', 0),
+                'camera': s.get('camera', ''),
+                'action': s.get('action', ''),
+                'dialogue': s.get('dialogue', ''),
+                'note': s.get('note', ''),
+                'prompt': s.get('prompt', ''),
+                'locationAssetId': s.get('locationAssetId'),
+                'locationStateId': s.get('locationStateId'),
+                'characterAssetIds': s.get('characterAssetIds'),
+                'characterStateIds': s.get('characterStateIds'),
+                'propAssetIds': s.get('propAssetIds'),
+                'propStateIds': s.get('propStateIds'),
+                'sceneDialogAudioId': s.get('sceneDialogAudioId'),
+                'characterAudioIds': s.get('characterAudioIds'),
+                'characterAudioTypes': s.get('characterAudioTypes'),
+                'musicOn': s.get('musicOn', False),
+                'musicDesc': s.get('musicDesc', ''),
+                'videoPath': s.get('videoPath'),
             })
-            if sl:
-                await db.shotlist.update(where={'id': sl.id}, data=updates)
 
-    # Remap audio FKs in shot lists
-    audio_id_map = {}
-    for a in data.get('audioAssets', []):
-        new_audio_id = str(uuid.uuid4())
-        audio_id_map[a.get('id')] = new_audio_id
-        await db.audioasset.create({
-            'id': new_audio_id,
-            'projectId': new_project_id,
-            'episode': a.get('episode', 1),
-            'name': a.get('name', ''),
-            'audioPath': a.get('audioPath', ''),
-            'audioType': a.get('audioType', 'SCENE_DIALOG'),
-            'transcript': a.get('transcript', ''),
-        })
-
-    # Remap audio IDs in shot lists
-    for s in data.get('shotLists', []):
-        updates = {}
-        old_scene_audio = s.get('sceneDialogAudioId')
-        if old_scene_audio and old_scene_audio in audio_id_map:
-            updates['sceneDialogAudioId'] = audio_id_map[old_scene_audio]
-        char_audios = s.get('characterAudioIds')
-        if char_audios:
-            try:
-                arr = json.loads(char_audios) if isinstance(char_audios, str) else char_audios
-                updates['characterAudioIds'] = json.dumps([audio_id_map.get(x, x) for x in arr])
-            except Exception:
-                pass
-        if updates:
-            sl = await db.shotlist.find_first({
+        # Import assets (with states) — build ID maps for FK remapping
+        asset_id_map = {}
+        state_id_map = {}
+        for a in data.get('assets', []):
+            new_asset_id = str(uuid.uuid4())
+            asset_id_map[a.get('id')] = new_asset_id
+            await tx.asset.create({
+                'id': new_asset_id,
                 'projectId': new_project_id,
-                'episode': s.get('episode', 1),
-                'shot': s.get('shot', 0),
+                'episode': a.get('episode', 1),
+                'beatId': None,
+                'type': a.get('type', 'CHARACTER'),
+                'name': a.get('name', ''),
+                'description': a.get('description'),
+                'imagePath': a.get('imagePath'),
+                'prompt': a.get('prompt'),
             })
-            if sl:
-                await db.shotlist.update(where={'id': sl.id}, data=updates)
-
-    # Import final video
-    fv = data.get('finalVideo')
-    if fv:
-        await db.finalvideo.create({
-            'id': str(uuid.uuid4()),
-            'projectId': new_project_id,
-            'totalDuration': fv.get('totalDuration'),
-            'exportPath': fv.get('exportPath'),
-            'thumbnailUrl': fv.get('thumbnailUrl'),
-        })
-
-    # Import settings and mappings only if explicitly requested by the user.
-    # They are machine-specific (IPs, ports, file paths) and silently importing
-    # them could lock the UI out of its own backend.
-    if import_settings:
-        settings = data.get('settings', {})
-        if settings.get('llm'):
-            llm = await db.llmsettings.find_first()
-            ld = settings['llm']
-            if llm:
-                await db.llmsettings.update(where={'id': llm.id}, data={
-                    'ip': ld.get('ip'), 'port': ld.get('port'),
-                    'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
-                    'maxTokens': ld.get('maxTokens'),
-                })
-            else:
-                await db.llmsettings.create({
-                    'ip': ld.get('ip'), 'port': ld.get('port'),
-                    'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
-                    'maxTokens': ld.get('maxTokens'),
-                })
-        if settings.get('backend'):
-            backend = await db.backendsettings.find_first()
-            bd = settings['backend']
-            if backend:
-                await db.backendsettings.update(where={'id': backend.id}, data={
-                    'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
-                })
-            else:
-                await db.backendsettings.create({
-                    'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
-                })
-        if settings.get('comfyui'):
-            comfy = await db.comfyuisettings.find_first()
-            cd = settings['comfyui']
-            if comfy:
-                await db.comfyuisettings.update(where={'id': comfy.id}, data={
-                    'ip': cd.get('ip'), 'port': cd.get('port'),
-                    'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
-                })
-            else:
-                await db.comfyuisettings.create({
-                    'ip': cd.get('ip'), 'port': cd.get('port'),
-                    'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
+            for st in a.get('states', []):
+                new_state_id = str(uuid.uuid4())
+                state_id_map[st.get('id')] = new_state_id
+                await tx.assetstate.create({
+                    'id': new_state_id,
+                    'assetId': new_asset_id,
+                    'name': st.get('name', ''),
+                    'description': st.get('description'),
+                    'prompt': st.get('prompt'),
+                    'imagePath': st.get('imagePath'),
+                    'characterSheet': st.get('characterSheet'),
+                    'scenes': st.get('scenes'),
                 })
 
-        for m in data.get('appActionMappings', []):
-            existing = await db.appactionmapping.find_first(where={'action': m.get('action')})
-            if existing:
-                await db.appactionmapping.update(where={'id': existing.id}, data={
-                    'promptFile': m.get('promptFile'),
-                })
-            else:
-                await db.appactionmapping.create({
-                    'action': m.get('action'),
-                    'promptFile': m.get('promptFile'),
-                })
+        # Remap shot list FKs to new asset/state IDs
+        for s in data.get('shotLists', []):
+            old_loc_asset = s.get('locationAssetId')
+            old_loc_state = s.get('locationStateId')
+            new_loc_asset = asset_id_map.get(old_loc_asset) if old_loc_asset else None
+            new_loc_state = state_id_map.get(old_loc_state) if old_loc_state else None
 
-        for m in data.get('comfyWorkflowMappings', []):
-            existing = await db.comfyworkflowmapping.find_first(where={'action': m.get('action')})
-            if existing:
-                await db.comfyworkflowmapping.update(where={'id': existing.id}, data={
-                    'workflowFile': m.get('workflowFile'),
-                    'resolutionJson': m.get('resolutionJson'),
+            char_assets = s.get('characterAssetIds')
+            char_states = s.get('characterStateIds')
+            prop_assets = s.get('propAssetIds')
+            prop_states = s.get('propStateIds')
+
+            def remap_json_arr(val, asset_map, state_map):
+                if not val:
+                    return val
+                try:
+                    arr = json.loads(val) if isinstance(val, str) else val
+                    if asset_map is not None:
+                        return json.dumps([asset_map.get(x, x) for x in arr])
+                    return json.dumps([state_map.get(x, x) for x in arr])
+                except Exception:
+                    return val
+
+            updates = {}
+            if new_loc_asset:
+                updates['locationAssetId'] = new_loc_asset
+            if new_loc_state:
+                updates['locationStateId'] = new_loc_state
+            if char_assets:
+                updates['characterAssetIds'] = remap_json_arr(char_assets, asset_id_map, None)
+            if char_states:
+                updates['characterStateIds'] = remap_json_arr(char_states, None, state_id_map)
+            if prop_assets:
+                updates['propAssetIds'] = remap_json_arr(prop_assets, asset_id_map, None)
+            if prop_states:
+                updates['propStateIds'] = remap_json_arr(prop_states, None, state_id_map)
+
+            if updates:
+                # Find the shot list entry we just created (match by shot number + episode)
+                sl = await tx.shotlist.find_first({
+                    'projectId': new_project_id,
+                    'episode': s.get('episode', 1),
+                    'shot': s.get('shot', 0),
                 })
-            else:
-                await db.comfyworkflowmapping.create({
-                    'action': m.get('action'),
-                    'workflowFile': m.get('workflowFile'),
-                    'resolutionJson': m.get('resolutionJson'),
+                if sl:
+                    await tx.shotlist.update(where={'id': sl.id}, data=updates)
+
+        # Remap audio FKs in shot lists
+        audio_id_map = {}
+        for a in data.get('audioAssets', []):
+            new_audio_id = str(uuid.uuid4())
+            audio_id_map[a.get('id')] = new_audio_id
+            await tx.audioasset.create({
+                'id': new_audio_id,
+                'projectId': new_project_id,
+                'episode': a.get('episode', 1),
+                'name': a.get('name', ''),
+                'audioPath': a.get('audioPath', ''),
+                'audioType': a.get('audioType', 'SCENE_DIALOG'),
+                'transcript': a.get('transcript', ''),
+            })
+
+        # Remap audio IDs in shot lists
+        for s in data.get('shotLists', []):
+            updates = {}
+            old_scene_audio = s.get('sceneDialogAudioId')
+            if old_scene_audio and old_scene_audio in audio_id_map:
+                updates['sceneDialogAudioId'] = audio_id_map[old_scene_audio]
+            char_audios = s.get('characterAudioIds')
+            if char_audios:
+                try:
+                    arr = json.loads(char_audios) if isinstance(char_audios, str) else char_audios
+                    updates['characterAudioIds'] = json.dumps([audio_id_map.get(x, x) for x in arr])
+                except Exception:
+                    pass
+            if updates:
+                sl = await tx.shotlist.find_first({
+                    'projectId': new_project_id,
+                    'episode': s.get('episode', 1),
+                    'shot': s.get('shot', 0),
                 })
+                if sl:
+                    await tx.shotlist.update(where={'id': sl.id}, data=updates)
+
+        # Import final video
+        fv = data.get('finalVideo')
+        if fv:
+            await tx.finalvideo.create({
+                'id': str(uuid.uuid4()),
+                'projectId': new_project_id,
+                'totalDuration': fv.get('totalDuration'),
+                'exportPath': fv.get('exportPath'),
+                'thumbnailUrl': fv.get('thumbnailUrl'),
+            })
+
+        # Import settings and mappings only if explicitly requested by the user.
+        # They are machine-specific (IPs, ports, file paths) and silently importing
+        # them could lock the UI out of its own backend.
+        if import_settings:
+            settings = data.get('settings', {})
+            if settings.get('llm'):
+                llm = await tx.llmsettings.find_first()
+                ld = settings['llm']
+                if llm:
+                    await tx.llmsettings.update(where={'id': llm.id}, data={
+                        'ip': ld.get('ip'), 'port': ld.get('port'),
+                        'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
+                        'maxTokens': ld.get('maxTokens'),
+                    })
+                else:
+                    await tx.llmsettings.create({
+                        'ip': ld.get('ip'), 'port': ld.get('port'),
+                        'modelName': ld.get('modelName'), 'temperature': ld.get('temperature'),
+                        'maxTokens': ld.get('maxTokens'),
+                    })
+            if settings.get('backend'):
+                backend = await tx.backendsettings.find_first()
+                bd = settings['backend']
+                if backend:
+                    await tx.backendsettings.update(where={'id': backend.id}, data={
+                        'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
+                    })
+                else:
+                    await tx.backendsettings.create({
+                        'apiUrl': bd.get('apiUrl'), 'dbPath': bd.get('dbPath'),
+                    })
+            if settings.get('comfyui'):
+                comfy = await tx.comfyuisettings.find_first()
+                cd = settings['comfyui']
+                if comfy:
+                    await tx.comfyuisettings.update(where={'id': comfy.id}, data={
+                        'ip': cd.get('ip'), 'port': cd.get('port'),
+                        'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
+                    })
+                else:
+                    await tx.comfyuisettings.create({
+                        'ip': cd.get('ip'), 'port': cd.get('port'),
+                        'deviceId': cd.get('deviceId'), 'pollInterval': cd.get('pollInterval'),
+                    })
+
+            for m in data.get('appActionMappings', []):
+                existing = await tx.appactionmapping.find_first(where={'action': m.get('action')})
+                if existing:
+                    await tx.appactionmapping.update(where={'id': existing.id}, data={
+                        'promptFile': m.get('promptFile'),
+                    })
+                else:
+                    await tx.appactionmapping.create({
+                        'action': m.get('action'),
+                        'promptFile': m.get('promptFile'),
+                    })
+
+            for m in data.get('comfyWorkflowMappings', []):
+                existing = await tx.comfyworkflowmapping.find_first(where={'action': m.get('action')})
+                if existing:
+                    await tx.comfyworkflowmapping.update(where={'id': existing.id}, data={
+                        'workflowFile': m.get('workflowFile'),
+                        'resolutionJson': m.get('resolutionJson'),
+                    })
+                else:
+                    await tx.comfyworkflowmapping.create({
+                        'action': m.get('action'),
+                        'workflowFile': m.get('workflowFile'),
+                        'resolutionJson': m.get('resolutionJson'),
+                    })
 
     # Import system prompts (write files) — sanitised
     os.makedirs(PROMPTS_DIR, exist_ok=True)

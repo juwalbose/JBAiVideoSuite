@@ -43,6 +43,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [genImage, setGenImage] = useState(false);
   const [genSheet, setGenSheet] = useState(false);
   const abortRef = React.useRef(false);
+  // M39: track whether the component is still mounted to stop polling
+  const mountedRef = React.useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioName, setAudioName] = useState('');
@@ -245,6 +251,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       const taskId = data.task_id;
       // Poll for completion
       const poll = async () => {
+        if (!mountedRef.current) return;
         try {
           const sRes = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-image/status/${taskId}`);
           const sData = await sRes.json();
@@ -258,8 +265,10 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             setGenImage(false);
           }
         } catch {
-          setError('Polling failed');
-          setGenImage(false);
+          if (mountedRef.current) {
+            setError('Polling failed');
+            setGenImage(false);
+          }
         }
       };
       setTimeout(poll, 3000);
@@ -284,6 +293,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       if (data.status === 'error') { setError(data.details); setGenSheet(false); return; }
       const taskId = data.task_id;
       const poll = async () => {
+        if (!mountedRef.current) return;
         try {
           const sRes = await fetch(`${baseUrl}/projects/${currentProject.id}/assets/${assetId}/generate-image/status/${taskId}`);
           const sData = await sRes.json();
@@ -297,8 +307,10 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             setGenSheet(false);
           }
         } catch {
-          setError('Polling failed');
-          setGenSheet(false);
+          if (mountedRef.current) {
+            setError('Polling failed');
+            setGenSheet(false);
+          }
         }
       };
       setTimeout(poll, 3000);
@@ -504,12 +516,12 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <label className="text-xs font-medium text-muted-foreground">Name</label>
-                <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm font-semibold" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+                <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm font-semibold" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} disabled={genImage || genSheet} />
               </div>
               {editing.states?.[0] && (
                 <div className="flex-1">
                   <label className="text-xs font-medium text-muted-foreground">State</label>
-                  <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm" value={editing.states[0].name} placeholder="State" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], name: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                  <input className="w-full p-2 border border-border rounded bg-card text-foreground text-sm" value={editing.states[0].name} placeholder="State" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], name: e.target.value }; setEditing({ ...editing, states: st }); }} disabled={genImage || genSheet} />
                 </div>
               )}
               <div className="w-28">
@@ -520,18 +532,18 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             {/* Descriptions */}
             <div>
               <label className="text-xs font-medium text-muted-foreground">Asset Description</label>
-              <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} />
+              <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })} disabled={genImage || genSheet} />
             </div>
             {selected?.type === 'characters' && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Characteristics</label>
-                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={3} value={editing.characteristics || ''} placeholder="Personality traits, speech patterns, mannerisms..." onChange={e => setEditing({ ...editing, characteristics: e.target.value })} />
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={3} value={editing.characteristics || ''} placeholder="Personality traits, speech patterns, mannerisms..." onChange={e => setEditing({ ...editing, characteristics: e.target.value })} disabled={genImage || genSheet} />
               </div>
             )}
             {editing.states?.[0] && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground">State Description</label>
-                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.states[0].description} placeholder="State description" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], description: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={2} value={editing.states[0].description} placeholder="State description" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], description: e.target.value }; setEditing({ ...editing, states: st }); }} disabled={genImage || genSheet} />
               </div>
             )}
             {/* Image previews */}
@@ -580,7 +592,7 @@ const AssetsStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
             {editing.states?.[0] && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Prompt</label>
-                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={6} value={editing.states[0].prompt || ''} placeholder="Prompt" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], prompt: e.target.value }; setEditing({ ...editing, states: st }); }} />
+                <textarea className="w-full p-2 border border-border rounded bg-card text-foreground mt-1 text-sm" rows={6} value={editing.states[0].prompt || ''} placeholder="Prompt" onChange={e => { const st = [...editing.states!]; st[0] = { ...st[0], prompt: e.target.value }; setEditing({ ...editing, states: st }); }} disabled={genImage || genSheet} />
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handleGeneratePrompt()} disabled={generating} className="flex-1 py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50">
                     {generating ? 'Generating...' : 'Generate Prompt'}

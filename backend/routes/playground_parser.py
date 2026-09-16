@@ -46,7 +46,13 @@ class PlaygroundParser:
         image_nodes = []
         audio_nodes = []
 
+        # M3: guard against non-dict workflow data (e.g. UI-format {"nodes":[...]})
+        if not isinstance(data, dict):
+            return {"is_valid": False, "error": "Workflow file is not a valid node map (expected a dict of nodes)"}
+
         for node_id, node_data in data.items():
+            if not isinstance(node_data, dict):
+                continue
             title = node_data.get('_meta', {}).get('title', '')
             match = re.search(r'\((Input|Output):(\w+)\)', title, re.IGNORECASE)
             

@@ -32,7 +32,7 @@ const WorkflowsPanel: React.FC = () => {
         const res = await fetch(`${baseUrl}/workflows/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: file.name.replace('.json', ''), json_content: content }),
+          body: JSON.stringify({ name: file.name.replace(/\.json$/, ''), json_content: content }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({ details: res.statusText }));

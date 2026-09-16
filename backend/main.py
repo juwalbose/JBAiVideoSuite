@@ -51,9 +51,9 @@ async def initialize_settings():
     llm = await db.llmsettings.find_first()
     if not llm:
         await db.llmsettings.create({
-            "ip": "192.168.1.66",
+            "ip": "127.0.0.1",
             "port": 1234,
-            "modelName": "gemma-4-e4b-uncensored-hauhaucs-aggressive",
+            "modelName": "",
             "temperature": 0.7,
             "maxTokens": 512,
         })

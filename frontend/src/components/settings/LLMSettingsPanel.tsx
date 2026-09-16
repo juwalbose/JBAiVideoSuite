@@ -77,7 +77,7 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
             type="number"
             className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.port}
-            onChange={(e) => setLLM({ port: parseInt(e.target.value) })}
+            onChange={(e) => setLLM({ port: parseInt(e.target.value) || 1234 })}
           />
         </div>
         <div>
@@ -96,7 +96,7 @@ const LLMSettingsPanel: React.FC<LLMSettingsPanelProps> = ({
             step="0.1"
             className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={llm.temperature}
-            onChange={(e) => setLLM({ temperature: parseFloat(e.target.value) })}
+            onChange={(e) => setLLM({ temperature: parseFloat(e.target.value) || 0.7 })}
           />
         </div>
       </div>

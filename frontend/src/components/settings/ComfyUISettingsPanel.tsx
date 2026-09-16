@@ -52,7 +52,7 @@ const ComfyUISettingsPanel: React.FC<ComfyUISettingsPanelProps> = ({
             type="number"
             className="border border-border p-2 rounded w-full bg-card text-foreground"
             value={comfyui.port}
-            onChange={(e) => setComfyUI({ port: parseInt(e.target.value) })}
+            onChange={(e) => setComfyUI({ port: parseInt(e.target.value) || 8188 })}
           />
         </div>
         <div>

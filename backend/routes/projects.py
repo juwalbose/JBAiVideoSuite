@@ -35,7 +35,7 @@ async def list_projects(db: Any = Depends(get_db)):
         return result
     except Exception as e:
         print(f"DEBUG: Error fetching projects: {e}")
-        return []
+        return {"status": "error", "details": str(e)}
 
 @router.post("/delete-all")
 async def delete_all(db: Any = Depends(get_db)):
@@ -169,6 +169,7 @@ async def generate_story(id: str, story_input: StoryInput, episode: int = 1, db:
             {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this raw idea into a narrative arc: {story_input.rawInput}"}
         ],
         "temperature": temperature,
+        "max_tokens": 16384,
     }
 
     timeout = httpx.Timeout(300.0, connect=10.0)
@@ -210,6 +211,7 @@ async def generate_script(id: str, episode: int = 1, db: Any = Depends(get_db)):
             {"role": "user", "content": f"Duration: {project.duration} seconds. Turn this narrative arc into a detailed script:\n\n{story.narrativeArc}"}
         ],
         "temperature": temperature,
+        "max_tokens": 16384,
     }
 
     timeout = httpx.Timeout(300.0, connect=10.0)

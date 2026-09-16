@@ -62,6 +62,8 @@ const ComfyUIPlayground = () => {
   // Effect 2: Fetch parsed data whenever selectedWorkflowId changes
   useEffect(() => {
     if (selectedWorkflowId) {
+      // M42: reset result image when switching workflows
+      setResultImage(null);
       setActiveWorkflowData(null);
       setIsLoadingParse(true);
       const fetchParsedData = async () => {

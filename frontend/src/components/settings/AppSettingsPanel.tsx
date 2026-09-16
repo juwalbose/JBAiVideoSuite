@@ -118,7 +118,13 @@ const AppSettingsPanel = () => {
           cleaned[action] = file && validIds.has(file) ? file : null;
         }
         setMappings(cleaned);
-        setComfyMappings(cm as Record<string, string | null>);
+        // M45: validate workflow mappings against available files
+        const validWfFiles = new Set(wf as string[]);
+        const cleanedComfy: Record<string, string | null> = {};
+        for (const [action, file] of Object.entries(cm as Record<string, string>)) {
+          cleanedComfy[action] = file && validWfFiles.has(file) ? file : null;
+        }
+        setComfyMappings(cleanedComfy);
         setWorkflowFiles(wf as string[]);
         if (res && res.character) setResSettings(res as ResSettings);
         if (vres && vres.low) setVideoRes(vres);
@@ -132,7 +138,7 @@ const AppSettingsPanel = () => {
     setSaving(true);
     setSaved(false);
     try {
-      await Promise.all([
+      await Promise.allSettled([
         ...Object.entries(mappings).map(([action, promptFile]) =>
           fetch(`${baseUrl}/appsettings/save`, {
             method: 'POST',

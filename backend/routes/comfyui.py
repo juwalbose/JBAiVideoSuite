@@ -91,7 +91,7 @@ async def upload_to_comfy(file: UploadFile = File(...)):
             res = await client.post(
                 f"{target_url}/upload/image", files=files, data=data
             )
-        except httpx.ConnectError:
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
             raise HTTPException(
                 status_code=503,
                 detail="ComfyUI is unreachable. Check if it is running.",

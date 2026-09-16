@@ -52,9 +52,12 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
+  // M33: use the hook so the effect re-runs when apiUrl changes
+  const { backend } = useSettingsStore();
+
   useEffect(() => {
     if (!currentProject) return;
-    const baseUrl = useSettingsStore.getState().backend.apiUrl;
+    const baseUrl = backend.apiUrl;
     fetch(`${baseUrl}/projects/${currentProject.id}/shotlist?episode=${selectedEpisode}`)
       .then((r) => r.json())
       .then((data) => {
@@ -64,14 +67,23 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
         }
       })
       .catch(console.error);
-  }, [currentProject?.id, selectedEpisode]);
+  }, [currentProject?.id, selectedEpisode, backend.apiUrl]);
+
+  // M32/M34: safe JSON.parse that returns [] on failure
+  const parseJsonArray = (val: any): any[] => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.startsWith('[')) {
+      try { return JSON.parse(val); } catch { return []; }
+    }
+    return [];
+  };
 
   const mapShot = (s: any): ShotData => ({
     shot: Number(s.shot) || 0,
     scene: Number(s.scene) || 0,
     beats: Array.isArray(s.beats) ? s.beats.map(Number) : (typeof s.beats === 'string' ? s.beats.replace(/[\[\]]/g, '').split(',').map((x: string) => Number(x.trim())).filter((n: number) => !isNaN(n)) : []),
     loc: s.loc || '',
-    subs: Array.isArray(s.subs) ? s.subs.join(', ') : (typeof s.subs === 'string' ? (s.subs.startsWith('[') ? JSON.parse(s.subs).join(', ') : s.subs) : ''),
+    subs: Array.isArray(s.subs) ? s.subs.join(', ') : (typeof s.subs === 'string' ? (s.subs.startsWith('[') ? parseJsonArray(s.subs).join(', ') : s.subs) : ''),
     frames: Number(s.frames) || 0,
     duration: Number(s.duration) || 0,
     camera: s.camera || '',
@@ -81,13 +93,13 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     prompt: s.prompt || '',
     locationAssetId: s.locationAssetId || null,
     locationStateId: s.locationStateId || null,
-    characterAssetIds: Array.isArray(s.characterAssetIds) ? s.characterAssetIds : (typeof s.characterAssetIds === 'string' && s.characterAssetIds.startsWith('[') ? JSON.parse(s.characterAssetIds) : []),
-    characterStateIds: Array.isArray(s.characterStateIds) ? s.characterStateIds : (typeof s.characterStateIds === 'string' && s.characterStateIds.startsWith('[') ? JSON.parse(s.characterStateIds) : []),
-    propAssetIds: Array.isArray(s.propAssetIds) ? s.propAssetIds : (typeof s.propAssetIds === 'string' && s.propAssetIds.startsWith('[') ? JSON.parse(s.propAssetIds) : []),
-    propStateIds: Array.isArray(s.propStateIds) ? s.propStateIds : (typeof s.propStateIds === 'string' && s.propStateIds.startsWith('[') ? JSON.parse(s.propStateIds) : []),
+    characterAssetIds: parseJsonArray(s.characterAssetIds),
+    characterStateIds: parseJsonArray(s.characterStateIds),
+    propAssetIds: parseJsonArray(s.propAssetIds),
+    propStateIds: parseJsonArray(s.propStateIds),
     sceneDialogAudioId: s.sceneDialogAudioId || null,
-    characterAudioIds: Array.isArray(s.characterAudioIds) ? s.characterAudioIds : (typeof s.characterAudioIds === 'string' && s.characterAudioIds.startsWith('[') ? JSON.parse(s.characterAudioIds) : []),
-    characterAudioTypes: Array.isArray(s.characterAudioTypes) ? s.characterAudioTypes : (typeof s.characterAudioTypes === 'string' && s.characterAudioTypes.startsWith('[') ? JSON.parse(s.characterAudioTypes) : []),
+    characterAudioIds: parseJsonArray(s.characterAudioIds),
+    characterAudioTypes: parseJsonArray(s.characterAudioTypes),
     musicOn: s.musicOn === true || s.musicOn === 'true',
     musicDesc: s.musicDesc || '',
     videoPath: s.videoPath || null,

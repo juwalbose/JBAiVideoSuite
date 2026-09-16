@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
@@ -53,7 +53,8 @@ interface AudioItem {
 
 const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const { currentProject } = useProjectStore();
-  const baseUrl = useSettingsStore.getState().backend.apiUrl;
+  const { backend } = useSettingsStore();
+  const baseUrl = backend.apiUrl;
 
   const [subTab, setSubTab] = useState<'generate' | 'assemble'>('generate');
   const [shots, setShots] = useState<ShotData[]>([]);
@@ -67,6 +68,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   const [saved, setSaved] = useState(false);
   const [assembleIdx, setAssembleIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [videoError, setVideoError] = useState('');
 
 
   useEffect(() => {
@@ -133,7 +135,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     } else {
       setVideoUrl(null);
     }
-  }, [selectedIdx, currentProject?.id]);
+  }, [selectedIdx, currentProject?.id, shot?.videoPath]);
 
   const findAsset = (list: AssetItem[], assetId: string | null, stateId: string | null): { asset: AssetItem; state: AssetState } | null => {
     if (!assetId) return null;
@@ -159,7 +161,15 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     });
   }
 
+  // M36: ref to track selectedIdx so pollStatus always targets the correct shot
+  const selectedIdxRef = useRef(selectedIdx);
+  selectedIdxRef.current = selectedIdx;
+
+  // M38: max-retry guard — stop polling after ~5 min (100 × 3s)
+  const MAX_POLL_RETRIES = 100;
+
   const pollStatus = (taskId: string, resolution: 'low' | 'high') => {
+    let retries = 0;
     const check = async () => {
       try {
         const res = await fetch(`${baseUrl}/projects/${currentProject!.id}/videogen/status/${taskId}`);
@@ -168,18 +178,32 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
           const url = `${baseUrl}${data.videoPath}`;
           setVideoUrl(url);
           if (resolution === 'high') {
-            setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, videoPath: data.videoPath } : s)));
+            const idx = selectedIdxRef.current;
+            setShots((prev) => prev.map((s, i) => (i === idx ? { ...s, videoPath: data.videoPath } : s)));
           }
           setIsGenerating(false);
         } else if (data.status === 'pending') {
-          setTimeout(check, 3000);
+          retries++;
+          if (retries >= MAX_POLL_RETRIES) {
+            setVideoError('Video generation timed out');
+            setIsGenerating(false);
+          } else {
+            setTimeout(check, 3000);
+          }
         } else {
           console.error('Video gen error:', data.details);
+          setVideoError(data.details || 'Video generation failed');
           setIsGenerating(false);
         }
       } catch (err) {
         console.error('Poll error:', err);
-        setTimeout(check, 3000);
+        retries++;
+        if (retries >= MAX_POLL_RETRIES) {
+          setVideoError('Video generation timed out');
+          setIsGenerating(false);
+        } else {
+          setTimeout(check, 3000);
+        }
       }
     };
     setTimeout(check, 1000);
@@ -187,6 +211,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
   const handleGenerate = async (resolution: 'low' | 'high') => {
     if (!currentProject || !shot) return;
+    setVideoError('');
     setIsGenerating(true);
     try {
       const res = await fetch(`${baseUrl}/projects/${currentProject.id}/videogen/generate`, {
@@ -312,7 +337,11 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
 
           {/* Video preview pane */}
           <div className="w-full aspect-[960/544] bg-black rounded shadow-md border border-border overflow-hidden">
-            {videoUrl ? (
+            {videoError ? (
+              <div className="w-full h-full flex items-center justify-center text-destructive text-sm px-4">
+                {videoError}
+              </div>
+            ) : videoUrl ? (
               <video src={videoUrl} controls className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground italic">
@@ -377,7 +406,8 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     className="px-2 py-1 border border-border rounded text-sm bg-card text-foreground w-20"
                     value={shot.duration}
                     onChange={(e) => {
-                      setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, duration: Number(e.target.value) } : s)));
+                      const v = Number(e.target.value);
+                      setShots((prev) => prev.map((s, i) => (i === selectedIdx ? { ...s, duration: isNaN(v) ? 0 : v } : s)));
                     }}
                   />
                   <span className="text-xs text-muted-foreground">s</span>
@@ -386,7 +416,7 @@ const FinalVideoStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
                     type="number"
                     className="px-2 py-1 border border-border rounded text-sm bg-card text-foreground w-32"
                     value={seed}
-                    onChange={(e) => setSeed(Number(e.target.value))}
+                    onChange={(e) => { const v = Number(e.target.value); setSeed(isNaN(v) ? 0 : v); }}
                   />
                   <button
                     type="button"

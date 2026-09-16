@@ -345,8 +345,14 @@ async def generate_image(id: str, asset_id: str, payload: dict, db: Any = Depend
         h = res.get(type_key, {}).get('h', 1024)
         seed = random.randint(0, 2**32 - 1)
 
+        # M3: guard against non-dict workflow data (e.g. UI-format {"nodes":[...]})
+        if not isinstance(workflow_data, dict):
+            return {"status": "error", "details": "Workflow file is not a valid node map"}
+
         # Inject inputs into workflow nodes (case-insensitive role matching)
         for node_id, node_data in workflow_data.items():
+            if not isinstance(node_data, dict):
+                continue
             title = node_data.get('_meta', {}).get('title', '').lower()
             inputs = node_data.setdefault('inputs', {})
             if '(input:prompt)' in title:
@@ -396,7 +402,18 @@ async def check_image_status(id: str, asset_id: str, task_id: str, db: Any = Dep
     async with httpx.AsyncClient(timeout=10.0) as client:
         history_res = await client.get(f"{comfy_http}/history/{prompt_id}")
         history_data = history_res.json()
-        outputs = history_data.get(prompt_id, {}).get("outputs", {})
+        entry = history_data.get(prompt_id, {})
+        outputs = entry.get("outputs", {})
+
+        # M1: check for ComfyUI errors before assuming pending
+        status_info = entry.get("status", {})
+        if status_info.get("status") == "error":
+            detail = status_info.get("message", "ComfyUI generation failed")
+            asset_gen_tasks.pop(task_id, None)
+            asset_gen_tasks.pop(f"{task_id}_state", None)
+            asset_gen_tasks.pop(f"{task_id}_field", None)
+            return {"status": "error", "details": detail, "task_id": task_id}
+
         image_info = None
         for node_output in outputs.values():
             if "images" in node_output and len(node_output["images"]) > 0:
@@ -406,6 +423,14 @@ async def check_image_status(id: str, asset_id: str, task_id: str, db: Any = Dep
         if not image_info:
             return {"status": "pending", "task_id": task_id}
 
+        # M31: claim the task atomically to prevent double-processing
+        # (two concurrent polls could both see the image and both save)
+        claimed = asset_gen_tasks.pop(task_id, None)
+        state_id = asset_gen_tasks.pop(f"{task_id}_state", None)
+        field = asset_gen_tasks.pop(f"{task_id}_field", "imagePath")
+        if claimed is None:
+            return {"status": "pending", "task_id": task_id}
+
         params = {
             "filename": image_info["filename"],
             "subfolder": image_info.get("subfolder", ""),
@@ -413,25 +438,20 @@ async def check_image_status(id: str, asset_id: str, task_id: str, db: Any = Dep
         }
         img_res = await client.get(f"{comfy_http}/view", params=params)
 
-        # Save to assets/generated/
+        # M2: save with a stable name (task_id) instead of ComfyUI's counter name
         os.makedirs(GENERATED_DIR, exist_ok=True)
         gen_dir = GENERATED_DIR
-        save_path = os.path.join(gen_dir, image_info["filename"])
+        ext = os.path.splitext(image_info["filename"])[1] or ".png"
+        stable_name = f"{task_id}{ext}"
+        save_path = os.path.join(gen_dir, stable_name)
         with open(save_path, "wb") as f:
             f.write(img_res.content)
 
-        image_path = f"/assets/generated/{image_info['filename']}"
+        image_path = f"/assets/generated/{stable_name}"
 
         # Update the state's imagePath in DB (stored in task tracker)
-        state_id = asset_gen_tasks.get(f"{task_id}_state")
-        field = asset_gen_tasks.get(f"{task_id}_field", "imagePath")
         if state_id:
             await db.assetstate.update(where={'id': state_id}, data={field: image_path})
-
-        # Remove task from tracker
-        asset_gen_tasks.pop(task_id, None)
-        asset_gen_tasks.pop(f"{task_id}_state", None)
-        asset_gen_tasks.pop(f"{task_id}_field", None)
 
         print(f"[AssetGen] task_id={task_id} -> COMPLETE ({image_info['filename']})")
         return {"status": "complete", "imagePath": image_path, "task_id": task_id}
@@ -494,9 +514,15 @@ async def generate_sheet(id: str, asset_id: str, payload: dict, db: Any = Depend
                 return {"status": "error", "details": f"ComfyUI rejected upload: {upload_res.text}"}
             uploaded_name = upload_res.json()["name"]
 
+        # M3: guard against non-dict workflow data
+        if not isinstance(workflow_data, dict):
+            return {"status": "error", "details": "Workflow file is not a valid node map"}
+
         # Inject image + seed into workflow
         seed = random.randint(0, 2**32 - 1)
         for node_id, node_data in workflow_data.items():
+            if not isinstance(node_data, dict):
+                continue
             title = node_data.get('_meta', {}).get('title', '')
             if '(Input:image)' in title:
                 node_data.setdefault('inputs', {})['image'] = uploaded_name

@@ -77,6 +77,7 @@ async def load_llm(payload: dict = {}, db = Depends(get_db)):
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             resp = await client.post(f"{base}/models/load", json={"model": model_id})
+            resp.raise_for_status()
             data = resp.json()
             return {"status": "success", "model": model_id, "details": data.get("status", "Model loaded")}
         except Exception as e:

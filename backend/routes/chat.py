@@ -59,6 +59,7 @@ async def chat(req: ChatRequest, db: Any = Depends(get_db)):
         "model": modelName,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": 16384,
     }
 
     timeout = httpx.Timeout(300.0, connect=10.0)

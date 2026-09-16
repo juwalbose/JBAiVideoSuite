@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from typing import Any, Dict
 
 from database import get_db
-from paths import WORKFLOWS_DIR, GENERATED_DIR
+from paths import WORKFLOWS_DIR, GENERATED_DIR, ASSETS_DIR
 
 router = APIRouter(prefix="/projects", tags=["VideoGen"])
 
@@ -117,10 +117,66 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         if af:
             audio_files.append(af)
 
+    comfyui = await db.comfyuisettings.find_first()
+    if not comfyui:
+        return {"status": "error", "details": "ComfyUI settings not found"}
+
+    comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
+    task_id = str(uuid.uuid4())
+
+    # M4: upload images and audio to ComfyUI's input/ folder BEFORE injecting
+    # so ComfyUI can actually find them.
+    assets_dir = ASSETS_DIR
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Upload images
+        for i, rel_path in enumerate(image_files):
+            local_path = os.path.join(assets_dir, rel_path)
+            if not os.path.exists(local_path):
+                print(f"[VideoGen] image not found locally: {local_path}")
+                continue
+            with open(local_path, "rb") as f:
+                file_bytes = f.read()
+            filename = os.path.basename(rel_path)
+            files = {"image": (filename, file_bytes, "image/png")}
+            data = {"overwrite": "true"}
+            try:
+                upload_res = await client.post(f"{comfy_http}/upload/image", files=files, data=data)
+                if upload_res.status_code == 200:
+                    uploaded_name = upload_res.json().get("name", filename)
+                    image_files[i] = uploaded_name
+                else:
+                    print(f"[VideoGen] upload failed for {filename}: {upload_res.text}")
+            except Exception as e:
+                print(f"[VideoGen] upload error for {filename}: {e}")
+
+        # Upload audio
+        for i, rel_path in enumerate(audio_files):
+            local_path = os.path.join(assets_dir, rel_path)
+            if not os.path.exists(local_path):
+                print(f"[VideoGen] audio not found locally: {local_path}")
+                continue
+            with open(local_path, "rb") as f:
+                file_bytes = f.read()
+            filename = os.path.basename(rel_path)
+            files = {"image": (filename, file_bytes, "audio/mpeg")}
+            data = {"overwrite": "true"}
+            try:
+                upload_res = await client.post(f"{comfy_http}/upload/image", files=files, data=data)
+                if upload_res.status_code == 200:
+                    uploaded_name = upload_res.json().get("name", filename)
+                    audio_files[i] = uploaded_name
+                else:
+                    print(f"[VideoGen] audio upload failed for {filename}: {upload_res.text}")
+            except Exception as e:
+                print(f"[VideoGen] audio upload error for {filename}: {e}")
+
     # Inject inputs into workflow nodes (case-insensitive role matching)
     img_idx = 0
     aud_idx = 0
     for node_id, node_data in workflow_data.items():
+        if not isinstance(node_data, dict):
+            continue
         title = node_data.get('_meta', {}).get('title', '').lower()
         inputs = node_data.setdefault('inputs', {})
 
@@ -142,13 +198,6 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
             if aud_idx < len(audio_files):
                 inputs['audio'] = audio_files[aud_idx]
                 aud_idx += 1
-
-    comfyui = await db.comfyuisettings.find_first()
-    if not comfyui:
-        return {"status": "error", "details": "ComfyUI settings not found"}
-
-    comfy_http = f"http://{comfyui.ip}:{comfyui.port}"
-    task_id = str(uuid.uuid4())
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         queue_res = await client.post(f"{comfy_http}/prompt", json={"prompt": workflow_data})
@@ -186,7 +235,15 @@ async def check_video_status(id: str, task_id: str, db: Any = Depends(get_db)):
     async with httpx.AsyncClient(timeout=10.0) as client:
         history_res = await client.get(f"{comfy_http}/history/{prompt_id}")
         history_data = history_res.json()
-        outputs = history_data.get(prompt_id, {}).get("outputs", {})
+        entry = history_data.get(prompt_id, {})
+        outputs = entry.get("outputs", {})
+
+        # M1: check for ComfyUI errors before assuming pending
+        status_info = entry.get("status", {})
+        if status_info.get("status") == "error":
+            detail = status_info.get("message", "ComfyUI generation failed")
+            video_tasks.pop(task_id, None)
+            return {"status": "error", "details": detail, "task_id": task_id}
 
         output_info = None
         for node_output in outputs.values():
@@ -207,13 +264,16 @@ async def check_video_status(id: str, task_id: str, db: Any = Depends(get_db)):
         }
         file_res = await client.get(f"{comfy_http}/view", params=params)
 
+        # M2: save with a stable name (task_id) instead of ComfyUI's counter name
         os.makedirs(GENERATED_DIR, exist_ok=True)
         gen_dir = GENERATED_DIR
-        save_path = os.path.join(gen_dir, output_info["filename"])
+        ext = os.path.splitext(output_info["filename"])[1] or ".mp4"
+        stable_name = f"{task_id}{ext}"
+        save_path = os.path.join(gen_dir, stable_name)
         with open(save_path, "wb") as f:
             f.write(file_res.content)
 
-        video_path = f"/assets/generated/{output_info['filename']}"
+        video_path = f"/assets/generated/{stable_name}"
 
         if info["resolution"] == "high":
             shot = await db.shotlist.find_first(
