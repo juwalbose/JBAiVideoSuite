@@ -13,6 +13,7 @@ class PlaygroundParser:
             "height": "int",
             "seed": "int",
             "duration": "float",
+            "upscale": "float",
             "image": "image",
             "audio": "audio"
         }

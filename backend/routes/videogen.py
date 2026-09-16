@@ -12,7 +12,7 @@ router = APIRouter(prefix="/projects", tags=["VideoGen"])
 
 video_tasks: Dict[str, dict] = {}
 
-DEFAULT_VIDEO_RES = {"low": {"w": 960, "h": 544}, "high": {"w": 1920, "h": 1080}}
+DEFAULT_VIDEO_RES = {"w": 960, "h": 544}
 
 
 async def _get_video_res(db):
@@ -23,6 +23,18 @@ async def _get_video_res(db):
         except Exception:
             pass
     return DEFAULT_VIDEO_RES
+
+
+async def _get_upscale_value(db):
+    m = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA High Res Generation'})
+    if m and m.resolutionJson:
+        try:
+            data = json.loads(m.resolutionJson)
+            if isinstance(data, dict) and 'upscaleValue' in data:
+                return data['upscaleValue']
+        except Exception:
+            pass
+    return 2
 
 
 async def _get_asset_image(db, asset_id, state_id, asset_type):
@@ -62,9 +74,14 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
     if not shot:
         return {"status": "error", "details": f"Shot {shot_num} not found"}
 
-    wf_mapping = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA Generation'})
+    if res_type == 'high':
+        wf_action = 'MinimaxH3 Ref2VA High Res Generation'
+    else:
+        wf_action = 'MinimaxH3 Ref2VA Generation'
+
+    wf_mapping = await db.comfyworkflowmapping.find_first(where={'action': wf_action})
     if not wf_mapping or not wf_mapping.workflowFile:
-        return {"status": "error", "details": "No workflow mapped for MinimaxH3 Ref2VA Generation"}
+        return {"status": "error", "details": f"No workflow mapped for {wf_action}"}
 
     workflow_path = os.path.join(WORKFLOWS_DIR, wf_mapping.workflowFile)
     if not os.path.exists(workflow_path):
@@ -74,8 +91,9 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
         workflow_data = json.load(f)
 
     res = await _get_video_res(db)
-    w = res.get(res_type, {}).get('w', 960)
-    h = res.get(res_type, {}).get('h', 544)
+    w = res.get('w', 960)
+    h = res.get('h', 544)
+    upscale = await _get_upscale_value(db) if res_type == 'high' else None
 
     # Collect image and audio filenames from shot's linked assets
     image_files = []
@@ -190,6 +208,9 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
             inputs['value'] = w
         elif '(input:height)' in title:
             inputs['value'] = h
+        elif '(input:upscale)' in title:
+            if upscale is not None:
+                inputs['value'] = upscale
         elif '(input:duration)' in title:
             inputs['value'] = shot.duration
         elif '(input:image)' in title:

@@ -315,18 +315,22 @@ const WorkflowInputManager = ({
               </div>
             </div>
           )}
-          {floatInputs.map(([role]) => (
-            <div key={role} className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">{role}</label>
-              <input
-                type="number"
-                step="0.1"
-                className="p-2 border border-border rounded bg-card text-foreground text-sm w-full"
-                value={inputValues[role]?.value ?? 0}
-                onChange={(e) => setInputValues(prev => ({ ...prev, [role]: { type: 'float', value: parseFloat(e.target.value) || 0 } }))}
-              />
+          {floatInputs.length > 0 && (
+            <div className="flex gap-2">
+              {floatInputs.map(([role]) => (
+                <div key={role} className="flex flex-col gap-1 flex-1">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">{role}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    className="p-2 border border-border rounded bg-card text-foreground text-sm w-full"
+                    value={inputValues[role]?.value ?? 0}
+                    onChange={(e) => setInputValues(prev => ({ ...prev, [role]: { type: 'float', value: parseFloat(e.target.value) || 0 } }))}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          )}
           {(hasWidth || hasHeight) && (
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Resolution</label>

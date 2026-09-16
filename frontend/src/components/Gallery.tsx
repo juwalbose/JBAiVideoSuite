@@ -155,7 +155,7 @@ const Gallery: React.FC<GalleryProps> = ({ className }) => {
         ) : error ? (
           <div className="flex items-center justify-center h-full text-destructive italic">{error}</div>
         ) : images.length > 0 ? (
-          <div className="grid grid-cols-3 gap-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 items-start">
+          <div className="grid grid-cols-3 gap-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 items-start auto-rows-min">
             {images.map((img, index) => (
               <div key={index} className="relative group overflow-hidden bg-muted w-full aspect-square cursor-pointer" onClick={() => setSelectedImage(img)}>
                 {types[img] === 'video' ? (

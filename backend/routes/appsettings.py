@@ -30,6 +30,7 @@ COMFY_ACTIONS = [
     "Asset Generation",
     "Character Sheet Generation",
     "MinimaxH3 Ref2VA Generation",
+    "MinimaxH3 Ref2VA High Res Generation",
 ]
 
 class MappingUpdate(BaseModel):
@@ -152,8 +153,8 @@ async def save_resolutions(payload: dict, db: Any = Depends(get_db)):
     return {"status": "success"}
 
 DEFAULT_VIDEO_RESOLUTIONS = {
-    "low": {"w": 960, "h": 544},
-    "high": {"w": 1920, "h": 1080},
+    "w": 960,
+    "h": 544,
 }
 
 @router.get("/video-resolutions")
@@ -186,6 +187,47 @@ async def save_video_resolutions(payload: dict, db: Any = Depends(get_db)):
             })
         except Exception:
             existing = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA Generation'})
+            if existing:
+                await db.comfyworkflowmapping.update(
+                    data={'resolutionJson': data},
+                    where={'id': existing.id}
+                )
+    return {"status": "success"}
+
+DEFAULT_UPSCALE_VALUE = 2
+
+@router.get("/upscale-value")
+async def get_upscale_value(db: Any = Depends(get_db)):
+    m = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA High Res Generation'})
+    if m and m.resolutionJson:
+        import json as _json
+        try:
+            data = _json.loads(m.resolutionJson)
+            if isinstance(data, dict) and 'upscaleValue' in data:
+                return data
+        except Exception:
+            pass
+    return {"upscaleValue": DEFAULT_UPSCALE_VALUE}
+
+@router.post("/upscale-value/save")
+async def save_upscale_value(payload: dict, db: Any = Depends(get_db)):
+    import json as _json
+    data = _json.dumps(payload)
+    existing = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA High Res Generation'})
+    if existing:
+        await db.comfyworkflowmapping.update(
+            data={'resolutionJson': data},
+            where={'id': existing.id}
+        )
+    else:
+        try:
+            await db.comfyworkflowmapping.create({
+                'action': 'MinimaxH3 Ref2VA High Res Generation',
+                'workflowFile': None,
+                'resolutionJson': data
+            })
+        except Exception:
+            existing = await db.comfyworkflowmapping.find_first(where={'action': 'MinimaxH3 Ref2VA High Res Generation'})
             if existing:
                 await db.comfyworkflowmapping.update(
                     data={'resolutionJson': data},

@@ -75,6 +75,7 @@ const COMFY_ACTIONS = [
   'Asset Generation',
   'Character Sheet Generation',
   'MinimaxH3 Ref2VA Generation',
+  'MinimaxH3 Ref2VA High Res Generation',
 ];
 
 type ResSettings = { character: { w: number; h: number }; location: { w: number; h: number }; prop: { w: number; h: number } };
@@ -90,10 +91,10 @@ const AppSettingsPanel = () => {
     location: { w: 1920, h: 1080 },
     prop: { w: 1024, h: 1024 },
   });
-  const [videoRes, setVideoRes] = useState<{ low: { w: number; h: number }; high: { w: number; h: number } }>({
-    low: { w: 960, h: 544 },
-    high: { w: 1920, h: 1080 },
+  const [videoRes, setVideoRes] = useState<{ w: number; h: number }>({
+    w: 960, h: 544,
   });
+  const [upscaleValue, setUpscaleValue] = useState(2);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -109,8 +110,9 @@ const AppSettingsPanel = () => {
       fetch(`${baseUrl}/appsettings/workflows/files`).then(r => r.json()),
       fetch(`${baseUrl}/appsettings/resolutions`).then(r => r.json()),
       fetch(`${baseUrl}/appsettings/video-resolutions`).then(r => r.json()),
+      fetch(`${baseUrl}/appsettings/upscale-value`).then(r => r.json()),
     ])
-      .then(([m, p, cm, wf, res, vres]) => {
+      .then(([m, p, cm, wf, res, vres, up]) => {
         setPrompts(p);
         const validIds = new Set(p.map((x: { id: string }) => x.id));
         const cleaned: Record<string, string | null> = {};
@@ -127,7 +129,8 @@ const AppSettingsPanel = () => {
         setComfyMappings(cleanedComfy);
         setWorkflowFiles(wf as string[]);
         if (res && res.character) setResSettings(res as ResSettings);
-        if (vres && vres.low) setVideoRes(vres);
+        if (vres && typeof vres.w === 'number') setVideoRes(vres);
+        if (up && typeof up.upscaleValue === 'number') setUpscaleValue(up.upscaleValue);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -162,6 +165,11 @@ const AppSettingsPanel = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(videoRes),
+        }),
+        fetch(`${baseUrl}/appsettings/upscale-value/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ upscaleValue }),
         }),
       ]);
       setSaved(true);
@@ -250,26 +258,38 @@ const AppSettingsPanel = () => {
               {action === 'MinimaxH3 Ref2VA Generation' && (
                 <div className="mt-3 pt-3 border-t border-border space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Resolution Settings</p>
-                  {(['low', 'high'] as const).map((type) => (
-                    <div key={type} className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground w-24 capitalize">{type} Res</span>
-                      <input
-                        type="number"
-                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
-                        value={videoRes[type].w}
-                        onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], w: Number(e.target.value) } }))}
-                        placeholder="Width"
-                      />
-                      <span className="text-muted-foreground">×</span>
-                      <input
-                        type="number"
-                        className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
-                        value={videoRes[type].h}
-                        onChange={(e) => setVideoRes(prev => ({ ...prev, [type]: { ...prev[type], h: Number(e.target.value) } }))}
-                        placeholder="Height"
-                      />
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground w-24">Resolution</span>
+                    <input
+                      type="number"
+                      className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
+                      value={videoRes.w}
+                      onChange={(e) => setVideoRes(prev => ({ ...prev, w: Number(e.target.value) }))}
+                      placeholder="Width"
+                    />
+                    <span className="text-muted-foreground">×</span>
+                    <input
+                      type="number"
+                      className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
+                      value={videoRes.h}
+                      onChange={(e) => setVideoRes(prev => ({ ...prev, h: Number(e.target.value) }))}
+                      placeholder="Height"
+                    />
+                  </div>
+                </div>
+              )}
+              {action === 'MinimaxH3 Ref2VA High Res Generation' && (
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground w-24">Upscale Value</span>
+                    <input
+                      type="number"
+                      className="w-20 p-1 border border-border rounded bg-card text-foreground text-sm"
+                      value={upscaleValue}
+                      onChange={(e) => setUpscaleValue(Number(e.target.value))}
+                      placeholder="2"
+                    />
+                  </div>
                 </div>
               )}
             </div>

@@ -1,0 +1,744 @@
+{
+  "124": {
+    "inputs": {
+      "scheduler": "beta57",
+      "steps": [
+        "5652",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "5683",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "125": {
+    "inputs": {
+      "noise": [
+        "129",
+        0
+      ],
+      "guider": [
+        "126",
+        0
+      ],
+      "sampler": [
+        "5581",
+        0
+      ],
+      "sigmas": [
+        "124",
+        0
+      ],
+      "latent_image": [
+        "136",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "126": {
+    "inputs": {
+      "model": [
+        "5683",
+        0
+      ],
+      "conditioning": [
+        "136",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "129": {
+    "inputs": {
+      "noise_seed": [
+        "5650",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "131": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "132": {
+    "inputs": {
+      "value": 5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "(Input:duration) Duration"
+    }
+  },
+  "136": {
+    "inputs": {
+      "prompt": [
+        "138",
+        0
+      ],
+      "width": [
+        "5645",
+        0
+      ],
+      "height": [
+        "5646",
+        0
+      ],
+      "length": [
+        "131",
+        1
+      ],
+      "ref_image_size": "match",
+      "clip": [
+        "5567:5600",
+        0
+      ],
+      "vae": [
+        "5567:5222",
+        0
+      ],
+      "audio_vae": [
+        "5567:5221",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "137",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "5649",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "5653",
+        0
+      ],
+      "ref_images.ref_image_3": [
+        "5684",
+        0
+      ],
+      "ref_images.ref_image_4": [
+        "5685",
+        0
+      ],
+      "ref_images.ref_image_5": [
+        "5686",
+        0
+      ],
+      "ref_images.ref_image_6": [
+        "5687",
+        0
+      ],
+      "ref_images.ref_image_7": [
+        "5688",
+        0
+      ],
+      "ref_images.ref_image_8": [
+        "5689",
+        0
+      ],
+      "ref_audios.ref_audio_0": [
+        "5678",
+        0
+      ],
+      "ref_audios.ref_audio_1": [
+        "5679",
+        0
+      ],
+      "ref_audios.ref_audio_2": [
+        "5690",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Reference to Video"
+    }
+  },
+  "137": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image1"
+    }
+  },
+  "138": {
+    "inputs": {
+      "value": "**subject_definitions**\n<Subject 1> is the warrior from the first reference image (Mahabali), featuring dark shoulder-length wavy hair, a thick prominent mustache, muscular bare golden-bronze chest, gold collar necklace with red gem, gold armlets, and a red-and-gold dhoti.\n<Subject 2> is the warrior from the second reference image (Indra), featuring clean-shaven sharp facial features, polished gold cuirass armor with blue gemstone embellishments, gold armlets, and a royal blue-and-gold dhoti.\n<Subject 3> is the ascetic warrior from the third reference image (Parasurama), featuring long dark greenish-black hair tied in a high ascetic bun, full dark beard, blue-toned temple paint, bare muscular chest with a long brown prayer bead mala and sacred cord, and an off-white cotton dhoti cinched with a brown sash.\n\n**summary**\n[reference generation] In a sun-drenched, dust-swept ancient arena, <Subject 1> commands the center foreground delivering his fierce challenge, flanked on his right by the smug armored <Subject 2> and on his left by the grim, stoic warrior-sage <Subject 3>.\n\n**retention_analysis**\n<Subject 1> (appears in [Shot 1]): fully_preserved - Facial features, mustache, long hair, bare muscular build, gold ornaments, and red-and-gold dhoti are fully preserved.\n<Subject 2> (appears in [Shot 1]): fully_preserved - Clean-shaven face, gold cuirass with blue gems, and royal blue-and-gold dhoti are fully preserved.\n<Subject 3> (appears in [Shot 1]): fully_preserved - Hair bun, full beard, facial markings, bead necklace, bare torso, and off-white dhoti with brown sash are fully preserved.\n\n**detailed_description**\n[Shot 1]\nMedium-full shot, low-angle dynamic slow push-in. In the center foreground of the sunlit, dusty stone arena, <Subject 1> stands grounded and chest out, thrusting an open arm toward the cheering crowd stands. To his right, <Subject 2> crosses his armored arms with a sharp smirk (sound of metal armor shifting and gold jewelry jingling). To his left, <Subject 3> stands tall and rigid, his intense dark eyes scanning the arena in grim silence with hands resting naturally at his sides (sound of coarse linen fluttering in the breeze).\n<Subject 1> (S1): \"Is there no one else?!\"\n(sound of deep, booming baritone challenge echoing off high stone walls). <Subject 2> gives an amused chuckle, while <Subject 3> remains stoic and watchful as desert dust swirls around their feet.\n\n**overall_soundscape**\nRoaring colosseum crowd echoes, whistling arid wind, swirling sand on stone, metal armor shifting, rhythmic clinking of heavy beads and gold ornaments.\n\n**non_diegetic_music**\nMassive, heroic war orchestration featuring driving timpani drums, low brass horn blasts, and intense rising string textures."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "(Input:prompt) Prompt"
+    }
+  },
+  "5581": {
+    "inputs": {
+      "sampler_name": "er_sde"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "5595": {
+    "inputs": {
+      "value": 24
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float"
+    }
+  },
+  "5645": {
+    "inputs": {
+      "value": 544
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:width) Width"
+    }
+  },
+  "5646": {
+    "inputs": {
+      "value": 960
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:height) Height"
+    }
+  },
+  "5649": {
+    "inputs": {
+      "image": "Indra_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image2"
+    }
+  },
+  "5650": {
+    "inputs": {
+      "value": 42
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "(Input:seed) Seed"
+    }
+  },
+  "5652": {
+    "inputs": {
+      "value": 4
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Steps"
+    }
+  },
+  "5653": {
+    "inputs": {
+      "image": "Parasurama_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image3"
+    }
+  },
+  "5678": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio1"
+    }
+  },
+  "5679": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio2"
+    }
+  },
+  "5680": {
+    "inputs": {
+      "unet_name": "minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "5681": {
+    "inputs": {
+      "lora_name": "minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_resized_avg_rank_64_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "5680",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "5682": {
+    "inputs": {
+      "selection": "sol-attn",
+      "selection.tau": 1.3,
+      "start_percent": 0,
+      "end_percent": 1,
+      "dense_blocks": "33-35,39-42",
+      "min_tokens": 12288,
+      "extra_tokens": 256,
+      "sink_conditioning": "exact_kv_and_rows",
+      "verbose": false,
+      "model": [
+        "5681",
+        0
+      ]
+    },
+    "class_type": "BlockSparseAttention",
+    "_meta": {
+      "title": "Model Sparse Attention"
+    }
+  },
+  "5683": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 3,
+      "model": [
+        "5682",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "ModelSamplingMiniMaxH3"
+    }
+  },
+  "5684": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image4"
+    }
+  },
+  "5685": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image5"
+    }
+  },
+  "5686": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image6"
+    }
+  },
+  "5687": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image7"
+    }
+  },
+  "5688": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image8"
+    }
+  },
+  "5689": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image9"
+    }
+  },
+  "5690": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio3"
+    }
+  },
+  "5692": {
+    "inputs": {
+      "prompt": "segment video which takes <Picture 1> as reference, clear and sharp details",
+      "width": [
+        "5715",
+        1
+      ],
+      "height": [
+        "5716",
+        1
+      ],
+      "length": [
+        "131",
+        1
+      ],
+      "ref_image_size": "match",
+      "clip": [
+        "5567:5600",
+        0
+      ],
+      "vae": [
+        "5567:5222",
+        0
+      ],
+      "audio_vae": [
+        "5567:5221",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Reference to Video"
+    }
+  },
+  "5696": {
+    "inputs": {
+      "sampler_name": "sa_solver"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "5697": {
+    "inputs": {
+      "noise_seed": 693190493626551
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "5699": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 1,
+      "denoise": 0.2,
+      "model": [
+        "5683",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "5703": {
+    "inputs": {
+      "model_name": "minimax_h3_latent_upscaler_3d_fp16.safetensors",
+      "width": [
+        "5715",
+        1
+      ],
+      "height": [
+        "5716",
+        1
+      ],
+      "device": "cuda",
+      "precision": "fp16"
+    },
+    "class_type": "MMH3LatentUpscaleWithModelParams",
+    "_meta": {
+      "title": "MMH3 Latent Upscale with Model Params"
+    }
+  },
+  "5706": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "5683",
+        0
+      ],
+      "conditioning": [
+        "5692",
+        0
+      ],
+      "latent": [
+        "125",
+        0
+      ],
+      "noise": [
+        "5697",
+        0
+      ],
+      "sampler": [
+        "5696",
+        0
+      ],
+      "sigmas": [
+        "5699",
+        0
+      ],
+      "latent_upscale_param": [
+        "5703",
+        0
+      ],
+      "temporal_split_param": [
+        "5713",
+        0
+      ],
+      "spatial_split_param": [
+        "5714",
+        0
+      ]
+    },
+    "class_type": "MMH3UltimateUpscale",
+    "_meta": {
+      "title": "MMH3 Ultimate Upscale"
+    }
+  },
+  "5708": {
+    "inputs": {
+      "samples": [
+        "5706",
+        0
+      ],
+      "vae": [
+        "5567:5222",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "5710": {
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "5567:5221",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "5712": {
+    "inputs": {
+      "frame_rate": [
+        "5595",
+        0
+      ],
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/nvenc_h264-mp4",
+      "pix_fmt": "yuv420p",
+      "bitrate": 10,
+      "megabit": true,
+      "save_metadata": false,
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "5708",
+        0
+      ],
+      "audio": [
+        "5710",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "(output:video) Video"
+    }
+  },
+  "5713": {
+    "inputs": {
+      "chunk_length": 85,
+      "temporal_overlap": 17,
+      "anchor_strength": 0.999
+    },
+    "class_type": "MMH3TemporalSplitParams",
+    "_meta": {
+      "title": "MMH3 Temporal Split Params"
+    }
+  },
+  "5714": {
+    "inputs": {
+      "upscale_width": [
+        "5715",
+        1
+      ],
+      "upscale_height": [
+        "5716",
+        1
+      ],
+      "tile_size_mode": "rows_cols",
+      "tile_width": 512,
+      "tile_height": 512,
+      "grid_rows": 3,
+      "grid_cols": 2,
+      "spatial_w_overlap": 128,
+      "spatial_h_overlap": 128,
+      "fade_width": 64,
+      "fade_height": 64,
+      "min_tile_size": 256,
+      "overlap_mode": "later",
+      "overlap_blend": "linear",
+      "joint_steps": 0.05,
+      "token_budget": 4096
+    },
+    "class_type": "MMH3SpatialSplitParams",
+    "_meta": {
+      "title": "MMH3 Spatial Split Params"
+    }
+  },
+  "5715": {
+    "inputs": {
+      "expression": "a//32*32",
+      "values.a": [
+        "5718",
+        1
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "5716": {
+    "inputs": {
+      "expression": "a//32*32",
+      "values.a": [
+        "5717",
+        1
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "5717": {
+    "inputs": {
+      "expression": "a * b",
+      "values.a": [
+        "5646",
+        0
+      ],
+      "values.b": [
+        "5719",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "5718": {
+    "inputs": {
+      "expression": "a * b",
+      "values.a": [
+        "5645",
+        0
+      ],
+      "values.b": [
+        "5719",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "5719": {
+    "inputs": {
+      "value": 2
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "(Input:upscale) Upscale"
+    }
+  },
+  "5567:5600": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3-w4a8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "5567:5221": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "5567:5222": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  }
+}

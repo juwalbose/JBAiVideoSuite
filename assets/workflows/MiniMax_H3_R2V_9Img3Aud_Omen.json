@@ -40,7 +40,7 @@
       ],
       "denoise": 1,
       "model": [
-        "5567:5598",
+        "5683",
         0
       ]
     },
@@ -80,7 +80,7 @@
   "126": {
     "inputs": {
       "model": [
-        "5567:5598",
+        "5683",
         0
       ],
       "conditioning": [
@@ -170,12 +170,40 @@
         "5653",
         0
       ],
+      "ref_images.ref_image_3": [
+        "5684",
+        0
+      ],
+      "ref_images.ref_image_4": [
+        "5685",
+        0
+      ],
+      "ref_images.ref_image_5": [
+        "5686",
+        0
+      ],
+      "ref_images.ref_image_6": [
+        "5687",
+        0
+      ],
+      "ref_images.ref_image_7": [
+        "5688",
+        0
+      ],
+      "ref_images.ref_image_8": [
+        "5689",
+        0
+      ],
       "ref_audios.ref_audio_0": [
         "5678",
         0
       ],
       "ref_audios.ref_audio_1": [
         "5679",
+        0
+      ],
+      "ref_audios.ref_audio_2": [
+        "5690",
         0
       ]
     },
@@ -273,7 +301,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "(input:image) Ref 2"
+      "title": "(input:image) Image2"
     }
   },
   "5650": {
@@ -321,6 +349,128 @@
       "title": "(input:audio) Audio2"
     }
   },
+  "5680": {
+    "inputs": {
+      "unet_name": "minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "5681": {
+    "inputs": {
+      "lora_name": "minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_resized_avg_rank_64_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "5680",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "5682": {
+    "inputs": {
+      "selection": "sol-attn",
+      "selection.tau": 1.3,
+      "start_percent": 0,
+      "end_percent": 1,
+      "dense_blocks": "33-35,39-42",
+      "min_tokens": 12288,
+      "extra_tokens": 256,
+      "sink_conditioning": "exact_kv_and_rows",
+      "verbose": false,
+      "model": [
+        "5681",
+        0
+      ]
+    },
+    "class_type": "BlockSparseAttention",
+    "_meta": {
+      "title": "Model Sparse Attention"
+    }
+  },
+  "5683": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 3,
+      "model": [
+        "5682",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "ModelSamplingMiniMaxH3"
+    }
+  },
+  "5684": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image4"
+    }
+  },
+  "5685": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image5"
+    }
+  },
+  "5686": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image6"
+    }
+  },
+  "5687": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image7"
+    }
+  },
+  "5688": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image8"
+    }
+  },
+  "5689": {
+    "inputs": {
+      "image": "Mahabali_LegendarySheet.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "(input:image) Image9"
+    }
+  },
+  "5690": {
+    "inputs": {
+      "audio": "bedroom.mp4"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "(input:audio) Audio3"
+    }
+  },
   "5567:5222": {
     "inputs": {
       "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
@@ -348,69 +498,6 @@
     "class_type": "CLIPLoader",
     "_meta": {
       "title": "Load CLIP"
-    }
-  },
-  "5567:5601": {
-    "inputs": {
-      "lora_name": "minimax_h3_fl2v_turbo_4step_v1.1_768p_comfyui_resized_avg_rank_64_bf16.safetensors",
-      "strength_model": 1
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
-  "5567:5604": {
-    "inputs": {
-      "attention": "comfy kitchen attention",
-      "model": [
-        "5567:5601",
-        0
-      ]
-    },
-    "class_type": "ModelAttentionBackend",
-    "_meta": {
-      "title": "ModelAttentionBackend"
-    }
-  },
-  "5567:5588": {
-    "inputs": {
-      "enable_fp16_accumulation": true,
-      "model": [
-        "5567:5604",
-        0
-      ]
-    },
-    "class_type": "ModelPatchTorchSettings",
-    "_meta": {
-      "title": "Model Patch Torch Settings"
-    }
-  },
-  "5567:5597": {
-    "inputs": {
-      "head_chunks": 4,
-      "model": [
-        "5567:5588",
-        0
-      ]
-    },
-    "class_type": "MiniMaxLowVRAMAttention",
-    "_meta": {
-      "title": "MiniMax H3 Low VRAM Attention"
-    }
-  },
-  "5567:5598": {
-    "inputs": {
-      "chunks": 2,
-      "seq_threshold": 4096,
-      "model": [
-        "5567:5597",
-        0
-      ]
-    },
-    "class_type": "MiniMaxChunkFeedForward",
-    "_meta": {
-      "title": "MiniMax H3 Chunk FeedForward"
     }
   }
 }
