@@ -199,6 +199,23 @@ async def generate_video(id: str, payload: dict, db: Any = Depends(get_db)):
                 inputs['audio'] = audio_files[aud_idx]
                 aud_idx += 1
 
+    # Prune unused image/audio input nodes
+    to_remove = []
+    for nid, ndata in workflow_data.items():
+        if not isinstance(ndata, dict):
+            continue
+        title = ndata.get('_meta', {}).get('title', '').lower()
+        if '(input:image)' in title or '(input:audio)' in title:
+            node_inputs = ndata.get('inputs', {})
+            if '(input:image)' in title and 'image' not in node_inputs:
+                to_remove.append(nid)
+            elif '(input:audio)' in title and 'audio' not in node_inputs:
+                to_remove.append(nid)
+    for nid in to_remove:
+        del workflow_data[nid]
+    if to_remove:
+        print(f"[VideoGen] pruned {len(to_remove)} unused input node(s): {to_remove}")
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         queue_res = await client.post(f"{comfy_http}/prompt", json={"prompt": workflow_data})
         if queue_res.status_code != 200:

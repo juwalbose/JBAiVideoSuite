@@ -58,7 +58,7 @@ def _inject_inputs(workflow_data: dict, inputs: Dict[str, Any]) -> dict:
         target_node_id = None
         for nid, ndata in workflow_data.items():
             title = ndata.get("_meta", {}).get("title", "")
-            if f"(Input:{role})" in title:
+            if f"(Input:{role})" in title.lower():
                 target_node_id = nid
                 break
 
@@ -70,6 +70,23 @@ def _inject_inputs(workflow_data: dict, inputs: Dict[str, Any]) -> dict:
                 inputs_dict["text"] = value
             else:
                 inputs_dict[role] = value
+    return workflow_data
+
+
+def _prune_unused_inputs(workflow_data: dict, provided_node_ids: set) -> dict:
+    """Remove unused (input:image)/(input:audio) nodes not in provided_node_ids."""
+    to_remove = []
+    for nid, ndata in workflow_data.items():
+        if not isinstance(ndata, dict):
+            continue
+        title = ndata.get("_meta", {}).get("title", "").lower()
+        if "(input:image)" in title or "(input:audio)" in title:
+            if nid not in provided_node_ids:
+                to_remove.append(nid)
+    for nid in to_remove:
+        del workflow_data[nid]
+    if to_remove:
+        print(f"[Prune] removed {len(to_remove)} unused input node(s): {to_remove}")
     return workflow_data
 
 @router.post("/generate")
@@ -86,6 +103,17 @@ async def generate(request: GenerateRequest, db: Any = Depends(get_db)):
         workflow_data = json.load(f)
 
     workflow_data = _inject_inputs(workflow_data, inputs)
+
+    # Prune unused image/audio input nodes
+    provided_node_ids = set()
+    for role, value in inputs.items():
+        if (
+            (role.startswith("image") or role.startswith("audio"))
+            and isinstance(value, list)
+            and len(value) >= 2
+        ):
+            provided_node_ids.add(str(value[0]))
+    workflow_data = _prune_unused_inputs(workflow_data, provided_node_ids)
 
     print(f"\n--- Queued Workflow ({workflow_id}) ---")
     print(json.dumps(workflow_data, indent=2))
