@@ -4,6 +4,7 @@ import StoryStage from '../components/studio/StoryStage';
 import ScriptStage from '../components/studio/ScriptStage';
 import AssetsStage from '../components/studio/AssetsStage';
 import ShotListStage from '../components/studio/ShotListStage';
+import TakesStage from '../components/studio/TakesStage';
 import FinalVideoStage from '../components/studio/FinalVideoStage';
 import ProjectLibrary from '../components/studio/ProjectLibrary';
 import Settings from './Settings';
@@ -21,6 +22,11 @@ const Studio = () => {
   const [episodeCount, setEpisodeCount] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [chatOpen, setChatOpen] = useState(true);
+  const [takesEnabled, setTakesEnabled] = useState(false);
+  useEffect(() => {
+    const v = localStorage.getItem('takesEnabled');
+    if (v === 'true') setTakesEnabled(true);
+  }, []);
 
   const { loadSettings } = useSettingsStore();
 
@@ -221,7 +227,7 @@ const Studio = () => {
                       </div>
 
                       <div className="flex gap-1 border-b border-border mb-6">
-                        {['story', 'script', 'assets', 'shotlist', 'final'].map((stage) => (
+                        {['story', 'script', 'assets', 'shotlist', ...(takesEnabled ? ['takes'] : []), 'final'].map((stage) => (
                           <button
                             key={stage}
                             onClick={() => setStageTab(stage)}
@@ -231,7 +237,7 @@ const Studio = () => {
                                 : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                           >
-                            {stage === 'story' ? '1. Story' : stage === 'script' ? '2. Script' : stage === 'assets' ? '3. Assets' : stage === 'shotlist' ? '4. Shot List' : '5. Final Video'}
+                            {stage === 'story' ? '1. Story' : stage === 'script' ? '2. Script' : stage === 'assets' ? '3. Assets' : stage === 'shotlist' ? '4. Shot List' : stage === 'takes' ? '5. Takes' : takesEnabled ? '6. Final Video' : '5. Final Video'}
                           </button>
                         ))}
                       </div>
@@ -301,7 +307,26 @@ const Studio = () => {
                               </select>
                             </div>
                           )}
-                          <ShotListStage selectedEpisode={selectedEpisode} />
+                          <ShotListStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} onTakesEnabledChange={(v) => { setTakesEnabled(v); localStorage.setItem('takesEnabled', String(v)); }} />
+                        </div>
+                      )}
+                      {stageTab === 'takes' && (
+                        <div className="space-y-4">
+                          {currentProject?.type === 'episodic' && (
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
+                              <select
+                                value={selectedEpisode}
+                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
+                                className="p-2 border border-border rounded bg-card text-foreground"
+                              >
+                                {Array.from({ length: episodeCount }, (_, i) => (
+                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          <TakesStage selectedEpisode={selectedEpisode} />
                         </div>
                       )}
                       {stageTab === 'final' && (

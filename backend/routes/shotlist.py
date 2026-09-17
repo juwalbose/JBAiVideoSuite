@@ -22,7 +22,15 @@ async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depe
     created = 0
     updated = 0
 
+    incoming_shot_nums = {s.get('shot', 0) for s in shots}
+
     async with db.tx() as tx:
+        # Delete shots that are no longer in the payload
+        existing_shots = await tx.shotlist.find_many(where={'projectId': id, 'episode': episode})
+        for es in existing_shots:
+            if es.shot not in incoming_shot_nums:
+                await tx.shotlist.delete(where={'id': es.id})
+
         for s in shots:
             shot_num = s.get('shot', 0)
             beats = s.get('beats', [])
@@ -82,6 +90,12 @@ async def save_shotlist(id: str, payload: dict, episode: int = 1, db: Any = Depe
     return {"status": "success", "count": len(shots), "created": created, "updated": updated}
 
 
+@router.delete("/{id}/shotlist/{shot_id}")
+async def delete_shot(id: str, shot_id: str, episode: int = 1, db: Any = Depends(get_db)):
+    await db.shotlist.delete(where={'id': shot_id})
+    return {"status": "success"}
+
+
 @router.delete("/{id}/shotlist")
 async def delete_shotlist(id: str, episode: int = 1, db: Any = Depends(get_db)):
     await db.shotlist.delete_many(where={'projectId': id, 'episode': episode})
@@ -107,9 +121,9 @@ def get_state_desc(asset, state_id: str | None) -> str:
 
 @router.post("/{id}/shotlist/generate-prompt")
 async def generate_shot_prompt(id: str, payload: dict, episode: int = 1, db: Any = Depends(get_db)):
-    system_prompt = await get_system_prompt(db, "Generate Video Prompt")
+    system_prompt = await get_system_prompt(db, "Generate Shot Video Prompt")
     if not system_prompt:
-        return {"status": "error", "details": "No system prompt mapped for 'Generate Video Prompt'."}
+        return {"status": "error", "details": "No system prompt mapped for 'Generate Shot Video Prompt'."}
     try:
         shot = payload
         scene_num = shot.get('scene', 0)

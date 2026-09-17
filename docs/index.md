@@ -32,6 +32,7 @@ A step-by-step guide to installing, configuring, and using **JBAiVideoSuite**.
    - [Script Stage](#script-stage)
    - [Assets Stage](#assets-stage)
    - [Shot List Stage](#shot-list-stage)
+   - [Takes Stage](#takes-stage)
    - [Final Video Stage](#final-video-stage)
 
 ---
@@ -126,8 +127,9 @@ Maps **system prompts** to app actions, and **ComfyUI workflows** to generation 
 | Develop Raw Story | Expands a raw story idea into a narrative arc |
 | Extract Cast | Pulls characters, locations, and props from the story |
 | Generate Script | Writes the episode script from the story |
-| Generate Prompt | Builds image prompts for assets |
-| Generate Video Prompt | Builds video prompts for shots |
+| Generate Image Prompt | Builds image prompts for assets |
+| Generate Shot Video Prompt | Builds video prompts for individual shots |
+| Generate Take Video Prompt | Builds consolidated video prompts for takes (groups of shots) |
 | Refine Dialog | Polishes dialogue lines |
 | Generate Shots | Breaks the script into a shot list |
 
@@ -513,7 +515,7 @@ When processing a user's script, output a structured shot list strictly as a JSO
 
 #### 6. Shot to MiniMax H3 Video Prompt
 
-**App Action:** Generate Video Prompt
+**App Action:** Generate Shot Video Prompt
 **Prompt File:** `GenerateVideoPrompt_SystemPrompt.txt`
 
 The LLM needs to generate a well-formatted reference-to-video prompt for the MiniMax H3 video model based on the guide found here:
@@ -525,8 +527,8 @@ The LLM will get the whole script scene text for context, the details of the spe
 
 #### 7. Text to Image Prompt Generation
 
-**App Action:** Generate Prompt
-**Prompt File:** `GeneratePrompt_SystemPrompt.txt`
+**App Action:** Generate Image Prompt
+**Prompt File:** `GenerateImagePrompt_SystemPrompt.txt`
 
 Generate text-to-image prompts for your chosen workflow and image model.
 
@@ -1008,6 +1010,68 @@ A textarea at the bottom where you can paste the raw JSON output from the LLM. C
 | **Save Shots** | Persists all shots to the database. Shows a green confirmation when successful. |
 
 > **Tip:** The shot list is what feeds the Final Video stage. Each shot's prompt, linked assets, and audio are used to generate the video clip for that shot.
+
+### Takes Stage
+
+The **Takes** stage groups consecutive shots into "takes" — each take is a continuous video segment of up to 15 seconds. This lets the video model generate longer, more coherent runs instead of many short clips.
+
+> **Note:** The Takes tab is hidden by default. Enable it by checking the **Enable Takes** checkbox in the Shot List stage header. The setting persists in your browser (localStorage).
+
+![Takes stage](images/placeholder.svg)
+
+**Header**
+
+- **Takes (N)** — title with take count
+- **+ Add Take** — appends a new take starting after the last take's end shot
+- **Delete Last Take** — removes the final take (immediate, no save needed)
+- **Save Takes** — persists all takes to the database
+
+**Take Selector**
+
+- **Take** dropdown — select which take to edit. Shows the take number and its end shot (e.g. *Take 2 (ends at shot 5)*)
+
+**End Shot Selector**
+
+- **End Shot** dropdown — pick where this take ends. Options are constrained:
+  - Minimum: start shot + 1 (a take must contain at least 2 shots)
+  - Maximum: the next take's end shot − 1 (takes cannot overlap)
+- Shows the shot range (e.g. *shots 3–5*)
+
+**Total Duration**
+
+- Sum of all shot durations in the take
+- Shows a ⚠ warning if the total exceeds 15 seconds
+
+**Consolidated Actions**
+
+- Read-only list of all shot actions in the take, one per line
+- Format: `Shot N: action text`
+
+**Consolidated Assets**
+
+- Read-only list of all unique assets (with states) referenced by shots in the take
+- Split into three columns: **Locations**, **Characters**, **Props**
+- Each entry shows `AssetName — StateName`
+
+**Prompt**
+
+- A large textarea for the consolidated video generation prompt
+- **Generate Prompt** — sends the take's shots to the LLM (using the *Generate Take Video Prompt* system prompt) to build a consolidated prompt. The LLM receives:
+  - Total take duration
+  - Per-scene sections (scene text from script + each shot's beats, camera, action, dialogue, audio instructions)
+  - Consolidated reference assets
+  - Background music
+- **Copy Prompt** — copies the prompt to clipboard
+
+**How Takes Work**
+
+- Takes are sequential and non-overlapping
+- Take 1 starts at shot 1. Each subsequent take starts at the previous take's end shot + 1
+- The start shot is derived automatically — you only select the end shot
+- A take must contain at least 2 shots
+- The Final Video stage uses the take's consolidated prompt (when takes are enabled) instead of individual shot prompts
+
+> **Tip:** Use takes when you want longer, more continuous video segments. Keep each take under 15 seconds for best results with the video model.
 
 ### Final Video Stage
 

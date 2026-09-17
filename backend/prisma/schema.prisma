@@ -44,6 +44,7 @@ model Project {
   finalVideo    FinalVideo?
   shotList      ShotList[]
   audioAssets   AudioAsset[]
+  takes         Take[]
   // cascade handled via child-side onDelete
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -201,5 +202,19 @@ model ShotList {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@index([projectId, episode])
+}
+
+model Take {
+  id            String   @id @default(cuid())
+  projectId     String
+  episode       Int      @default(1)
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  endShotIndex  Int
+  prompt        String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, episode, endShotIndex])
   @@index([projectId, episode])
 }

@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
 interface ShotData {
+  id: string;
   shot: number;
   scene: number;
   beats: number[];
@@ -42,7 +43,7 @@ interface AssetItem {
   states: AssetState[];
 }
 
-const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
+const ShotListStage = ({ selectedEpisode, takesEnabled, onTakesEnabledChange }: { selectedEpisode: number; takesEnabled: boolean; onTakesEnabledChange: (v: boolean) => void }) => {
   const { currentProject } = useProjectStore();
   const [shots, setShots] = useState<ShotData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -79,6 +80,7 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
   };
 
   const mapShot = (s: any): ShotData => ({
+    id: s.id || '',
     shot: Number(s.shot) || 0,
     scene: Number(s.scene) || 0,
     beats: Array.isArray(s.beats) ? s.beats.map(Number) : (typeof s.beats === 'string' ? s.beats.replace(/[\[\]]/g, '').split(',').map((x: string) => Number(x.trim())).filter((n: number) => !isNaN(n)) : []),
@@ -286,7 +288,21 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
     setSaved(false);
   };
 
-  const deleteShot = (index: number) => {
+  const deleteShot = async (index: number) => {
+    const shot = shots[index];
+    if (!shot) return;
+    if (shot.id) {
+      try {
+        const baseUrl = useSettingsStore.getState().backend.apiUrl;
+        await fetch(`${baseUrl}/projects/${currentProject!.id}/shotlist/${shot.id}?episode=${selectedEpisode}`, {
+          method: 'DELETE',
+        });
+      } catch (err) {
+        console.error('Error deleting shot:', err);
+        setError('Failed to delete shot.');
+        return;
+      }
+    }
     setShots((prev) => {
       const next = prev.filter((_, i) => i !== index);
       setSelectedIdx((si) => (si >= next.length ? Math.max(0, next.length - 1) : si));
@@ -330,7 +346,18 @@ const ShotListStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
       )}
 
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Shot List ({shots.length} shots)</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold text-foreground">Shot List ({shots.length} shots)</h3>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={takesEnabled}
+              onChange={(e) => onTakesEnabledChange(e.target.checked)}
+              className="rounded border-border"
+            />
+            Enable Takes
+          </label>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={addShot} className="px-3 py-1 bg-accent text-accent-foreground rounded hover:bg-accent/80 text-sm">
             + Add Shot

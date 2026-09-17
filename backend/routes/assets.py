@@ -382,9 +382,9 @@ async def generate_prompt(id: str, asset_id: str, payload: dict, db: Any = Depen
     asset = await db.asset.find_first(where={'id': asset_id, 'projectId': id})
     if not asset:
         return {"status": "error", "details": "Asset not found"}
-    system_prompt = await get_system_prompt(db, "Generate Prompt")
+    system_prompt = await get_system_prompt(db, "Generate Image Prompt")
     if not system_prompt:
-        return {"status": "error", "details": "No system prompt mapped for 'Generate Prompt'."}
+        return {"status": "error", "details": "No system prompt mapped for 'Generate Image Prompt'."}
     try:
         asset_desc = payload.get('assetDescription', asset.description or '')
         state_desc = payload.get('stateDescription', '')
