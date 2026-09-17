@@ -212,6 +212,7 @@ model Take {
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   endShotIndex  Int
   prompt        String   @default("")
+  videoPath     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -40,8 +40,10 @@ async def save_takes(id: str, payload: dict, episode: int = 1, db: Any = Depends
                 'projectId': id, 'episode': episode, 'endShotIndex': end_shot
             })
 
+            video_path = t.get('videoPath') or None
+
             if existing:
-                await tx.take.update(where={'id': existing.id}, data={'prompt': prompt})
+                await tx.take.update(where={'id': existing.id}, data={'prompt': prompt, 'videoPath': video_path})
                 updated += 1
             else:
                 await tx.take.create({
@@ -49,6 +51,7 @@ async def save_takes(id: str, payload: dict, episode: int = 1, db: Any = Depends
                     'episode': episode,
                     'endShotIndex': end_shot,
                     'prompt': prompt,
+                    'videoPath': video_path,
                 })
                 created += 1
 

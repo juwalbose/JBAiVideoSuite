@@ -345,7 +345,7 @@ const Studio = () => {
                               </select>
                             </div>
                           )}
-                          <FinalVideoStage selectedEpisode={selectedEpisode} />
+                          <FinalVideoStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} />
                         </div>
                       )}
                     </div>

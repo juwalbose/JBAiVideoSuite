@@ -339,7 +339,7 @@ Manages the system prompt `.txt` files available to the app.
 
 You will need to generate a few system prompts with your favorite LLM of choice — use the best one available, but even a local model should work. Each prompt is a plain `.txt` file that instructs the LLM on its role, constraints, and output format for a specific app action.
 
-There are eight prompts to generate. Here is what each one does and the exact output format it must produce.
+There are nine prompts to generate. Here is what each one does and the exact output format it must produce.
 
 ---
 
@@ -543,6 +543,35 @@ Ref-to-video prompt generation for MiniMax H3 based on the official guide.
 
 ---
 
+#### 9. Take to MiniMax H3 Video Prompt
+
+**App Action:** Generate Take Video Prompt
+**Prompt File:** `GenerateTakeVideoPrompt_SystemPrompt.txt`
+
+The LLM generates a consolidated reference-to-video prompt for the MiniMax H3 video model that covers an entire take (a group of consecutive shots) as a single continuous video segment. This is different from the per-shot prompt (prompt #6) — here the LLM receives multiple shots at once and must produce one unified prompt that flows through all of them.
+
+The LLM receives:
+
+- **Total Take Duration** — the combined duration of all shots in the take (e.g. `12.50s`)
+- **Per-scene sections** — for each scene in the take:
+  - The full scene text from the script (for context)
+  - Each shot's details: target beats, camera direction, action, dialogue
+  - Audio instructions per shot (e.g. *"Use the attached audio reference as the complete synchronized dialogue track"* or *"Use audio reference 1 as the voice-timbre reference for [Character Name]"*)
+- **Reference Assets** — a deduplicated list of all locations, characters, and props referenced by any shot in the take, with their state descriptions
+- **Background Music** — the music description from the first shot, or *"None — do not include any background music."*
+
+The output should be a single, well-formatted MiniMax H3 prompt that:
+
+- Describes the full continuous action across all shots in the take
+- Uses **"cut to"** directives between shots (e.g. *"Cut to: [next shot description]"*)
+- Maps reference images and audio to the correct subjects
+- Stays within the total take duration
+- Follows the [MiniMax H3 Video Prompt Writing Guide](https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/docs/VIDEO_PROMPT_WRITING_GUIDE_ref_en.md)
+
+> **Note:** This prompt is only used when the **Enable Takes** checkbox is checked in the Shot List stage and you click **Generate Prompt** in the Takes stage. It is separate from the per-shot *Generate Shot Video Prompt* (prompt #6).
+
+---
+
 **How to generate a prompt:**
 
 1. Open your favorite LLM (LM Studio, ChatGPT, Claude, etc.)
@@ -551,7 +580,7 @@ Ref-to-video prompt generation for MiniMax H3 based on the official guide.
 4. In the app, go to **Settings → System Prompts** and click **Refresh**
 5. In **Settings → App Settings**, map the prompt to its action under *LLM System Prompt Mapping*
 
-> **Tip:** You don't need all 8 prompts to use the app. The minimum viable set is: FleshoutStory, Story2Script, ExtractCharactersLocationsProps, and Script2Shots. The rest (dialog refiner, image/video prompt generators, Krea2) enhance the workflow but can be left unmapped.
+> **Tip:** You don't need all 9 prompts to use the app. The minimum viable set is: FleshoutStory, Story2Script, ExtractCharactersLocationsProps, and Script2Shots. The rest (dialog refiner, image/video prompt generators, take video prompt, Krea2) enhance the workflow but can be left unmapped.
 
 > **Note:** The prompts in this repo are examples. Feel free to modify them or write your own — the app only cares that the output format matches what it expects (see the collapsible JSON format sections in *App Settings*).
 
@@ -1075,13 +1104,24 @@ The **Takes** stage groups consecutive shots into "takes" — each take is a con
 
 ### Final Video Stage
 
-The **Final Video** stage is where you generate video clips for each shot and preview the assembled sequence. It has two sub-tabs: **Generate Clips** and **Assemble Clips**.
+The **Final Video** stage is where you generate video clips and preview the assembled sequence. It has two sub-tabs: **Generate Clips** and **Assemble Clips**.
 
 ![Final Video stage](images/placeholder.svg)
+
+**Source Radio** — when the **Enable Takes** checkbox is checked in the Shot List stage, a **Source** radio appears on the sub-tab row (right-aligned, visible in both tabs):
+
+| Option | Behavior |
+|--------|----------|
+| **Use Shots** *(default)* | Each shot is generated individually using its own prompt and assets |
+| **Use Takes** | Each take is generated as a single clip using the take's consolidated prompt and assets |
+
+The selection persists in your browser (localStorage). Switching source resets the selection index to the first item.
 
 #### Generate Clips
 
 The main working area for producing video clips.
+
+**When Use Shots is selected:**
 
 **Shot Selector** — **← Prev / Next →** buttons and a dropdown to jump between shots. Shows the current shot number and duration.
 
@@ -1109,15 +1149,51 @@ The main working area for producing video clips.
 
 > **Note:** If no shots exist, the stage shows *"No shots found. Generate shots in the Shot List tab first."*
 
+**When Use Takes is selected:**
+
+**Take Selector** — **← Prev / Next →** buttons and a dropdown to jump between takes. Shows the take number and its end shot (e.g. *Take 2 · ends at shot 5*).
+
+**Video Preview** — same as shots mode, but shows the take's generated clip.
+
+**Take Detail** — a panel below the preview showing:
+
+| Field | Description |
+|-------|-------------|
+| **Take Prompt** | The consolidated video generation prompt (editable, 12-row textarea). This is the prompt you generated in the Takes stage. |
+| **Total Duration** | Sum of all shot durations in the take. Shows a ⚠ warning if it exceeds 15 seconds. |
+| **Consolidated Asset Previews** | Thumbnails of all unique locations, characters (uses character sheet if available), and props referenced by any shot in the take. Deduplicated across shots. |
+| **Audio** | Audio players for all unique audio files referenced by any shot in the take. |
+| **Seed** | Numeric seed for the generation. **Randomize** button for a random seed |
+
+**Buttons:**
+
+| Button | What it does |
+|--------|--------------|
+| **Gen Low Res** | Generates the take clip at low resolution. The result appears in the video preview. |
+| **Gen High Res** | Generates the take clip at high resolution. The result is saved to the take's `videoPath`. |
+| **Save** | Persists all takes (including any prompt edits) to the database. |
+
+> **Note:** If no takes exist, the stage shows *"No takes found. Create takes in the Takes tab first."*
+
 #### Assemble Clips
 
-A preview mode for watching your shots play in sequence.
+A preview mode for watching your clips play in sequence. The content adapts to the selected source.
+
+**When Use Shots is selected:**
 
 **Video Preview** — a video player showing the clip for the currently selected shot. Shows *"No video generated for Shot N"* if the shot hasn't been rendered yet.
 
 **Play Sequence** — a button that plays all shots in order. Shots without a generated video are skipped (1.5s pause). Click **Stop** to halt playback.
 
 **Shot Strip** — a horizontal scrollable strip of thumbnails, one per shot. Each thumbnail shows the video (or *"No video"* if not generated) with the shot number overlaid. Click a thumbnail to jump to that shot.
+
+**When Use Takes is selected:**
+
+**Video Preview** — a video player showing the clip for the currently selected take. Shows *"No video generated for Take N"* if the take hasn't been rendered yet.
+
+**Play Sequence** — a button that plays all takes in order. Takes without a generated video are skipped (1.5s pause). Click **Stop** to halt playback.
+
+**Take Strip** — a horizontal scrollable strip of thumbnails, one per take. Each thumbnail shows the video (or *"No video"* if not generated) with the take number overlaid (e.g. *Take 1*, *Take 2*). Click a thumbnail to jump to that take.
 
 **Export Video** — currently disabled. Export functionality is coming soon.
 
