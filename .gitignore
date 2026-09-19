@@ -9,6 +9,7 @@ backend/check_shots.py
 
 # Database
 backend/prisma/database.db
+backend/dev.db
 
 # System prompts (each user generates their own)
 assets/systemprompts/*.txt

@@ -2,9 +2,9 @@
 
 > 📖 **Access detailed documentation:** [https://juwalbose.github.io/JBAiVideoSuite/](https://juwalbose.github.io/JBAiVideoSuite/)
 
-An AI-powered video production pipeline that takes you from a raw story idea to a final video through five stages:
+An AI-powered video production pipeline that takes you from a raw story idea to a final video through six stages:
 
-**Story → Script → Assets → Shot List → Final Video**
+**Story → Script → Assets → Shot List → Takes → Final Video**
 
 Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), and integrates with LM Studio (LLM) and ComfyUI (image/video generation).
 
@@ -18,10 +18,11 @@ Built with Next.js (frontend), FastAPI (backend), Prisma + SQLite (database), an
 - **Story Stage** — Enter a raw story idea, generate a narrative arc via LLM
 - **Script Stage** — Generate a full script from the story, refine dialog, extract cast
 - **Assets Stage** — Manage Characters, Locations, and Props with states; generate image prompts; map generated images
-- **Shot List Stage** — Generate a shot list from the script
-- **Final Video** — Two sub-tabs:
-  - **Generate Clips** — Per-shot video generation via ComfyUI (MinimaxH3 Ref2VA workflow). Editable prompt, asset previews (location/characters/props), audio players, seed + duration controls, low/high-res generation, save to shot
-  - **Assemble Clips** — Full-width video preview (16:9), shot strip with thumbnails, play sequence (auto-advances through shots), export placeholder
+- **Shot List Stage** — Generate a shot list from the script. Optional "Enable Takes" checkbox to group shots into takes
+- **Takes Stage** — Group consecutive shots into takes (each ≤15s) for longer video generation. Consolidated asset states, concatenated prompts, per-take LLM prompt generation, save to database
+- **Final Video** — Two sub-tabs, each with a Source radio (Use Shots / Use Takes) when takes are enabled:
+  - **Generate Clips** — Per-shot or per-take video generation via ComfyUI (MinimaxH3 Ref2VA workflow). Editable prompt, asset previews (location/characters/props), audio players, seed + duration controls, low/high-res generation, save to shot or take
+  - **Assemble Clips** — Full-width video preview (16:9), shot/take strip with thumbnails, play sequence (auto-advances through shots or takes), export placeholder
 - **Playground** — Run ComfyUI workflows with a visual gallery and input manager (image + audio inputs)
 - **Chat Panel** — LLM chat with system prompt support
 - **Settings** — Configure LLM, ComfyUI, backend, workflows, system prompts, app action mappings, and video resolution presets
@@ -91,9 +92,9 @@ On first launch, the app will prompt you to configure:
 
 You can also edit these in the **Settings** tab within the app.
 
-### 5. Add system prompts (optional)
+### 5. Add system prompts
 
-The app ships with default system prompts in `assets/systemprompts/`. You can add or edit them via the **Settings → System Prompts** tab, or drop `.txt` files into the folder.
+The app requires system prompts for LLM-driven actions. Each user generates their own — they are not shipped in the repository. Add or edit them via the **Settings → System Prompts** tab, or drop `.txt` files into `assets/systemprompts/`. Each app action (e.g., "Generate Script", "Generate Shot Video Prompt", "Generate Take Video Prompt") must be mapped to a system prompt in **Settings → App Settings**.
 
 ### 6. Add ComfyUI workflows (optional)
 
@@ -159,15 +160,17 @@ JBAiVideoSuite/
 │       ├── chat.py           # LLM chat
 │       ├── appsettings.py    # App action mapping + video resolution presets
 │       ├── shotlist.py       # Shot list CRUD (includes videoPath)
-│       └── videogen.py       # Per-shot video generation (MinimaxH3 Ref2VA)
+│       ├── takes.py          # Takes CRUD + prompt generation
+│       └── videogen.py       # Per-shot/take video generation (MinimaxH3 Ref2VA)
 └── frontend/
     ├── src/
     │   ├── pages/
-    │   │   ├── index.tsx     # Studio (5-stage pipeline)
+    │   │   ├── index.tsx     # Studio (6-stage pipeline)
     │   │   └── Settings.tsx  # Settings page
     │   ├── components/
-    │   │   ├── studio/       # Story, Script, Assets, ShotList, FinalVideo stages
-    │   │   │   └── FinalVideoStage.tsx  # Generate Clips + Assemble Clips
+    │   │   ├── studio/       # Story, Script, Assets, ShotList, Takes, FinalVideo stages
+    │   │   │   ├── TakesStage.tsx       # Takes CRUD + consolidated assets + prompt gen
+    │   │   │   └── FinalVideoStage.tsx  # Generate Clips + Assemble Clips (shots/takes)
     │   │   ├── playground/   # ComfyUI workflow runner
     │   │   ├── settings/     # Settings panels
     │   │   ├── Gallery.tsx   # Image gallery with map-to-asset
@@ -181,15 +184,16 @@ JBAiVideoSuite/
 
 ---
 
-## The 5-Stage Pipeline
+## The 6-Stage Pipeline
 
 | Stage | What it does |
 |-------|-------------|
 | **Story** | Enter a raw idea → LLM generates a narrative arc |
 | **Script** | Generate a full script → refine dialog → extract cast (characters, locations, props) |
 | **Assets** | Review/edit extracted assets → generate image prompts → map generated images to asset states |
-| **Shot List** | Generate a shot list from the script |
-| **Final Video** | **Generate Clips** — per-shot video gen via ComfyUI (editable prompt, asset/audio previews, seed, duration, low/high res). **Assemble Clips** — preview, shot strip, play sequence, export |
+| **Shot List** | Generate a shot list from the script. Optional "Enable Takes" checkbox to group shots into takes |
+| **Takes** | Group consecutive shots into takes (each ≤15s). Consolidated asset states, concatenated prompts, per-take LLM prompt generation |
+| **Final Video** | **Generate Clips** — per-shot or per-take video gen via ComfyUI (editable prompt, asset/audio previews, seed, duration, low/high res). **Assemble Clips** — preview, shot/take strip, play sequence, export. Source radio (Use Shots / Use Takes) when takes are enabled |
 
 ---
 
@@ -209,15 +213,15 @@ All settings are stored in the SQLite database and editable via the **Settings**
 
 ## Video Generation
 
-Per-shot video generation uses the **MinimaxH3 Ref2VA** ComfyUI workflow. The backend:
+Per-shot or per-take video generation uses the **MinimaxH3 Ref2VA** ComfyUI workflow. The backend:
 
 1. Loads the mapped workflow JSON
-2. Injects prompt, seed, width, height, duration from the shot
-3. Collects reference images (location, character sheets, props) and audio (scene dialog, character audio) from linked assets
+2. Injects prompt, seed, width, height, duration from the shot or take
+3. Collects reference images (location, character sheets, props) and audio (scene dialog, character audio) from linked assets — for takes, assets are consolidated across all shots in the take
 4. Uploads files to ComfyUI and queues the prompt
 5. Polls ComfyUI history for completion
 6. Saves the generated video to `assets/generated/`
-7. For **high-res** generation, persists `videoPath` to the shot in the database
+7. For **high-res** generation, persists `videoPath` to the shot or take in the database
 
 Resolution presets are configured in **Settings → MinimaxH3 Ref2VA Generation** (default: low 960×544, high 1920×1080).
 
