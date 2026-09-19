@@ -437,6 +437,54 @@
       "audio_vae": [
         "5567:5221",
         0
+      ],
+      "ref_images.ref_image_0": [
+        "137",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "5649",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "5653",
+        0
+      ],
+      "ref_images.ref_image_3": [
+        "5684",
+        0
+      ],
+      "ref_images.ref_image_4": [
+        "5685",
+        0
+      ],
+      "ref_images.ref_image_5": [
+        "5686",
+        0
+      ],
+      "ref_images.ref_image_6": [
+        "5687",
+        0
+      ],
+      "ref_images.ref_image_7": [
+        "5688",
+        0
+      ],
+      "ref_images.ref_image_8": [
+        "5689",
+        0
+      ],
+      "ref_audios.ref_audio_0": [
+        "5678",
+        0
+      ],
+      "ref_audios.ref_audio_1": [
+        "5679",
+        0
+      ],
+      "ref_audios.ref_audio_2": [
+        "5690",
+        0
       ]
     },
     "class_type": "MiniMaxH3ReferenceToVideo",
@@ -455,7 +503,7 @@
   },
   "5697": {
     "inputs": {
-      "noise_seed": 693190493626551
+      "noise_seed": 717452832959058
     },
     "class_type": "RandomNoise",
     "_meta": {
@@ -606,7 +654,7 @@
     "inputs": {
       "chunk_length": 85,
       "temporal_overlap": 17,
-      "anchor_strength": 0.999
+      "anchor_strength": 1
     },
     "class_type": "MMH3TemporalSplitParams",
     "_meta": {
