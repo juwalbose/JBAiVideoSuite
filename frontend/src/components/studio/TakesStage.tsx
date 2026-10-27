@@ -356,7 +356,7 @@ const TakesStage = ({ selectedEpisode }: { selectedEpisode: number }) => {
               onChange={(e) => updateEndShot(selectedTakeIdx, Number(e.target.value))}
             >
               {Array.from({ length: getMaxEndShot(selectedTakeIdx) - getStartShot(selectedTakeIdx) + 1 }, (_, i) => {
-                const shotNum = getStartShot(selectedTakeIdx) + 1 + i;
+                const shotNum = getStartShot(selectedTakeIdx) + i;
                 return (
                   <option key={shotNum} value={shotNum}>
                     Shot {shotNum}
