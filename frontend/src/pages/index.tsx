@@ -255,7 +255,7 @@ const Studio = () => {
                       {stageTab === 'story' && (
                         <div>
                           {currentProject?.story ? (
-                            <StoryStage selectedEpisode={selectedEpisode} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
+                            <StoryStage selectedEpisode={selectedEpisode} onEpisodeChange={setSelectedEpisode} onEpisodeCountChange={setEpisodeCount} onNavigateToScript={() => setStageTab('script')} />
                           ) : (
                             <div className="p-8 border-2 border-dashed border-border rounded-xl text-center">
                               <p className="text-muted-foreground italic">No story yet. Create a project to begin.</p>
@@ -264,99 +264,19 @@ const Studio = () => {
                         </div>
                       )}
                       {stageTab === 'script' && (
-                        <div className="space-y-4">
-                          {currentProject?.type === 'episodic' && (
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
-                              <select
-                                value={selectedEpisode}
-                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border border-border rounded bg-card text-foreground"
-                              >
-                                {Array.from({ length: episodeCount }, (_, i) => (
-                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <ScriptStage selectedEpisode={selectedEpisode} onNavigateToAssets={() => setStageTab('assets')} />
-                        </div>
+                        <ScriptStage selectedEpisode={selectedEpisode} onNavigateToAssets={() => setStageTab('assets')} />
                       )}
                       {stageTab === 'assets' && (
-                        <div className="space-y-4">
-                          {currentProject?.type === 'episodic' && (
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
-                              <select
-                                value={selectedEpisode}
-                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border border-border rounded bg-card text-foreground"
-                              >
-                                {Array.from({ length: episodeCount }, (_, i) => (
-                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <AssetsStage selectedEpisode={selectedEpisode} />
-                        </div>
+                        <AssetsStage selectedEpisode={selectedEpisode} />
                       )}
                       {stageTab === 'shotlist' && (
-                        <div className="space-y-4">
-                          {currentProject?.type === 'episodic' && (
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
-                              <select
-                                value={selectedEpisode}
-                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border border-border rounded bg-card text-foreground"
-                              >
-                                {Array.from({ length: episodeCount }, (_, i) => (
-                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <ShotListStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} onTakesEnabledChange={(v) => { setTakesEnabled(v); localStorage.setItem('takesEnabled', String(v)); }} />
-                        </div>
+                        <ShotListStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} onTakesEnabledChange={(v) => { setTakesEnabled(v); localStorage.setItem('takesEnabled', String(v)); }} />
                       )}
                       {stageTab === 'takes' && (
-                        <div className="space-y-4">
-                          {currentProject?.type === 'episodic' && (
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
-                              <select
-                                value={selectedEpisode}
-                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border border-border rounded bg-card text-foreground"
-                              >
-                                {Array.from({ length: episodeCount }, (_, i) => (
-                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <TakesStage selectedEpisode={selectedEpisode} />
-                        </div>
+                        <TakesStage selectedEpisode={selectedEpisode} />
                       )}
                       {stageTab === 'final' && (
-                        <div className="space-y-4">
-                          {currentProject?.type === 'episodic' && (
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-muted-foreground">Episode:</label>
-                              <select
-                                value={selectedEpisode}
-                                onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                                className="p-2 border border-border rounded bg-card text-foreground"
-                              >
-                                {Array.from({ length: episodeCount }, (_, i) => (
-                                  <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <FinalVideoStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} />
-                        </div>
+                        <FinalVideoStage selectedEpisode={selectedEpisode} takesEnabled={takesEnabled} />
                       )}
                     </div>
                   </main>

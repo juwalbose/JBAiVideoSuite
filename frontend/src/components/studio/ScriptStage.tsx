@@ -13,46 +13,91 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   const [isRefining, setIsRefining] = useState(false);
   const [comparisonData, setComparisonData] = useState<{ new: any[]; existing: any[] } | null>(null);
   const [existingAssetsList, setExistingAssetsList] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [episodeScript, setEpisodeScript] = useState('');
+  const [episodeNarrativeArc, setEpisodeNarrativeArc] = useState('');
 
-  // Draft lives in the store so it survives tab switches
-  const script = scriptDraft?.script ?? currentProject?.script?.content ?? '';
-  const cast = scriptDraft?.cast ?? '';
-  const formattedCast = scriptDraft?.formattedCast ?? '';
-  const refinedScript = scriptDraft?.refinedScript ?? '';
+  // Per-episode draft values
+  const epDraft = scriptDraft?.[selectedEpisode];
+  const script = epDraft?.script ?? episodeScript;
+  const cast = epDraft?.cast ?? '';
+  const formattedCast = epDraft?.formattedCast ?? '';
+  const refinedScript = epDraft?.refinedScript ?? '';
 
   const updateDraft = (patch: Partial<{ script: string; cast: string; formattedCast: string; refinedScript: string }>) => {
-    setScriptDraft({ script, cast, formattedCast, refinedScript, ...patch });
+    setScriptDraft((prev) => ({
+      ...(prev ?? {}),
+      [selectedEpisode]: { script, cast, formattedCast, refinedScript, ...patch },
+    }));
   };
 
-  // Sync local state with project data when currentProject or episode changes
+  // Fetch episode-specific script and story when project or episode changes
   useEffect(() => {
-    if (currentProject) {
-      // Reset draft to saved values when project or episode changes
-      setScriptDraft({
-        script: currentProject.script?.content || '',
-        cast: '',
-        formattedCast: '',
-        refinedScript: '',
-      });
-      // Fetch saved assets from DB and populate the cast box
-      const baseUrl = useSettingsStore.getState().backend.apiUrl;
-      fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success' && data.assets) {
-            const hasContent =
-              data.assets.characters?.length ||
-              data.assets.locations?.length ||
-              data.assets.props?.length;
-            if (hasContent) {
-              const json = JSON.stringify(data.assets, null, 2);
-              setScriptDraft(prev => prev ? { ...prev, cast: json, formattedCast: formatCast(json) } : { script: currentProject.script?.content || '', cast: json, formattedCast: formatCast(json), refinedScript: '' });
-              setHasSavedAssets(true);
-            }
+    if (!currentProject) return;
+    const baseUrl = useSettingsStore.getState().backend.apiUrl;
+    let cancelled = false;
+
+    // Reset draft for this episode
+    setScriptDraft((prev) => {
+      if (!prev) return null;
+      const next = { ...prev };
+      delete next[selectedEpisode];
+      return Object.keys(next).length === 0 ? null : next;
+    });
+
+    // Fetch saved script for this episode
+    fetch(`${baseUrl}/projects/${currentProject.id}/script?episode=${selectedEpisode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.status === 'success') {
+          setEpisodeScript(data.data?.content || '');
+        } else {
+          setEpisodeScript('');
+        }
+      })
+      .catch(() => { if (!cancelled) setEpisodeScript(''); });
+
+    // Fetch saved story for this episode (for narrative arc check)
+    fetch(`${baseUrl}/projects/${currentProject.id}/story?episode=${selectedEpisode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.status === 'success') {
+          setEpisodeNarrativeArc(data.data?.narrativeArc || '');
+        } else {
+          setEpisodeNarrativeArc('');
+        }
+      })
+      .catch(() => { if (!cancelled) setEpisodeNarrativeArc(''); });
+
+    // Fetch saved assets from DB and populate the cast box
+    fetch(`${baseUrl}/projects/${currentProject.id}/assets?episode=${selectedEpisode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.status === 'success' && data.assets) {
+          const hasContent =
+            data.assets.characters?.length ||
+            data.assets.locations?.length ||
+            data.assets.props?.length;
+          if (hasContent) {
+            const json = JSON.stringify(data.assets, null, 2);
+            setScriptDraft((prev) => ({
+              ...(prev ?? {}),
+              [selectedEpisode]: {
+                script: '',
+                cast: json,
+                formattedCast: formatCast(json),
+                refinedScript: '',
+              },
+            }));
+            setHasSavedAssets(true);
           }
-        })
-        .catch(err => console.warn('Failed to load saved assets:', err));
-    }
+        }
+      })
+      .catch(err => console.warn('Failed to load saved assets:', err));
+
+    return () => { cancelled = true; };
   }, [currentProject?.id, selectedEpisode]);
 
   const handleGenerateScript = async () => {
@@ -227,13 +272,14 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       if (!scriptRes.ok) throw new Error('Failed to save script');
 
       // Update local store to reflect the saved script
-      const { setCurrentProject } = useProjectStore.getState();
-      setCurrentProject({
-        ...currentProject,
-        script: { id: currentProject.script?.id || 'pending', content: script } as Script
+      setEpisodeScript(script);
+      // Clear draft for this episode after successful save
+      setScriptDraft((prev) => {
+        if (!prev) return null;
+        const next = { ...prev };
+        delete next[selectedEpisode];
+        return Object.keys(next).length === 0 ? null : next;
       });
-      // Clear draft after successful save
-      setScriptDraft(null);
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');
@@ -334,7 +380,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       <div className="flex justify-center gap-4 mt-2">
         <button
           onClick={handleGenerateScript}
-          disabled={isLoading || !currentProject?.story?.narrativeArc}
+          disabled={isLoading || !episodeNarrativeArc}
           className="px-6 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 transition-colors"
         >
           {isLoading ? 'Generating...' : script ? 'Regenerate Script' : 'Generate Script'}

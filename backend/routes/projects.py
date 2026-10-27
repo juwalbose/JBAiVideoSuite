@@ -243,3 +243,17 @@ async def update_story(id: str, story_input: StoryInput, episode: int = 1, db: A
         })
 
     return {"status": "success", "data": story_input}
+
+@router.get("/{id}/story")
+async def get_story(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    story = await db.story.find_first(where={'projectId': id, 'episode': episode})
+    if not story:
+        return {"status": "error", "details": f"Story not found for episode {episode}"}
+    return {"status": "success", "data": story.dict()}
+
+@router.get("/{id}/script")
+async def get_script(id: str, episode: int = 1, db: Any = Depends(get_db)):
+    script = await db.script.find_first(where={'projectId': id, 'episode': episode})
+    if not script:
+        return {"status": "error", "details": f"Script not found for episode {episode}"}
+    return {"status": "success", "data": script.dict()}

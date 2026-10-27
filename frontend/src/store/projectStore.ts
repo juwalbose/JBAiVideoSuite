@@ -48,6 +48,8 @@ interface StoryDraft {
   narrativeArc: string;
 }
 
+type StoryDraftMap = Record<number, StoryDraft>;
+
 interface ScriptDraft {
   script: string;
   cast: string;
@@ -55,13 +57,15 @@ interface ScriptDraft {
   refinedScript: string;
 }
 
+type ScriptDraftMap = Record<number, ScriptDraft>;
+
 interface ProjectState {
   projects: Project[];
   currentProject: Project | null;
   isLoading: boolean;
   error: string | null;
-  storyDraft: StoryDraft | null;
-  scriptDraft: ScriptDraft | null;
+  storyDraft: StoryDraftMap | null;
+  scriptDraft: ScriptDraftMap | null;
   setProjects: (newProject: Project) => void;
   addProject: (newProject: Project) => void;
   setCurrentProject: (project: Project | null) => void;
@@ -72,8 +76,8 @@ interface ProjectState {
   updateStory: (narrativeArc: string, rawInput?: string, episode?: number) => Promise<void>;
   addBeat: (content: string) => void;
   removeBeat: (beatId: string) => void;
-  setStoryDraft: (draft: StoryDraft | null | ((prev: StoryDraft | null) => StoryDraft | null)) => void;
-  setScriptDraft: (draft: ScriptDraft | null | ((prev: ScriptDraft | null) => ScriptDraft | null)) => void;
+  setStoryDraft: (draft: StoryDraftMap | null | ((prev: StoryDraftMap | null) => StoryDraftMap | null)) => void;
+  setScriptDraft: (draft: ScriptDraftMap | null | ((prev: ScriptDraftMap | null) => ScriptDraftMap | null)) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({

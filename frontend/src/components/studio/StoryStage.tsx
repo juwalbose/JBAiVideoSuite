@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 
-const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript }: { selectedEpisode: number; onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
+const StoryStage = ({ selectedEpisode, onEpisodeChange, onEpisodeCountChange, onNavigateToScript }: { selectedEpisode: number; onEpisodeChange?: (ep: number) => void; onEpisodeCountChange?: (count: number) => void; onNavigateToScript?: () => void }) => {
   const { currentProject, updateProject, updateStory, storyDraft, setStoryDraft } = useProjectStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -12,12 +12,18 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
   const [name, setName] = useState('');
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Draft lives in the store so it survives tab switches
-  const rawInput = storyDraft?.rawInput ?? currentProject?.story?.rawInput ?? '';
-  const narrativeArc = storyDraft?.narrativeArc ?? currentProject?.story?.narrativeArc ?? '';
+  const isEpisodic = currentProject?.type === 'episodic';
+
+  // Per-episode draft values
+  const epDraft = storyDraft?.[selectedEpisode];
+  const rawInput = epDraft?.rawInput ?? currentProject?.story?.rawInput ?? '';
+  const narrativeArc = epDraft?.narrativeArc ?? currentProject?.story?.narrativeArc ?? '';
 
   const updateDraft = (patch: Partial<{ rawInput: string; narrativeArc: string }>) => {
-    setStoryDraft({ rawInput, narrativeArc, ...patch });
+    setStoryDraft((prev) => ({
+      ...(prev ?? {}),
+      [selectedEpisode]: { rawInput, narrativeArc, ...patch },
+    }));
   };
 
   // Sync local state with project data when currentProject changes
@@ -27,10 +33,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
       setEpisodeCount(currentProject.episodeCount || 1);
       setName(currentProject.name);
       // Reset draft to saved values when project changes
-      setStoryDraft({
-        rawInput: currentProject.story?.rawInput || '',
-        narrativeArc: currentProject.story?.narrativeArc || '',
-      });
+      setStoryDraft(null);
     }
   }, [currentProject?.id]);
 
@@ -75,10 +78,15 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
     setIsSaving(true);
     setError('');
     try {
-      await updateProject(currentProject.name, duration, currentProject.type === 'episodic' ? episodeCount : undefined);
+      await updateProject(currentProject.name, duration, isEpisodic ? episodeCount : undefined);
       await updateStory(narrativeArc, rawInput, selectedEpisode);
-      // Clear draft after successful save — store now matches saved state
-      setStoryDraft(null);
+      // Clear the draft for this episode after successful save
+      setStoryDraft((prev) => {
+        if (!prev) return null;
+        const next = { ...prev };
+        delete next[selectedEpisode];
+        return Object.keys(next).length === 0 ? null : next;
+      });
     } catch (error) {
       console.error("Error saving:", error);
       setError('Failed to save. Check backend connection.');
@@ -104,6 +112,54 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
               </div>
             </div>
           </section>
+
+          {isEpisodic && (
+            <section className="space-y-3 border-b pb-6">
+              <h3 className="text-lg font-semibold text-foreground">Episodes</h3>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-muted-foreground">Episode:</label>
+                  <select
+                    value={selectedEpisode}
+                    onChange={(e) => {
+                      const newEp = Number(e.target.value);
+                      // Save current draft and clear the new episode's draft in one update
+                      setStoryDraft((prev) => {
+                        const next = { ...(prev ?? {}) };
+                        // Save current episode's draft if it differs from saved
+                        if (rawInput !== currentProject?.story?.rawInput || narrativeArc !== currentProject?.story?.narrativeArc) {
+                          next[selectedEpisode] = { rawInput, narrativeArc };
+                        }
+                        // Clear the new episode's draft so it loads from the backend
+                        delete next[newEp];
+                        return Object.keys(next).length === 0 ? null : next;
+                      });
+                      onEpisodeChange?.(newEp);
+                    }}
+                    className="p-2 border border-border rounded bg-card text-foreground"
+                  >
+                    {Array.from({ length: episodeCount }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>Episode {i + 1}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-muted-foreground">Number of Episodes:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-24 p-2 border border-border rounded bg-card text-foreground"
+                    value={episodeCount}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      setEpisodeCount(val);
+                      onEpisodeCountChange?.(val);
+                    }}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="space-y-4">
             <div>
@@ -137,7 +193,7 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
                 </button>
               </div>
               <span className="text-xs text-muted-foreground">
-                {currentProject.type === 'episodic' ? 'per episode' : 'total video'}
+                {isEpisodic ? 'per episode' : 'total video'}
               </span>
             </div>
 
@@ -154,26 +210,6 @@ const StoryStage = ({ selectedEpisode, onEpisodeCountChange, onNavigateToScript 
               </div>
             )}
           </section>
-
-          {currentProject.type === 'episodic' && (
-            <section className="space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">Episodes</h3>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-muted-foreground">Number of Episodes:</label>
-                <input
-                  type="number"
-                  min={1}
-                  className="w-24 p-2 border border-border rounded bg-card text-foreground"
-                  value={episodeCount}
-                  onChange={(e) => {
-                    const val = Math.max(1, parseInt(e.target.value) || 1);
-                    setEpisodeCount(val);
-                    onEpisodeCountChange?.(val);
-                  }}
-                />
-              </div>
-            </section>
-          )}
 
           {error && (
             <div className="p-4 border border-destructive/40 bg-destructive/10 rounded-lg text-destructive text-sm">
