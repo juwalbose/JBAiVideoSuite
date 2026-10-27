@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProjectStore, Script } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import ExtractComparisonModal from './ExtractComparisonModal';
@@ -15,10 +15,11 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
   const [existingAssetsList, setExistingAssetsList] = useState<{ id: string; name: string; type: string }[]>([]);
   const [episodeScript, setEpisodeScript] = useState('');
   const [episodeNarrativeArc, setEpisodeNarrativeArc] = useState('');
+  const loadedScriptRef = useRef('');
 
   // Per-episode draft values
   const epDraft = scriptDraft?.[selectedEpisode];
-  const script = epDraft?.script ?? episodeScript;
+  const script = epDraft?.script || episodeScript;
   const cast = epDraft?.cast ?? '';
   const formattedCast = epDraft?.formattedCast ?? '';
   const refinedScript = epDraft?.refinedScript ?? '';
@@ -50,12 +51,15 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
       .then(data => {
         if (cancelled) return;
         if (data.status === 'success') {
-          setEpisodeScript(data.data?.content || '');
+          const content = data.data?.content || '';
+          loadedScriptRef.current = content;
+          setEpisodeScript(content);
         } else {
+          loadedScriptRef.current = '';
           setEpisodeScript('');
         }
       })
-      .catch(() => { if (!cancelled) setEpisodeScript(''); });
+      .catch(() => { if (!cancelled) { loadedScriptRef.current = ''; setEpisodeScript(''); } });
 
     // Fetch saved story for this episode (for narrative arc check)
     fetch(`${baseUrl}/projects/${currentProject.id}/story?episode=${selectedEpisode}`)
@@ -85,7 +89,7 @@ const ScriptStage = ({ selectedEpisode, onNavigateToAssets }: { selectedEpisode:
             setScriptDraft((prev) => ({
               ...(prev ?? {}),
               [selectedEpisode]: {
-                script: '',
+                script: loadedScriptRef.current,
                 cast: json,
                 formattedCast: formatCast(json),
                 refinedScript: '',
