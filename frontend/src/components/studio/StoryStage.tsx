@@ -16,8 +16,19 @@ const StoryStage = ({ selectedEpisode, onEpisodeChange, onEpisodeCountChange, on
 
   // Per-episode draft values
   const epDraft = storyDraft?.[selectedEpisode];
-  const rawInput = epDraft?.rawInput ?? currentProject?.story?.rawInput ?? '';
-  const narrativeArc = epDraft?.narrativeArc ?? currentProject?.story?.narrativeArc ?? '';
+  
+  // Priority: Draft -> Episode-specific saved data -> Global project story -> Empty string
+  const rawInput = epDraft?.rawInput ?? 
+                    (isEpisodic ? currentProject?.story?.[selectedEpisode]?.rawInput : currentProject?.story?.rawInput) ?? 
+                    '';
+
+  const narrativeArc = epDraft?.narrativeArc ?? 
+                       (isEpisodic ? currentProject?.story?.[selectedEpisode]?.narrativeArc : currentProject?.story?.narrativeArc) ?? 
+                       '';
+
+  // Helper to check if the user has started typing for this episode
+  const hasRawInput = rawInput.trim().length > 0;
+
 
   const updateDraft = (patch: Partial<{ rawInput: string; narrativeArc: string }>) => {
     setStoryDraft((prev) => ({
@@ -197,18 +208,24 @@ const StoryStage = ({ selectedEpisode, onEpisodeChange, onEpisodeCountChange, on
               </span>
             </div>
 
-            {currentProject?.story && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <h3 className="text-lg font-semibold mb-2 text-foreground">2. Narrative Arc</h3>
-                <textarea
-                  className="w-full p-4 border border-border rounded bg-accent-soft text-foreground whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
-                  rows={10}
-                  value={narrativeArc}
-                  onChange={(e) => updateDraft({ narrativeArc: e.target.value })}
-                  placeholder="Narrative arc will appear here..."
-                />
-              </div>
-            )}
+          {currentProject?.story && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <h3 className="text-lg font-semibold mb-2 text-foreground">2. Narrative Arc</h3>
+              {!hasRawInput && (
+                <p className="text-sm text-muted-foreground italic mb-2">
+                  Enter the story for this arc to generate a narrative arc...
+                </p>
+              )}
+              <textarea
+                className="w-full p-4 border border-border rounded bg-accent-soft text-foreground whitespace-pre-wrap min-h-[100px] shadow-inner resize-y"
+                rows={10}
+                value={narrativeArc}
+                onChange={(e) => updateDraft({ narrativeArc: e.target.value })}
+                placeholder="Narrative arc will appear here..."
+              />
+            </div>
+          )}
+
           </section>
 
           {error && (
